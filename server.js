@@ -24,8 +24,12 @@ const countrySchema = new mongoose.Schema({
 
 const Country = mongoose.model('Country', countrySchema);
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hrdd-risk')
+// Connect to MongoDB - check multiple possible variable names
+const mongoUri = process.env.MONGODB_URI || process.env.MongoDB_URI || process.env.Monogdb_URI || process.env.MONGO_URL || process.env.Mongo_URL || process.env.MongoURL || 'mongodb://localhost:27017/hrdd-risk';
+
+console.log('Attempting to connect to MongoDB with URI:', mongoUri.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
+
+mongoose.connect(mongoUri)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -111,6 +115,33 @@ function getRiskBand(score) {
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Test route to verify app is working
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'HRDD Risk API is running',
+    mongoUri: process.env.Mongo_URL ? 'Mongo_URL found' : 'Mongo_URL not found',
+    mongoDbUri: process.env.MongoDB_URI ? 'MongoDB_URI found' : 'MongoDB_URI not found',
+    monogdbUri: process.env.Monogdb_URI ? 'Monogdb_URI found (typo)' : 'Monogdb_URI not found',
+    port: PORT
+  });
+});
+
+// Debug route to check environment variables (remove in production)
+app.get('/debug-env', (req, res) => {
+  res.json({
+    hasMongoURL: !!process.env.MongoURL,
+    hasMongoDBURI: !!process.env.MONGODB_URI,
+    hasMongoDB_URI: !!process.env.MongoDB_URI,
+    hasMonogdbURI: !!process.env.Monogdb_URI,
+    hasMONGO_URL: !!process.env.MONGO_URL,
+    hasMongo_URL: !!process.env.Mongo_URL,
+    nodeEnv: process.env.NODE_ENV,
+    port: PORT,
+    // Show first part of connection string (hide credentials)
+    connectionString: mongoUri ? mongoUri.substring(0, 20) + '...' : 'none'
+  });
 });
 
 app.listen(PORT, () => {
