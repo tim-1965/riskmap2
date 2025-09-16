@@ -26,10 +26,9 @@ export class UIComponents {
     `;
 
     try {
-      // Load D3 if not already loaded
-      if (typeof d3 === 'undefined') {
-        await this._loadD3();
-      }
+      // Ensure visualization libraries are available
+      await this._loadD3();
+      await this._loadTopoJson();
 
       // Load world map data
       const worldData = await this._loadWorldData();
@@ -61,18 +60,68 @@ export class UIComponents {
 
   // Load D3 library dynamically
   static async _loadD3() {
-    return new Promise((resolve, reject) => {
-      if (typeof d3 !== 'undefined') {
-        resolve();
+    if (typeof d3 !== 'undefined') {
+      return;
+    }
+
+    if (this._d3LoadingPromise) {
+      return this._d3LoadingPromise;
+    }
+
+    this._d3LoadingPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector('script[data-lib="d3"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', resolve, { once: true });
+        existingScript.addEventListener('error', reject, { once: true });
         return;
       }
 
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js';
-      script.onload = resolve;
-      script.onerror = reject;
+      script.async = true;
+      script.dataset.lib = 'd3';
+      script.onload = () => resolve();
+      script.onerror = () => {
+        this._d3LoadingPromise = null;
+        reject(new Error('Failed to load D3 library'));
+      };
       document.head.appendChild(script);
     });
+
+    return this._d3LoadingPromise;
+  }
+
+  // Load TopoJSON helper library dynamically
+  static async _loadTopoJson() {
+    if (typeof topojson !== 'undefined') {
+      return;
+    }
+
+    if (this._topojsonLoadingPromise) {
+      return this._topojsonLoadingPromise;
+    }
+
+    this._topojsonLoadingPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector('script[data-lib="topojson"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', resolve, { once: true });
+        existingScript.addEventListener('error', reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/topojson-client/3.1.0/topojson-client.min.js';
+      script.async = true;
+      script.dataset.lib = 'topojson';
+      script.onload = () => resolve();
+      script.onerror = () => {
+        this._topojsonLoadingPromise = null;
+        reject(new Error('Failed to load TopoJSON library'));
+      };
+      document.head.appendChild(script);
+    });
+
+    return this._topojsonLoadingPromise;
   }
 
   // Load world map topology data
@@ -88,19 +137,62 @@ export class UIComponents {
     }
   }
 
-  // Simplified world data fallback
   static _getSimplifiedWorldData() {
-    return {
-      type: "Topology",
-      objects: {
-        countries: {
-          type: "GeometryCollection",
-          geometries: [
-            // Simplified country polygons would go here
-            // For now, we'll use the fallback grid approach
-          ]
-        }
+    const createRectFeature = (iso, name, minLon, minLat, maxLon, maxLat) => ({
+      type: 'Feature',
+      properties: { ISO_A3: iso, NAME: name },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [minLon, minLat],
+          [maxLon, minLat],
+          [maxLon, maxLat],
+          [minLon, maxLat],
+          [minLon, minLat]
+        ]]
       }
+    });
+
+    const features = [
+      createRectFeature('USA', 'United States', -125, 24, -66, 49),
+      createRectFeature('CAN', 'Canada', -141, 49, -52, 70),
+      createRectFeature('MEX', 'Mexico', -118, 14, -86, 33),
+      createRectFeature('BRA', 'Brazil', -74, -35, -34, 6),
+      createRectFeature('ARG', 'Argentina', -73, -55, -53, -21),
+      createRectFeature('GBR', 'United Kingdom', -8, 49, 2, 59),
+      createRectFeature('FRA', 'France', -5, 43, 7, 51),
+      createRectFeature('DEU', 'Germany', 5, 47, 15, 55),
+      createRectFeature('ESP', 'Spain', -10, 35, 5, 44),
+      createRectFeature('ITA', 'Italy', 7, 36, 19, 47),
+      createRectFeature('RUS', 'Russia', 30, 50, 120, 70),
+      createRectFeature('CHN', 'China', 73, 18, 135, 53),
+      createRectFeature('IND', 'India', 68, 7, 89, 35),
+      createRectFeature('AUS', 'Australia', 112, -44, 154, -10),
+      createRectFeature('JPN', 'Japan', 130, 30, 146, 46),
+      createRectFeature('ZAF', 'South Africa', 16, -35, 33, -22),
+      createRectFeature('EGY', 'Egypt', 24, 22, 36, 32),
+      createRectFeature('NGA', 'Nigeria', 3, 4, 15, 14),
+      createRectFeature('SAU', 'Saudi Arabia', 34, 16, 56, 32),
+      createRectFeature('TUR', 'Turkey', 26, 36, 45, 43),
+      createRectFeature('IRN', 'Iran', 44, 25, 64, 40),
+      createRectFeature('PAK', 'Pakistan', 60, 24, 77, 37),
+      createRectFeature('KOR', 'South Korea', 125, 33, 130, 39),
+      createRectFeature('IDN', 'Indonesia', 95, -11, 141, 6),
+      createRectFeature('PHL', 'Philippines', 117, 5, 126, 20),
+      createRectFeature('THA', 'Thailand', 97, 5, 106, 21),
+      createRectFeature('VNM', 'Vietnam', 102, 8, 110, 23),
+      createRectFeature('KEN', 'Kenya', 34, -5, 42, 5),
+      createRectFeature('ETH', 'Ethiopia', 33, 3, 44, 15),
+      createRectFeature('DZA', 'Algeria', -9, 19, 12, 37),
+      createRectFeature('MAR', 'Morocco', -13, 21, -1, 36),
+      createRectFeature('PER', 'Peru', -82, -18, -68, 1),
+      createRectFeature('COL', 'Colombia', -79, -5, -66, 13),
+      createRectFeature('CHL', 'Chile', -75, -56, -66, -17)
+    ];
+
+    return {
+      type: 'FeatureCollection',
+      features
     };
   }
 
@@ -109,91 +201,171 @@ export class UIComponents {
     const wrapper = document.getElementById(container);
     if (!wrapper) return;
 
-    // Create SVG
-    const svg = d3.select(wrapper)
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height)
-      .style('border', '1px solid #ccc')
-      .style('background', '#f8fafc');
+    wrapper.innerHTML = '';
 
-    // Set up projection
-    const projection = d3.geoNaturalEarth1()
-      .scale(150)
-      .translate([width / 2, height / 2]);
-
-    const path = d3.geoPath().projection(projection);
-
-    // Create main group for zoom
-    const g = svg.append('g');
-
-    // Add zoom behavior
-    const zoom = d3.zoom()
-      .scaleExtent([0.5, 8])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform);
-      });
-
-    svg.call(zoom);
-
-    // Try to render countries with topojson
     try {
-      if (worldData.objects && worldData.objects.countries && typeof topojson !== 'undefined') {
-        const countries = topojson.feature(worldData, worldData.objects.countries);
-        
-        g.selectAll('path')
-          .data(countries.features)
-          .enter()
-          .append('path')
-          .attr('d', path)
-          .attr('class', 'country')
-          .style('fill', d => {
+      const features = this._extractWorldFeatures(worldData);
+      if (!features.length) {
+        throw new Error('No geographic features available');
+      }
+
+      const featureCollection = { type: 'FeatureCollection', features };
+
+      // Create SVG canvas
+      const svg = d3.select(wrapper)
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet')
+        .style('width', '100%')
+        .style('height', 'auto')
+        .style('border', '1px solid #e5e7eb')
+        .style('border-radius', '8px')
+        .style('background', '#f8fafc');
+
+      const projection = d3.geoNaturalEarth1()
+        .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
+
+      const path = d3.geoPath(projection);
+
+      const mapGroup = svg.append('g').attr('class', 'map-layer');
+
+      // Draw ocean background and graticule for context
+      const graticule = d3.geoGraticule10();
+      mapGroup.append('path')
+        .datum({ type: 'Sphere' })
+        .attr('d', path)
+        .attr('fill', '#e0f2fe')
+        .attr('stroke', '#bae6fd')
+        .attr('stroke-width', 0.6)
+        .attr('pointer-events', 'none');
+
+      mapGroup.append('path')
+        .datum(graticule)
+        .attr('d', path)
+        .attr('fill', 'none')
+        .attr('stroke', '#bfdbfe')
+        .attr('stroke-width', 0.3)
+        .attr('stroke-dasharray', '2,4')
+        .attr('pointer-events', 'none');
+
+      const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
+
+      const countryGroup = mapGroup.append('g').attr('class', 'countries');
+
+      countryGroup.selectAll('path.country')
+        .data(features)
+        .enter()
+        .append('path')
+        .attr('class', 'country')
+        .attr('data-iso-code', d => this._getCountryId(d) || '')
+        .attr('d', path)
+        .attr('tabindex', d => this._getCountryId(d) ? 0 : null)
+        .attr('role', d => this._getCountryId(d) ? 'button' : null)
+        .attr('aria-label', d => {
+          const iso = this._getCountryId(d);
+          if (!iso) return null;
+          return metadataMap.get(iso)?.name || d.properties?.NAME || iso;
+        })
+        .attr('aria-pressed', d => selectedCountries.includes(this._getCountryId(d)) ? 'true' : 'false')
+        .style('cursor', d => this._getCountryId(d) ? 'pointer' : 'default')
+        .style('fill', d => {
+          const countryId = this._getCountryId(d);
+          const risk = countryRisks[countryId];
+          return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
+        })
+        .style('stroke', d => selectedCountries.includes(this._getCountryId(d)) ? '#111827' : '#ffffff')
+        .style('stroke-width', d => selectedCountries.includes(this._getCountryId(d)) ? 1.5 : 0.6)
+        .style('opacity', d => {
+          const countryId = this._getCountryId(d);
+          return countryRisks[countryId] !== undefined ? 0.95 : 0.7;
+        })
+        .on('click', (event, d) => {
+          const countryId = this._getCountryId(d);
+          if (!countryId) return;
+
+          const isSelected = selectedCountries.includes(countryId);
+          d3.select(event.currentTarget)
+            .style('stroke', isSelected ? '#ffffff' : '#111827')
+            .style('stroke-width', isSelected ? 0.6 : 1.5)
+            .attr('aria-pressed', isSelected ? 'false' : 'true');
+
+          if (onCountrySelect) {
+            onCountrySelect(countryId);
+          }
+        })
+        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap))
+        .on('mousemove', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap))
+        .on('mouseout', () => this._hideMapTooltip())
+        .on('focus', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap))
+        .on('blur', () => this._hideMapTooltip())
+        .on('keydown', (event, d) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
             const countryId = this._getCountryId(d);
-            const risk = countryRisks[countryId];
-            return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
-          })
-          .style('stroke', d => {
-            const countryId = this._getCountryId(d);
-            return selectedCountries.includes(countryId) ? '#000000' : '#ffffff';
-          })
-          .style('stroke-width', d => {
-            const countryId = this._getCountryId(d);
-            return selectedCountries.includes(countryId) ? 2 : 0.5;
-          })
-          .style('cursor', 'pointer')
-          .on('click', (event, d) => {
-            const countryId = this._getCountryId(d);
-            if (onCountrySelect && countryId) {
+            if (countryId && onCountrySelect) {
               onCountrySelect(countryId);
             }
-          })
-          .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks))
-          .on('mouseout', () => this._hideMapTooltip());
-      } else {
-        throw new Error('TopojSON not available or invalid world data');
+          }
+        });
+
+      if (typeof topojson !== 'undefined' && worldData.objects?.countries) {
+        const borders = topojson.mesh(worldData, worldData.objects.countries, (a, b) => a !== b);
+        mapGroup.append('path')
+          .datum(borders)
+          .attr('class', 'country-borders')
+          .attr('d', path)
+          .attr('fill', 'none')
+          .attr('stroke', '#94a3b8')
+          .attr('stroke-width', 0.4)
+          .attr('pointer-events', 'none');
       }
+
+      const zoom = d3.zoom()
+        .scaleExtent([0.75, 8])
+        .on('zoom', (event) => {
+          mapGroup.attr('transform', event.transform);
+        });
+
+      svg.call(zoom);
     } catch (error) {
       console.warn('D3 map rendering failed, using fallback:', error);
-      // Remove SVG and use fallback
-      svg.remove();
       this._createSimpleMapGrid(container, { countries, countryRisks, selectedCountries, onCountrySelect });
     }
+  }
+
+  static _extractWorldFeatures(worldData) {
+    if (!worldData) return [];
+
+    if (worldData.type === 'FeatureCollection' && Array.isArray(worldData.features)) {
+      return worldData.features;
+    }
+
+    if (worldData.type === 'Topology' && worldData.objects?.countries && typeof topojson !== 'undefined') {
+      const geojson = topojson.feature(worldData, worldData.objects.countries);
+      return Array.isArray(geojson?.features) ? geojson.features : [];
+    }
+
+    return [];
   }
 
   // Get country ID from map data
   static _getCountryId(countryData) {
     // Try different property names for country identification
-    return countryData.id || 
-           countryData.properties?.ISO_A3 || 
-           countryData.properties?.ADM0_A3 ||
-           countryData.properties?.SOV_A3;
+    const id = countryData.id ||
+      countryData.properties?.ISO_A3 ||
+      countryData.properties?.iso_a3 ||
+      countryData.properties?.ADM0_A3 ||
+      countryData.properties?.SOV_A3;
+
+    return typeof id === 'string' ? id.toUpperCase() : id;
   }
 
   // Show map tooltip
-  static _showMapTooltip(event, countryData, countryRisks) {
+  static _showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map()) {
     const countryId = this._getCountryId(countryData);
-    const countryName = countryData.properties?.NAME || countryData.properties?.NAME_LONG || countryId;
+    const countryName = countryData.properties?.NAME || countryData.properties?.NAME_LONG || countryMetadata.get(countryId)?.name || countryId;
     const risk = countryRisks[countryId];
+
 
     // Remove existing tooltips
     d3.selectAll('.map-tooltip').remove();
@@ -214,15 +386,24 @@ export class UIComponents {
       .duration(200)
       .style('opacity', 1);
 
+    const target = event.currentTarget || event.target;
+    const scrollX = typeof window !== 'undefined' ? window.scrollX : 0;
+    const scrollY = typeof window !== 'undefined' ? window.scrollY : 0;
+    const targetRect = target?.getBoundingClientRect?.();
+    const fallbackX = (targetRect?.left ?? 0) + scrollX + (targetRect?.width ?? 0) / 2;
+    const fallbackY = (targetRect?.top ?? 0) + scrollY + (targetRect?.height ?? 0) / 2;
+    const pageX = event.pageX ?? fallbackX;
+    const pageY = event.pageY ?? fallbackY;
+
     tooltip.html(`
       <strong>${countryName}</strong><br/>
-      ${risk !== undefined ? 
-        `Risk Score: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}` : 
+      ${risk !== undefined ?
+        `Risk Score: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}` :
         'No data available'
       }
     `)
-      .style('left', (event.pageX + 10) + 'px')
-      .style('top', (event.pageY - 10) + 'px');
+      .style('left', (pageX + 10) + 'px')
+      .style('top', (pageY - 10) + 'px');
   }
 
   // Hide map tooltip
