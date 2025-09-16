@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -9,6 +10,12 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static component files for embedding
+const componentsDir = path.join(__dirname, 'public', 'components');
+app.use('/components', express.static(componentsDir));
+app.use('/public/components', express.static(componentsDir));
+console.log('Static component directory configured at:', componentsDir);
 
 // Country schema
 const countrySchema = new mongoose.Schema({
