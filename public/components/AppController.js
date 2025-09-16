@@ -16,12 +16,14 @@ export class AppController {
       error: null,
       apiHealthy: false,
       lastUpdate: null,
-      isDirty: false // Track if user has made changes
+       isDirty: false // Track if user has made changes
     };
 
     this.retryCount = 0;
     this.maxRetries = 3;
     this.retryDelay = 2000; // 2 seconds
+    this.containerElement = null;
+    this._waitingForContainer = false;
 
     // Bind methods to preserve 'this' context
     this.initialize = this.initialize.bind(this);
@@ -30,10 +32,17 @@ export class AppController {
     this.onVolumeChange = this.onVolumeChange.bind(this);
   }
 
-  // Enhanced initialization with retry logic
+ // Enhanced initialization with retry logic
   async initialize(containerId) {
     this.containerId = containerId;
-    
+
+    const container = await this._waitForContainer(containerId);
+    if (!container) {
+      console.error(`❌ Unable to initialize application: container "${containerId}" not found.`);
+      return;
+    }
+    this.containerElement = container;
+
     try {
       this.showLoadingState();
       
@@ -63,9 +72,39 @@ export class AppController {
     }
   }
 
+  async _waitForContainer(containerId, timeout = 5000) {
+    if (typeof document === 'undefined') return null;
+
+    let container = document.getElementById(containerId);
+    if (container) {
+      return container;
+    }
+
+    if (document.readyState === 'loading' && !this._waitingForContainer) {
+      this._waitingForContainer = true;
+      await new Promise(resolve => {
+        document.addEventListener('DOMContentLoaded', () => {
+          this._waitingForContainer = false;
+          resolve();
+        }, { once: true });
+      });
+    }
+
+    const start = Date.now();
+    while (!container && Date.now() - start < timeout) {
+      container = document.getElementById(containerId);
+      if (container) {
+        return container;
+      }
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    return container || null;
+  }
+
   // Enhanced loading state
   showLoadingState() {
-    const container = document.getElementById(this.containerId);
+    const container = this.containerElement || document.getElementById(this.containerId);
     if (!container) return;
 
     container.innerHTML = `
@@ -282,10 +321,11 @@ export class AppController {
     return `Application error: ${error.message}`;
   }
 
-  // Enhanced rendering with better layout and responsiveness
+   // Enhanced rendering with better layout and responsiveness
   render() {
-    const container = document.getElementById(this.containerId);
+    const container = this.containerElement || document.getElementById(this.containerId);
     if (!container) return;
+    this.containerElement = container;
 
     if (this.state.loading) {
       this.showLoadingState();
