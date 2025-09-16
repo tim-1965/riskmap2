@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');␊
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const { loadCountriesFromFile } = require('../utils/countryDataLoader');
@@ -18,9 +18,11 @@ const countrySchema = new mongoose.Schema({
 const Country = mongoose.model('Country', countrySchema);
 
 async function importData() {
+  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/hrdd-risk';
+
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hrdd-risk');
+    await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
 
     // Clear existing data
