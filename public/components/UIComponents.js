@@ -28,7 +28,6 @@ export class UIComponents {
     try {
       // Ensure visualization libraries are available
       await this._loadD3();
-      await this._loadTopoJson();
 
       // Load world map data
       const worldData = await this._loadWorldData();
@@ -89,39 +88,6 @@ export class UIComponents {
     });
 
     return this._d3LoadingPromise;
-  }
-
-  // Load TopoJSON helper library dynamically
-  static async _loadTopoJson() {
-    if (typeof topojson !== 'undefined') {
-      return;
-    }
-
-    if (this._topojsonLoadingPromise) {
-      return this._topojsonLoadingPromise;
-    }
-
-    this._topojsonLoadingPromise = new Promise((resolve, reject) => {
-      const existingScript = document.querySelector('script[data-lib="topojson"]');
-      if (existingScript) {
-        existingScript.addEventListener('load', resolve, { once: true });
-        existingScript.addEventListener('error', reject, { once: true });
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/topojson-client/3.1.0/topojson-client.min.js';
-      script.async = true;
-      script.dataset.lib = 'topojson';
-      script.onload = () => resolve();
-      script.onerror = () => {
-        this._topojsonLoadingPromise = null;
-        reject(new Error('Failed to load TopoJSON library'));
-      };
-      document.head.appendChild(script);
-    });
-
-    return this._topojsonLoadingPromise;
   }
 
   // Load world map topology data
@@ -248,7 +214,12 @@ export class UIComponents {
         .attr('stroke-dasharray', '2,4')
         .attr('pointer-events', 'none');
 
-      const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
+       const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
+      const nameLookup = this._buildCountryNameLookup(metadataMap);
+
+      features.forEach(feature => {
+        feature.__isoCode = this._getFeatureIsoCode(feature, metadataMap, nameLookup);
+      });
 
       const countryGroup = mapGroup.append('g').attr('class', 'countries');
 
@@ -256,31 +227,31 @@ export class UIComponents {
         .data(features)
         .enter()
         .append('path')
-        .attr('class', 'country')
-        .attr('data-iso-code', d => this._getCountryId(d) || '')
+       .attr('class', 'country')
+        .attr('data-iso-code', d => d.__isoCode || '')
         .attr('d', path)
-        .attr('tabindex', d => this._getCountryId(d) ? 0 : null)
-        .attr('role', d => this._getCountryId(d) ? 'button' : null)
+        .attr('tabindex', d => d.__isoCode ? 0 : null)
+        .attr('role', d => d.__isoCode ? 'button' : null)
         .attr('aria-label', d => {
-          const iso = this._getCountryId(d);
+          const iso = d.__isoCode;
           if (!iso) return null;
           return metadataMap.get(iso)?.name || d.properties?.NAME || iso;
         })
-        .attr('aria-pressed', d => selectedCountries.includes(this._getCountryId(d)) ? 'true' : 'false')
-        .style('cursor', d => this._getCountryId(d) ? 'pointer' : 'default')
+        .attr('aria-pressed', d => selectedCountries.includes(d.__isoCode) ? 'true' : 'false')
+        .style('cursor', d => d.__isoCode ? 'pointer' : 'default')
         .style('fill', d => {
-          const countryId = this._getCountryId(d);
+          const countryId = d.__isoCode;
           const risk = countryRisks[countryId];
           return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
         })
-        .style('stroke', d => selectedCountries.includes(this._getCountryId(d)) ? '#111827' : '#ffffff')
-        .style('stroke-width', d => selectedCountries.includes(this._getCountryId(d)) ? 1.5 : 0.6)
+        .style('stroke', d => selectedCountries.includes(d.__isoCode) ? '#111827' : '#ffffff')
+        .style('stroke-width', d => selectedCountries.includes(d.__isoCode) ? 1.5 : 0.6)
         .style('opacity', d => {
-          const countryId = this._getCountryId(d);
+          const countryId = d.__isoCode;
           return countryRisks[countryId] !== undefined ? 0.95 : 0.7;
         })
         .on('click', (event, d) => {
-          const countryId = this._getCountryId(d);
+          const countryId = d.__isoCode;
           if (!countryId) return;
 
           const isSelected = selectedCountries.includes(countryId);
@@ -293,39 +264,26 @@ export class UIComponents {
             onCountrySelect(countryId);
           }
         })
-        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap))
-        .on('mousemove', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap))
+        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup))
+        .on('mousemove', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup))
         .on('mouseout', () => this._hideMapTooltip())
-        .on('focus', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap))
+        .on('focus', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup))
         .on('blur', () => this._hideMapTooltip())
         .on('keydown', (event, d) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            const countryId = this._getCountryId(d);
+            const countryId = d.__isoCode;
             if (countryId && onCountrySelect) {
               onCountrySelect(countryId);
             }
           }
         });
 
-      if (typeof topojson !== 'undefined' && worldData.objects?.countries) {
-        const borders = topojson.mesh(worldData, worldData.objects.countries, (a, b) => a !== b);
-        mapGroup.append('path')
-          .datum(borders)
-          .attr('class', 'country-borders')
-          .attr('d', path)
-          .attr('fill', 'none')
-          .attr('stroke', '#94a3b8')
-          .attr('stroke-width', 0.4)
-          .attr('pointer-events', 'none');
-      }
-
       const zoom = d3.zoom()
         .scaleExtent([0.75, 8])
         .on('zoom', (event) => {
           mapGroup.attr('transform', event.transform);
         });
-
       svg.call(zoom);
     } catch (error) {
       console.warn('D3 map rendering failed, using fallback:', error);
@@ -340,12 +298,113 @@ export class UIComponents {
       return worldData.features;
     }
 
-    if (worldData.type === 'Topology' && worldData.objects?.countries && typeof topojson !== 'undefined') {
-      const geojson = topojson.feature(worldData, worldData.objects.countries);
-      return Array.isArray(geojson?.features) ? geojson.features : [];
+    if (worldData.type === 'Topology' && worldData.objects?.countries) {
+      const features = this._topologyToFeatures(worldData, 'countries');
+      return Array.isArray(features) ? features : [];
     }
 
     return [];
+  }
+
+  static _topologyToFeatures(topology, objectName) {
+    try {
+      const object = topology.objects?.[objectName];
+      if (!object) return [];
+
+      const transform = topology.transform;
+      const arcs = topology.arcs || [];
+      const decodedArcs = arcs.map(arc => this._decodeArc(arc, transform));
+
+      const buildRing = (ring = []) => {
+        const coordinates = [];
+
+        ring.forEach((arcIndex, index) => {
+          const reversed = arcIndex < 0;
+          const arc = decodedArcs[reversed ? ~arcIndex : arcIndex];
+          if (!arc || arc.length === 0) return;
+
+          const points = reversed ? [...arc].reverse() : arc;
+          const segment = index > 0 ? points.slice(1) : points;
+          coordinates.push(...segment);
+        });
+
+        if (coordinates.length) {
+          const first = coordinates[0];
+          const last = coordinates[coordinates.length - 1];
+          if (first && last && (first[0] !== last[0] || first[1] !== last[1])) {
+            coordinates.push([...first]);
+          }
+        }
+
+        return coordinates;
+      };
+
+      const convertGeometry = (geometry) => {
+        if (!geometry) return null;
+
+        switch (geometry.type) {
+          case 'Polygon':
+            return {
+              type: 'Polygon',
+              coordinates: geometry.arcs.map(buildRing).filter(ring => ring && ring.length)
+            };
+          case 'MultiPolygon':
+            return {
+              type: 'MultiPolygon',
+              coordinates: geometry.arcs
+                .map(polygon => polygon.map(buildRing).filter(ring => ring && ring.length))
+                .filter(polygon => polygon.length)
+            };
+          default:
+            return null;
+        }
+      };
+
+      const createFeature = (geometry, properties = {}) => {
+        const geom = convertGeometry(geometry);
+        if (!geom) return null;
+        return {
+          type: 'Feature',
+          properties: { ...properties, ...geometry?.properties },
+          geometry: geom
+        };
+      };
+
+      if (object.type === 'GeometryCollection' && Array.isArray(object.geometries)) {
+        return object.geometries
+          .map(geometry => createFeature(geometry, object.properties))
+          .filter(Boolean);
+      }
+
+      const feature = createFeature(object, object.properties);
+      return feature ? [feature] : [];
+    } catch (error) {
+      console.warn('Failed to convert topology to features:', error);
+      return [];
+    }
+  }
+
+  static _decodeArc(arc = [], transform) {
+    const coordinates = [];
+    let x = 0;
+    let y = 0;
+
+    const scaleX = transform?.scale?.[0] ?? 1;
+    const scaleY = transform?.scale?.[1] ?? 1;
+    const translateX = transform?.translate?.[0] ?? 0;
+    const translateY = transform?.translate?.[1] ?? 0;
+
+    arc.forEach(point => {
+      x += point[0];
+      y += point[1];
+
+      coordinates.push([
+        translateX + x * scaleX,
+        translateY + y * scaleY
+      ]);
+    });
+
+    return coordinates;
   }
 
   // Get country ID from map data
@@ -360,11 +419,222 @@ export class UIComponents {
     return typeof id === 'string' ? id.toUpperCase() : id;
   }
 
+  static _getFeatureIsoCode(feature, metadataMap, nameLookup) {
+    if (!feature) return null;
+
+    const directId = this._getCountryId(feature);
+    if (directId) return directId;
+
+    return this._resolveCountryCodeFromName(feature, metadataMap, nameLookup);
+  }
+
+  static _resolveCountryCodeFromName(feature, metadataMap, nameLookup = new Map()) {
+    const candidates = this._getFeatureNameCandidates(feature);
+
+    for (const candidate of candidates) {
+      const normalized = this._normalizeCountryName(candidate);
+      if (!normalized) continue;
+
+      const directMatch = nameLookup.get(normalized) || nameLookup.get(normalized.replace(/^the/, ''));
+      if (directMatch) return directMatch;
+    }
+
+    for (const candidate of candidates) {
+      const normalized = this._normalizeCountryName(candidate);
+      if (!normalized) continue;
+
+      for (const [iso, country] of metadataMap.entries()) {
+        const countryName = this._normalizeCountryName(country?.name);
+        if (!countryName) continue;
+
+        if (normalized === countryName ||
+          normalized.includes(countryName) ||
+          countryName.includes(normalized)) {
+          return iso;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  static _getFeatureNameCandidates(feature) {
+    const properties = feature?.properties || {};
+    const names = [
+      properties.NAME,
+      properties.name,
+      properties.NAME_LONG,
+      properties.NAME_EN,
+      properties.NAME_SORT,
+      properties.BRK_NAME,
+      properties.ABBREV,
+      properties.FORMAL_EN,
+      properties.FORMAL_FR
+    ];
+
+    const cleaned = new Set();
+    names.forEach(name => {
+      if (!name || typeof name !== 'string') return;
+      cleaned.add(name);
+      cleaned.add(name.replace(/\(.+?\)/g, '').trim());
+      cleaned.add(name.replace(/^The\s+/i, '').trim());
+    });
+
+    cleaned.delete('');
+    return Array.from(cleaned);
+  }
+
+  static _normalizeCountryName(name) {
+    if (typeof name !== 'string') return '';
+
+    return name
+      .replace(/&/g, ' and ')
+      .replace(/Dem\./gi, 'Democratic ')
+      .replace(/Rep\./gi, 'Republic ')
+      .replace(/Eq\./gi, 'Equatorial ')
+      .replace(/Is\./gi, 'Islands ')
+      .replace(/St\./gi, 'Saint ')
+      .replace(/\./g, ' ')
+      .replace(/\s+/g, ' ')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  static _buildCountryNameLookup(metadataMap) {
+    const lookup = new Map();
+
+    metadataMap.forEach((country, iso) => {
+      const normalizedName = this._normalizeCountryName(country?.name);
+      if (normalizedName) lookup.set(normalizedName, iso);
+
+      const alternates = this._generateAlternateNames(country?.name);
+      alternates.forEach(name => {
+        const normalized = this._normalizeCountryName(name);
+        if (normalized) lookup.set(normalized, iso);
+      });
+
+      const isoKey = this._normalizeCountryName(iso);
+      if (isoKey) lookup.set(isoKey, iso);
+    });
+
+    const manualAliases = this._getManualNameAliases();
+    Object.entries(manualAliases).forEach(([alias, iso]) => {
+      const normalized = this._normalizeCountryName(alias);
+      if (normalized && iso) {
+        lookup.set(normalized, iso);
+      }
+    });
+
+    return lookup;
+  }
+
+  static _generateAlternateNames(name = '') {
+    if (!name || typeof name !== 'string') return [];
+
+    const alternates = new Set();
+
+    const withoutParentheses = name.replace(/\(.+?\)/g, '').replace(/\s+/g, ' ').trim();
+    if (withoutParentheses && withoutParentheses !== name) {
+      alternates.add(withoutParentheses);
+    }
+
+    if (name.includes(',')) {
+      const parts = name.split(',').map(part => part.trim());
+      parts.forEach(part => alternates.add(part));
+      if (parts.length === 2) {
+        alternates.add(`${parts[1]} ${parts[0]}`.trim());
+      }
+    }
+
+    if (/^The\s+/i.test(name)) {
+      alternates.add(name.replace(/^The\s+/i, '').trim());
+    }
+
+    if (name.includes(' and ')) {
+      name.split(' and ').forEach(part => alternates.add(part.trim()));
+    }
+
+    if (name.includes('Republic')) {
+      alternates.add(name.replace(/Republic of/gi, '').trim());
+      alternates.add(name.replace(/Republic/gi, '').trim());
+    }
+
+    if (name.includes('Democratic')) {
+      alternates.add(name.replace(/Democratic Republic of/gi, '').trim());
+      alternates.add(name.replace(/Democratic/gi, '').trim());
+    }
+
+    if (name.includes('Kingdom')) {
+      alternates.add(name.replace(/Kingdom of/gi, '').trim());
+    }
+
+    if (name.includes('State of')) {
+      alternates.add(name.replace(/State of/gi, '').trim());
+    }
+
+    if (name.includes('Federation')) {
+      alternates.add(name.replace(/Federation/gi, '').trim());
+    }
+
+    return Array.from(alternates).filter(Boolean);
+  }
+
+  static _getManualNameAliases() {
+    return {
+      'bolivia': 'BOL',
+      'boliviaplurinationalstateof': 'BOL',
+      'bruneidarussalam': 'BRN',
+      'capeverde': 'CPV',
+      'congo': 'COG',
+      'congorepublic': 'COG',
+      'congobrepublicofthe': 'COG',
+      'congodemocraticrepublicofthe': 'COD',
+      'congodemocraticrepublic': 'COD',
+      'cotedivoire': 'CIV',
+      'ivorycoast': 'CIV',
+      'czechrepublic': 'CZE',
+      'czechia': 'CZE',
+      'swaziland': 'SWZ',
+      'eswatini': 'SWZ',
+      'gambia': 'GMB',
+      'hongkong': 'HKG',
+      'iran': 'IRN',
+      'iranislamicrepublicof': 'IRN',
+      'southkorea': 'KOR',
+      'northkorea': 'PRK',
+      'laos': 'LAO',
+      'macedonia': 'MKD',
+      'northmacedonia': 'MKD',
+      'moldova': 'MDA',
+      'myanmar': 'MMR',
+      'burma': 'MMR',
+      'palestine': 'PSE',
+      'russia': 'RUS',
+      'russianfederation': 'RUS',
+      'syria': 'SYR',
+      'syrianarabrepublic': 'SYR',
+      'tanzania': 'TZA',
+      'unitedkingdom': 'GBR',
+      'unitedkingdomofgreatbritainandnorthernireland': 'GBR',
+      'unitedstates': 'USA',
+      'unitedstatesofamerica': 'USA',
+      'venezuela': 'VEN',
+      'venezuela bolivarian republic of': 'VEN',
+      'viet nam': 'VNM',
+      'vietnam': 'VNM'
+    };
+  }
+
   // Show map tooltip
-  static _showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map()) {
-    const countryId = this._getCountryId(countryData);
-    const countryName = countryData.properties?.NAME || countryData.properties?.NAME_LONG || countryMetadata.get(countryId)?.name || countryId;
-    const risk = countryRisks[countryId];
+  static _showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map()) {
+    const countryId = countryData.__isoCode || this._getFeatureIsoCode(countryData, countryMetadata, nameLookup);
+    const countryName = countryMetadata.get(countryId)?.name ||
+      countryData.properties?.NAME ||
+      countryData.properties?.NAME_LONG ||
+      countryData.properties?.name ||
+      countryId || 'Unknown';
+    const risk = countryId ? countryRisks[countryId] : undefined;
 
 
     // Remove existing tooltips
