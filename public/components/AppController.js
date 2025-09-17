@@ -95,7 +95,7 @@ export class AppController {
       <div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
         <div style="text-align: center; margin-bottom: 40px;">
           <h1 style="font-size: 28px; font-weight: bold; color: #1f2937; margin-bottom: 12px;">
-            Human Rights Due Diligence Risk Assessment Tool
+            Measuring the effectiveness of supply chain due diligence
           </h1>
           <p style="font-size: 16px; color: #6b7280;">
             Initializing application and loading country data...
@@ -341,8 +341,8 @@ export class AppController {
 
           <!-- MAP SECTION (TOP) - FULL WIDTH -->
           <div id="mapContainer" style="margin-bottom: 32px; background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; padding: 10px;">
-            <div style="background: #ffc107; color: #856404; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
-              📍 MAP SECTION - NOW AT TOP (FULL WIDTH)
+          <div style="background: #ffc107; color: #856404; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">␊
+              Labour rights: base line risk
             </div>
             <!-- Map will be rendered here -->
           </div>
@@ -369,20 +369,6 @@ export class AppController {
               ⚖️ WEIGHTINGS PANEL - NOW AT BOTTOM (FULL WIDTH)
             </div>
             <!-- Weightings Panel will be rendered here -->
-          </div>
-
-          <!-- Footer Info -->
-          <div style="background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%); border: 1px solid #93c5fd; color: #1e40af; padding: 24px; border-radius: 12px; margin-top: 24px;">
-            <div style="display: flex; align-items: start; gap: 16px;">
-              <div style="font-size: 24px;">🚀</div>
-              <div>
-                <h3 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Layout Change Successful!</h3>
-                <p style="font-size: 14px; margin-bottom: 8px;">
-                  The layout has been restructured: Map moved to top, controls split into 3 sections below.
-                  Step 2 will allow you to configure HRDD strategies, Step 3 will calculate managed risk levels.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
