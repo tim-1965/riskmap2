@@ -9,7 +9,8 @@ export class RiskEngine {
     this.defaultTransparencyEffectiveness = [85, 50, 15, 5, 0]; // Effectiveness percentages for each strategy
     
     // Step 3: Responsiveness Strategy defaults  
-    this.defaultResponsivenessStrategy = [100, 80, 40, 20, -20]; // Real time, 1 week, 2 weeks, 4 weeks, 3 months, no action (converted to percentages)
+    this.defaultResponsivenessStrategy = [100, 80, 40, 20, -20, 0]; // Real time, 1 week, 2 weeks, 4 weeks, 3 months, no action
+    this.defaultResponsivenessEffectiveness = [100, 80, 60, 40, 20, 0]; // Effectiveness percentages for each responsiveness approach
     
     // Strategy labels
     this.hrddStrategyLabels = [
@@ -107,33 +108,33 @@ export class RiskEngine {
   }
 
   // Step 3: Calculate overall responsiveness effectiveness
-  calculateResponsivenessEffectiveness(responsivenessStrategy) {
-    if (!this.validateResponsiveness(responsivenessStrategy)) {
+  calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness) {
+    if (!this.validateResponsiveness(responsivenessStrategy) || !this.validateResponsivenessEffectiveness(responsivenessEffectiveness)) {
       return 0;
     }
 
     // Find the highest weighted responsiveness approach
     let maxWeight = 0;
-    let selectedEffectiveness = 0;
+    let primaryIndex = 0;
 
     for (let i = 0; i < responsivenessStrategy.length; i++) {
       if (responsivenessStrategy[i] > maxWeight) {
         maxWeight = responsivenessStrategy[i];
-        selectedEffectiveness = this.defaultResponsivenessStrategy[i] / 100; // Convert to decimal
+        primaryIndex = i;
       }
     }
 
-    return selectedEffectiveness;
+    return maxWeight > 0 ? responsivenessEffectiveness[primaryIndex] / 100 : 0; // Convert percentage to decimal
   }
 
   // Step 3: Calculate final managed risk
-  calculateManagedRisk(baselineRisk, hrddStrategy, transparencyEffectiveness, responsivenessStrategy) {
+  calculateManagedRisk(baselineRisk, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness) {
     if (baselineRisk <= 0) {
       return 0;
     }
 
     const overallTransparencyEffectiveness = this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
-    const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy);
+    const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
     
     // Formula: Managed Risk = Baseline Risk × (1 - Transparency Effectiveness × Responsiveness Effectiveness)
     const riskReductionFactor = overallTransparencyEffectiveness * overallResponsivenessEffectiveness;
@@ -212,7 +213,7 @@ export class RiskEngine {
   }
 
   validateResponsiveness(responsiveness) {
-    if (!Array.isArray(responsiveness) || responsiveness.length !== 5) {
+    if (!Array.isArray(responsiveness) || responsiveness.length !== 6) {
       return false;
     }
     
@@ -220,6 +221,18 @@ export class RiskEngine {
       typeof weight === 'number' && 
       weight >= 0 && 
       weight <= 100
+    );
+  }
+
+  validateResponsivenessEffectiveness(effectiveness) {
+    if (!Array.isArray(effectiveness) || effectiveness.length !== 6) {
+      return false;
+    }
+    
+    return effectiveness.every(eff => 
+      typeof eff === 'number' && 
+      eff >= 0 && 
+      eff <= 100
     );
   }
 
@@ -244,12 +257,12 @@ export class RiskEngine {
   }
 
   // Get strategy effectiveness breakdown
-  getStrategyBreakdown(hrddStrategy, transparencyEffectiveness, responsivenessStrategy) {
+  getStrategyBreakdown(hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness) {
     const breakdown = {
       hrddStrategies: [],
       overallTransparency: this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness),
-      overallResponsiveness: this.calculateResponsivenessEffectiveness(responsivenessStrategy),
-      primaryResponse: this.getPrimaryResponseMethod(responsivenessStrategy)
+      overallResponsiveness: this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness),
+      primaryResponse: this.getPrimaryResponseMethod(responsivenessStrategy, responsivenessEffectiveness)
     };
 
     // Calculate individual strategy contributions
@@ -270,7 +283,7 @@ export class RiskEngine {
     return breakdown;
   }
 
-  getPrimaryResponseMethod(responsivenessStrategy) {
+  getPrimaryResponseMethod(responsivenessStrategy, responsivenessEffectiveness) {
     let maxWeight = 0;
     let primaryIndex = 0;
 
@@ -284,14 +297,14 @@ export class RiskEngine {
     return {
       method: this.responsivenessLabels[primaryIndex],
       weight: maxWeight,
-      effectiveness: this.defaultResponsivenessStrategy[primaryIndex]
+      effectiveness: responsivenessEffectiveness[primaryIndex]
     };
   }
 
   // Generate risk assessment summary
-  generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy) {
+  generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness) {
     const riskReduction = this.calculateRiskReduction(baselineRisk, managedRisk);
-    const breakdown = this.getStrategyBreakdown(hrddStrategy, transparencyEffectiveness, responsivenessStrategy);
+    const breakdown = this.getStrategyBreakdown(hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness);
     
     return {
       baseline: {
@@ -342,6 +355,7 @@ export class RiskEngine {
       },
       step3: {
         responsivenessStrategy: state.responsivenessStrategy,
+        responsivenessEffectiveness: state.responsivenessEffectiveness,
         managedRisk: state.managedRisk,
         responsivenessLabels: this.responsivenessLabels
       },
@@ -351,7 +365,8 @@ export class RiskEngine {
         state.selectedCountries,
         state.hrddStrategy,
         state.transparencyEffectiveness,
-        state.responsivenessStrategy
+        state.responsivenessStrategy,
+        state.responsivenessEffectiveness
       )
     };
   }

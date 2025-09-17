@@ -298,7 +298,7 @@ export class UIComponents {
     });
   }
 
-  // Step 3: Responsiveness Strategy Panel
+  // Step 3: Responsiveness Strategy Panel (Left Column)
   static createResponsivenessPanel(containerId, { responsiveness, onResponsivenessChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -313,95 +313,54 @@ export class UIComponents {
       'No response or remedial action taken'
     ];
 
-    const effectivenessValues = riskEngine.defaultResponsivenessStrategy;
-
     let localResponsiveness = [...responsiveness];
 
     const updateResponsiveness = () => {
+      const total = localResponsiveness.reduce((sum, w) => sum + w, 0);
+      const totalElement = document.getElementById('totalResponsiveness');
+      if (totalElement) {
+        totalElement.textContent = total;
+        totalElement.style.color = '#374151';
+      }
       if (onResponsivenessChange) onResponsivenessChange([...localResponsiveness]);
     };
 
     container.innerHTML = `
       <div class="responsiveness-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Response Strategy</h2>
+          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Response Strategy Mix</h2>
           <button id="resetResponsiveness" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
             Reset to Default
           </button>
         </div>
         
-        <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-          <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Time Strategy:</h4>
-          <p style="font-size: 14px; margin: 0; line-height: 1.5;">
-            Select your primary response approach. Faster responses are more effective at reducing risk. 
-            The system will use the highest weighted response method for calculations.
-          </p>
+        <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
+        
+        <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
+          Total Strategy Weight: <span id="totalResponsiveness" style="font-weight: 600; font-size: 16px;">${localResponsiveness.reduce((sum, w) => sum + w, 0)}</span>%
+          <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy allocation)</span>
         </div>
 
-        <div id="responsivenessContainer"></div>
-
-        <div id="primaryResponse" style="margin-top: 20px; padding: 16px; background-color: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px;">
-          <!-- Primary response method will be shown here -->
+        <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 20px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Time Strategy:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Higher percentages = more resources allocated to that response time</li>
+            <li>Mix multiple approaches for comprehensive coverage</li>
+            <li>Each approach has different effectiveness rates (see right panel)</li>
+          </ul>
         </div>
       </div>
     `;
 
     const responsivenessContainer = document.getElementById('responsivenessContainer');
-    const primaryResponseDiv = document.getElementById('primaryResponse');
-
-    const updatePrimaryResponse = () => {
-      let maxWeight = 0;
-      let primaryIndex = 0;
-      
-      localResponsiveness.forEach((weight, index) => {
-        if (weight > maxWeight) {
-          maxWeight = weight;
-          primaryIndex = index;
-        }
-      });
-
-      if (maxWeight > 0) {
-        const effectiveness = effectivenessValues[primaryIndex];
-        const effectivenessColor = effectiveness >= 80 ? '#22c55e' : 
-                                   effectiveness >= 40 ? '#f59e0b' : 
-                                   effectiveness >= 0 ? '#ef4444' : '#991b1b';
-        
-        primaryResponseDiv.innerHTML = `
-          <h4 style="font-weight: 600; color: #166534; margin-bottom: 8px;">Primary Response Method:</h4>
-          <div style="font-size: 16px; font-weight: 500; color: ${effectivenessColor};">
-            ${responsivenessLabels[primaryIndex]} (${effectiveness}% effectiveness)
-          </div>
-          <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">
-            Weight: ${maxWeight}% - ${responsivenessDescriptions[primaryIndex]}
-          </div>
-        `;
-      } else {
-        primaryResponseDiv.innerHTML = `
-          <h4 style="font-weight: 600; color: #dc2626; margin-bottom: 8px;">No Response Method Selected</h4>
-          <div style="font-size: 14px; color: #6b7280;">Please select a response approach above</div>
-        `;
-      }
-    };
-
     responsivenessLabels.forEach((label, index) => {
-      const effectiveness = effectivenessValues[index];
-      const effectivenessColor = effectiveness >= 80 ? '#22c55e' : 
-                                 effectiveness >= 40 ? '#f59e0b' : 
-                                 effectiveness >= 0 ? '#ef4444' : '#991b1b';
-      
       const responsivenessControl = document.createElement('div');
-      responsivenessControl.style.cssText = 'margin-bottom: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+      responsivenessControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
       responsivenessControl.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <label style="font-size: 14px; font-weight: 500; color: #374151;">
-            ${label}
-          </label>
-          <div style="text-align: right;">
-            <span style="font-weight: 600; color: ${effectivenessColor};">${effectiveness}% effective</span>
-            <div style="font-size: 12px; color: #6b7280;">Weight: <span id="responsivenessValue_${index}">${localResponsiveness[index]}%</span></div>
-          </div>
-        </div>
-        <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px; font-style: italic;">
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
+          ${label} <span id="responsivenessValue_${index}" style="font-weight: 600; color: #1f2937;">(${localResponsiveness[index]}%)</span>
+        </label>
+        <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
           ${responsivenessDescriptions[index]}
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
@@ -420,8 +379,7 @@ export class UIComponents {
         localResponsiveness[index] = newValue;
         rangeInput.value = newValue;
         numberInput.value = newValue;
-        valueDisplay.textContent = `${newValue}%`;
-        updatePrimaryResponse();
+        valueDisplay.textContent = `(${newValue}%)`;
         updateResponsiveness();
       };
 
@@ -435,24 +393,144 @@ export class UIComponents {
       localResponsiveness.forEach((weight, index) => {
         document.getElementById(`responsiveness_${index}`).value = weight;
         document.getElementById(`responsivenessNum_${index}`).value = weight;
-        document.getElementById(`responsivenessValue_${index}`).textContent = `${weight}%`;
+        document.getElementById(`responsivenessValue_${index}`).textContent = `(${weight}%)`;
       });
-      updatePrimaryResponse();
       updateResponsiveness();
     });
+  }
 
-    // Initialize primary response display
-    updatePrimaryResponse();
+  // Step 3: Responsiveness Effectiveness Panel (Right Column)
+  static createResponsivenessEffectivenessPanel(containerId, { effectiveness, onEffectivenessChange }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const responsivenessLabels = riskEngine.responsivenessLabels;
+    const effectivenessDescriptions = [
+      'Maximum effectiveness - immediate problem resolution',
+      'High effectiveness - rapid corrective action',
+      'Good effectiveness - standard response timeframe',
+      'Moderate effectiveness - slower but still meaningful action',
+      'Low effectiveness - very delayed response',
+      'No effectiveness - problems remain unaddressed'
+    ];
+
+    let localEffectiveness = [...effectiveness];
+
+    const updateEffectiveness = () => {
+      if (onEffectivenessChange) onEffectivenessChange([...localEffectiveness]);
+    };
+
+    container.innerHTML = `
+      <div class="responsiveness-effectiveness-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Response Effectiveness</h2>
+          <button id="resetResponsivenessEffectiveness" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            Reset to Default
+          </button>
+        </div>
+        
+        <div id="responsivenessEffectivenessContainer" style="margin-bottom: 20px;"></div>
+
+        <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Understanding Response Effectiveness:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Higher percentages = better ability to resolve identified issues</li>
+            <li>Faster response times typically have higher effectiveness</li>
+            <li>Combined with your response strategy to calculate overall effectiveness</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    const effectivenessContainer = document.getElementById('responsivenessEffectivenessContainer');
+    responsivenessLabels.forEach((label, index) => {
+      const effectivenessColor = localEffectiveness[index] >= 80 ? '#22c55e' : 
+                                 localEffectiveness[index] >= 60 ? '#84cc16' :
+                                 localEffectiveness[index] >= 40 ? '#f59e0b' : 
+                                 localEffectiveness[index] >= 20 ? '#ef4444' : '#991b1b';
+      
+      const effectivenessControl = document.createElement('div');
+      effectivenessControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+      effectivenessControl.innerHTML = `
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
+          ${label}
+          <span id="effectivenessValue_${index}" style="font-weight: 600; color: ${effectivenessColor};">(${localEffectiveness[index]}%)</span>
+        </label>
+        <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
+          ${effectivenessDescriptions[index]}
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input type="range" min="0" max="100" value="${localEffectiveness[index]}" id="effectiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+          <input type="number" min="0" max="100" value="${localEffectiveness[index]}" id="effectivenessNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        </div>
+        <div style="margin-top: 8px; height: 4px; background-color: #e5e7eb; border-radius: 2px;">
+          <div style="height: 100%; width: ${localEffectiveness[index]}%; background-color: ${effectivenessColor}; border-radius: 2px; transition: all 0.3s;"></div>
+        </div>
+      `;
+      effectivenessContainer.appendChild(effectivenessControl);
+
+      const rangeInput = document.getElementById(`effectiveness_${index}`);
+      const numberInput = document.getElementById(`effectivenessNum_${index}`);
+      const valueDisplay = document.getElementById(`effectivenessValue_${index}`);
+
+      const updateEffectivenessValue = (value) => {
+        const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
+        const newColor = newValue >= 80 ? '#22c55e' : 
+                        newValue >= 60 ? '#84cc16' :
+                        newValue >= 40 ? '#f59e0b' : 
+                        newValue >= 20 ? '#ef4444' : '#991b1b';
+        
+        localEffectiveness[index] = newValue;
+        rangeInput.value = newValue;
+        numberInput.value = newValue;
+        valueDisplay.textContent = `(${newValue}%)`;
+        valueDisplay.style.color = newColor;
+        
+        const progressBar = effectivenessControl.querySelector('div:last-child div');
+        if (progressBar) {
+          progressBar.style.width = `${newValue}%`;
+          progressBar.style.backgroundColor = newColor;
+        }
+        
+        updateEffectiveness();
+      };
+
+      rangeInput.addEventListener('input', (e) => updateEffectivenessValue(e.target.value));
+      numberInput.addEventListener('input', (e) => updateEffectivenessValue(e.target.value));
+    });
+
+    const resetButton = document.getElementById('resetResponsivenessEffectiveness');
+    resetButton.addEventListener('click', () => {
+      localEffectiveness = [...riskEngine.defaultResponsivenessEffectiveness];
+      localEffectiveness.forEach((effectiveness, index) => {
+        const newColor = effectiveness >= 80 ? '#22c55e' : 
+                        effectiveness >= 60 ? '#84cc16' :
+                        effectiveness >= 40 ? '#f59e0b' : 
+                        effectiveness >= 20 ? '#ef4444' : '#991b1b';
+                        
+        document.getElementById(`effectiveness_${index}`).value = effectiveness;
+        document.getElementById(`effectivenessNum_${index}`).value = effectiveness;
+        document.getElementById(`effectivenessValue_${index}`).textContent = `(${effectiveness}%)`;
+        document.getElementById(`effectivenessValue_${index}`).style.color = newColor;
+        
+        const progressBar = effectivenessContainer.children[index].querySelector('div:last-child div');
+        if (progressBar) {
+          progressBar.style.width = `${effectiveness}%`;
+          progressBar.style.backgroundColor = newColor;
+        }
+      });
+      updateEffectiveness();
+    });
   }
 
   // Step 3: Final Results Panel
-  static createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy }) {
+  static createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     const riskReduction = riskEngine.calculateRiskReduction(baselineRisk, managedRisk);
     const isImprovement = managedRisk < baselineRisk;
-    const summary = riskEngine.generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy);
+    const summary = riskEngine.generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness);
 
     container.innerHTML = `
       <div class="final-results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
@@ -1372,6 +1450,42 @@ export class UIComponents {
     this.updateRiskBreakdown(selectedCountries, countries, countryRisks);
   }
 
+  static updateRiskBreakdown(selectedCountries, countries, countryRisks) {
+    const container = document.getElementById('riskBreakdownList');
+    if (!container) return;
+
+    if (selectedCountries.length === 0) {
+      container.innerHTML = '<p style="color: #6b7280; font-style: italic; text-align: center; padding: 16px;">No countries selected</p>';
+      return;
+    }
+
+    const breakdown = selectedCountries.map(countryCode => {
+      const country = countries.find(c => c.isoCode === countryCode);
+      const risk = countryRisks[countryCode] || 0;
+      const riskBand = riskEngine.getRiskBand(risk);
+      const riskColor = riskEngine.getRiskColor(risk);
+      
+      return { country, risk, riskBand, riskColor, countryCode };
+    }).sort((a, b) => b.risk - a.risk);
+
+    container.innerHTML = breakdown.map(({ country, risk, riskBand, riskColor, countryCode }) => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb;">
+        <div style="flex: 1;">
+          <span style="font-weight: 500;">${country?.name || countryCode}</span>
+          <span style="font-size: 12px; color: #6b7280; margin-left: 8px;">(${countryCode})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 600; color: ${riskColor};">${risk.toFixed(1)}</span>
+          <span style="font-size: 12px; padding: 2px 8px; border-radius: 12px; background-color: ${riskColor}20; color: ${riskColor};">
+            ${riskBand}
+          </span>
+        </div>
+      </div>
+    `).join('');
+  }
+});
+  }
+
   static createWeightingsPanel(containerId, { weights, onWeightsChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -1565,40 +1679,4 @@ export class UIComponents {
       `;
     }
 
-    this.updateRiskBreakdown(selectedCountries, countries, countryRisks);
-  }
-
-  static updateRiskBreakdown(selectedCountries, countries, countryRisks) {
-    const container = document.getElementById('riskBreakdownList');
-    if (!container) return;
-
-    if (selectedCountries.length === 0) {
-      container.innerHTML = '<p style="color: #6b7280; font-style: italic; text-align: center; padding: 16px;">No countries selected</p>';
-      return;
-    }
-
-    const breakdown = selectedCountries.map(countryCode => {
-      const country = countries.find(c => c.isoCode === countryCode);
-      const risk = countryRisks[countryCode] || 0;
-      const riskBand = riskEngine.getRiskBand(risk);
-      const riskColor = riskEngine.getRiskColor(risk);
-      
-      return { country, risk, riskBand, riskColor, countryCode };
-    }).sort((a, b) => b.risk - a.risk);
-
-    container.innerHTML = breakdown.map(({ country, risk, riskBand, riskColor, countryCode }) => `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb;">
-        <div style="flex: 1;">
-          <span style="font-weight: 500;">${country?.name || countryCode}</span>
-          <span style="font-size: 12px; color: #6b7280; margin-left: 8px;">(${countryCode})</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-weight: 600; color: ${riskColor};">${risk.toFixed(1)}</span>
-          <span style="font-size: 12px; padding: 2px 8px; border-radius: 12px; background-color: ${riskColor}20; color: ${riskColor};">
-            ${riskBand}
-          </span>
-        </div>
-      </div>
-    `).join('');
-  }
-}
+    this.updateRiskBreakdown(selectedCountries, countries, countryRisks
