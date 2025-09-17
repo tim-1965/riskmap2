@@ -24,15 +24,22 @@ export class UIComponents {
       </div>
     `;
 
+    const safeSelectedCountries = Array.isArray(selectedCountries) ? selectedCountries : [];
+    const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+
     try {
       await this._loadD3();
       const worldData = await this._loadWorldData();
-      
+
+      if (worldData?.type === 'Topology') {
+        await this._loadTopoJSON();
+      }
+
       this._renderD3Map(worldData, {
         container: 'map-wrapper',
         countries,
-        countryRisks,
-        selectedCountries,
+        countryRisks: safeCountryRisks,
+        selectedCountries: safeSelectedCountries,
         onCountrySelect,
         width,
         height: Math.max(height, 600)
@@ -45,7 +52,7 @@ export class UIComponents {
 
     } catch (error) {
       console.error('Error creating world map:', error);
-      this._createFallbackMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title });
+     this._createFallbackMap(containerId, { countries, countryRisks: safeCountryRisks, selectedCountries: safeSelectedCountries, onCountrySelect, title });
     }
   }
 
@@ -74,6 +81,36 @@ export class UIComponents {
     });
 
     return this._d3LoadingPromise;
+  }
+
+  static async _loadTopoJSON() {
+    if (typeof topojson !== 'undefined' && typeof topojson.feature === 'function') {
+      return;
+    }
+
+    if (this._topojsonLoadingPromise) return this._topojsonLoadingPromise;
+
+    this._topojsonLoadingPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector('script[data-lib="topojson-client"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', resolve, { once: true });
+        existingScript.addEventListener('error', reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/topojson-client/3.1.0/topojson-client.min.js';
+      script.async = true;
+      script.dataset.lib = 'topojson-client';
+      script.onload = () => resolve();
+      script.onerror = () => {
+        this._topojsonLoadingPromise = null;
+        reject(new Error('Failed to load TopoJSON library'));
+      };
+      document.head.appendChild(script);
+    });
+
+    return this._topojsonLoadingPromise;
   }
 
   static async _loadWorldData() {
@@ -250,7 +287,7 @@ export class UIComponents {
     if (worldData.type === 'FeatureCollection' && Array.isArray(worldData.features)) {
       return worldData.features;
     }
-    if (worldData.type === 'Topology' && worldData.objects?.countries) {
+     if (worldData.type === 'Topology' && worldData.objects?.countries) {
       const features = this._topologyToFeatures(worldData, 'countries');
       return Array.isArray(features) ? features : [];
     }
@@ -261,7 +298,19 @@ export class UIComponents {
     try {
       const object = topology.objects?.[objectName];
       if (!object) return [];
-      return []; // Simplified for brevity - full topology conversion would be here
+
+      if (typeof topojson !== 'undefined' && typeof topojson.feature === 'function') {
+        const collection = topojson.feature(topology, object);
+        if (collection?.type === 'FeatureCollection' && Array.isArray(collection.features)) {
+          return collection.features;
+        }
+        if (collection?.type === 'Feature') {
+          return [collection];
+        }
+      }
+
+      console.warn('TopoJSON library unavailable for conversion. Returning empty feature set.');
+      return [];
     } catch (error) {
       console.warn('Failed to convert topology to features:', error);
       return [];
