@@ -32,7 +32,11 @@ export class UIComponents {
       const worldData = await this._loadWorldData();
 
       if (worldData?.type === 'Topology') {
-        await this._loadTopoJSON();
+        try {
+          await this._loadTopoJSON();
+        } catch (topojsonError) {
+          console.warn('TopoJSON library unavailable - using internal converter instead.', topojsonError);
+        }
       }
 
       this._renderD3Map(worldData, {
@@ -50,9 +54,15 @@ export class UIComponents {
       const loadingElement = document.getElementById('map-loading');
       if (loadingElement) loadingElement.remove();
 
-    } catch (error) {
+        } catch (error) {
       console.error('Error creating world map:', error);
-     this._createFallbackMap(containerId, { countries, countryRisks: safeCountryRisks, selectedCountries: safeSelectedCountries, onCountrySelect, title });
+      this._createFallbackMap(containerId, {
+        countries,
+        countryRisks: safeCountryRisks,
+        selectedCountries: safeSelectedCountries,
+        onCountrySelect,
+        title
+      });
     }
   }
 
@@ -84,35 +94,69 @@ export class UIComponents {
   }
 
   static async _loadTopoJSON() {
-    if (typeof topojson !== 'undefined' && typeof topojson.feature === 'function') {
+    const libraryAvailable = () => typeof topojson !== 'undefined' && typeof topojson.feature === 'function';
+    if (libraryAvailable()) {
       return;
     }
 
     if (this._topojsonLoadingPromise) return this._topojsonLoadingPromise;
 
-    this._topojsonLoadingPromise = new Promise((resolve, reject) => {
+    this._topojsonLoadingPromise = new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (!libraryAvailable()) {
+          console.warn('TopoJSON library not available after attempted load. Falling back to internal converter.');
+        }
+        resolve();
+      };
+
       const existingScript = document.querySelector('script[data-lib="topojson-client"]');
       if (existingScript) {
-        existingScript.addEventListener('load', resolve, { once: true });
-        existingScript.addEventListener('error', reject, { once: true });
-        return;
+        const loadState = existingScript.dataset.loadState;
+        if (loadState === 'loaded') {
+          finish();
+          return;
+        }
+        if (loadState === 'failed') {
+          existingScript.remove();
+        } else {
+          existingScript.addEventListener('load', () => {
+            existingScript.dataset.loadState = 'loaded';
+            finish();
+          }, { once: true });
+          existingScript.addEventListener('error', () => {
+            existingScript.dataset.loadState = 'failed';
+            existingScript.remove();
+            finish();
+          }, { once: true });
+          return;
+        }
       }
 
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/topojson-client/3.1.0/topojson-client.min.js';
       script.async = true;
       script.dataset.lib = 'topojson-client';
-      script.onload = () => resolve();
+      script.dataset.loadState = 'loading';
+      script.onload = () => {
+        script.dataset.loadState = 'loaded';
+        finish();
+      };
       script.onerror = () => {
-        this._topojsonLoadingPromise = null;
-        reject(new Error('Failed to load TopoJSON library'));
+        script.dataset.loadState = 'failed';
+        script.remove();
+        finish();
       };
       document.head.appendChild(script);
+    }).finally(() => {
+      this._topojsonLoadingPromise = null;
     });
 
     return this._topojsonLoadingPromise;
   }
-
+  
   static async _loadWorldData() {
     try {
       const response = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
@@ -309,13 +353,166 @@ export class UIComponents {
         }
       }
 
-      console.warn('TopoJSON library unavailable for conversion. Returning empty feature set.');
+      const fallbackCollection = this._convertTopologyToFeatureCollection(topology, object);
+      if (fallbackCollection?.type === 'FeatureCollection' && Array.isArray(fallbackCollection.features)) {
+        return fallbackCollection.features;
+      }
+      if (Array.isArray(fallbackCollection)) {
+        return fallbackCollection;
+      }
+
+      console.warn('TopoJSON conversion fallback failed to produce features.');
       return [];
     } catch (error) {
       console.warn('Failed to convert topology to features:', error);
       return [];
     }
   }
+
+  static _convertTopologyToFeatureCollection(topology, object) {
+    if (!topology || !object) {
+      return { type: 'FeatureCollection', features: [] };
+    }
+
+    const transform = topology.transform || null;
+    const hasTransform = transform && Array.isArray(transform.scale) && Array.isArray(transform.translate);
+    const scale = hasTransform ? transform.scale : [1, 1];
+    const translate = hasTransform ? transform.translate : [0, 0];
+
+    const absoluteArcs = Array.isArray(topology.arcs) ? topology.arcs.map(arc => {
+      let x = 0;
+      let y = 0;
+      const points = [];
+
+      arc.forEach(point => {
+        if (!Array.isArray(point) || point.length < 2) return;
+        x += point[0];
+        y += point[1];
+        const transformed = hasTransform
+          ? [translate[0] + x * scale[0], translate[1] + y * scale[1]]
+          : [x, y];
+        points.push(transformed);
+      });
+
+      return points;
+    }) : [];
+
+    const getArc = (index) => {
+      const arcIndex = index >= 0 ? index : ~index;
+      const arc = absoluteArcs[arcIndex] || [];
+      const coordinates = arc.map(coord => coord.slice());
+      if (index >= 0) {
+        return coordinates;
+      }
+      return coordinates.reverse();
+    };
+
+    const mergeArcs = (arcIndexes = []) => {
+      const coordinates = [];
+
+      arcIndexes.forEach((arcIndex, position) => {
+        const arcCoordinates = getArc(arcIndex);
+        if (!arcCoordinates.length) return;
+
+        if (position > 0 && coordinates.length) {
+          const [lastX, lastY] = coordinates[coordinates.length - 1];
+          const [nextX, nextY] = arcCoordinates[0] || [];
+          const startIndex = (lastX === nextX && lastY === nextY) ? 1 : 0;
+          for (let i = startIndex; i < arcCoordinates.length; i++) {
+            coordinates.push(arcCoordinates[i]);
+          }
+        } else {
+          coordinates.push(...arcCoordinates);
+        }
+      });
+
+      return coordinates;
+    };
+
+    const transformPoint = (point = []) => {
+      if (!Array.isArray(point)) return point;
+      const [x = 0, y = 0] = point;
+      if (!hasTransform) {
+        return [x, y];
+      }
+      return [translate[0] + x * scale[0], translate[1] + y * scale[1]];
+    };
+
+    const convertGeometry = (geometry) => {
+      if (!geometry) return null;
+
+      switch (geometry.type) {
+        case 'GeometryCollection': {
+          const geometries = (geometry.geometries || [])
+            .map(convertGeometry)
+            .filter(Boolean);
+          return geometries.length ? { type: 'GeometryCollection', geometries } : null;
+        }
+        case 'Point':
+          return { type: 'Point', coordinates: transformPoint(geometry.coordinates) };
+        case 'MultiPoint':
+          return { type: 'MultiPoint', coordinates: (geometry.coordinates || []).map(transformPoint) };
+        case 'LineString':
+          return { type: 'LineString', coordinates: mergeArcs(geometry.arcs || []) };
+        case 'MultiLineString':
+          return { type: 'MultiLineString', coordinates: (geometry.arcs || []).map(mergeArcs) };
+        case 'Polygon':
+          return { type: 'Polygon', coordinates: (geometry.arcs || []).map(mergeArcs) };
+        case 'MultiPolygon':
+          return {
+            type: 'MultiPolygon',
+            coordinates: (geometry.arcs || []).map(rings => (rings || []).map(mergeArcs))
+          };
+        default:
+          return null;
+      }
+    };
+
+    const toFeatureArray = (obj) => {
+      if (!obj) return [];
+
+      if (obj.type === 'FeatureCollection') {
+        return (obj.features || []).flatMap(toFeatureArray);
+      }
+
+      if (obj.type === 'Feature') {
+        const geometry = convertGeometry(obj.geometry);
+        if (!geometry) return [];
+        return [{
+          type: 'Feature',
+          id: obj.id ?? obj.properties?.id ?? obj.properties?.ISO_A3 ?? undefined,
+          properties: obj.properties ? { ...obj.properties } : {},
+          geometry
+        }];
+      }
+
+      if (obj.type === 'GeometryCollection') {
+        return (obj.geometries || []).flatMap(geometry => {
+          const converted = convertGeometry(geometry);
+          if (!converted) return [];
+          return [{
+            type: 'Feature',
+            id: geometry.id ?? geometry.properties?.id ?? geometry.properties?.ISO_A3 ?? undefined,
+            properties: geometry.properties ? { ...geometry.properties } : {},
+            geometry: converted
+          }];
+        });
+      }
+
+      const geometry = convertGeometry(obj);
+      if (!geometry) return [];
+      return [{
+        type: 'Feature',
+        id: obj.id ?? obj.properties?.id ?? obj.properties?.ISO_A3 ?? undefined,
+        properties: obj.properties ? { ...obj.properties } : {},
+        geometry
+      }];
+    };
+
+    const features = toFeatureArray(object);
+    return { type: 'FeatureCollection', features };
+  }
+
 
   static _getCountryId(countryData) {
     const id = countryData.id || countryData.properties?.ISO_A3 || countryData.properties?.iso_a3;
