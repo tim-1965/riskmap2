@@ -515,8 +515,47 @@ export class UIComponents {
 
 
   static _getCountryId(countryData) {
-    const id = countryData.id || countryData.properties?.ISO_A3 || countryData.properties?.iso_a3;
-    return typeof id === 'string' ? id.toUpperCase() : id;
+    if (!countryData) return null;
+
+    const properties = countryData.properties || {};
+    const isoCandidates = [
+      properties.ISO_A3,
+      properties.iso_a3,
+      properties.ADM0_A3,
+      properties.adm0_a3,
+      properties.A3_UN,
+      properties.a3_un,
+      properties.ABBREV,
+      properties.abbrev
+    ];
+
+    for (const candidate of isoCandidates) {
+      if (typeof candidate !== 'string') continue;
+      const trimmed = candidate.trim();
+      if (!trimmed || trimmed === '-99') continue;
+      if (/^[A-Z]{3}$/i.test(trimmed)) {
+        return trimmed.toUpperCase();
+      }
+    }
+
+    const id = countryData.id;
+    if (typeof id === 'string') {
+      const trimmed = id.trim();
+      if (/^[A-Z]{3}$/i.test(trimmed)) {
+        return trimmed.toUpperCase();
+      }
+
+      // If the id is purely numeric, fall back to name-based resolution
+      if (/^\d+$/.test(trimmed)) {
+        return null;
+      }
+    }
+
+    if (typeof id === 'number') {
+      return null;
+    }
+
+    return typeof id === 'string' ? id.toUpperCase() : null;
   }
 
   static _getFeatureIsoCode(feature, metadataMap, nameLookup) {
