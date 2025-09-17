@@ -1,4 +1,4 @@
-// AppController.js - Enhanced application controller with full React functionality
+// AppController.js - Enhanced application controller with new layout
 import { dataService } from './DataService.js';
 import { riskEngine } from './RiskEngine.js';
 import { UIComponents } from './UIComponents.js';
@@ -8,45 +8,40 @@ export class AppController {
     this.state = {
       countries: [],
       weights: [...riskEngine.defaultWeights],
-      selectedCountries: ['USA', 'CHN', 'DEU'], // Default selection
-      countryVolumes: { USA: 10, CHN: 15, DEU: 8 }, // Default volumes
+      selectedCountries: ['USA', 'CHN', 'DEU'],
+      countryVolumes: { USA: 10, CHN: 15, DEU: 8 },
       countryRisks: {},
       baselineRisk: 0,
       loading: true,
       error: null,
       apiHealthy: false,
       lastUpdate: null,
-       isDirty: false // Track if user has made changes
+      isDirty: false
     };
 
     this.retryCount = 0;
     this.maxRetries = 3;
-    this.retryDelay = 2000; // 2 seconds
+    this.retryDelay = 2000;
     this.containerElement = null;
     this._waitingForContainer = false;
 
-    // Bind methods to preserve 'this' context
     this.initialize = this.initialize.bind(this);
     this.onWeightsChange = this.onWeightsChange.bind(this);
     this.onCountrySelect = this.onCountrySelect.bind(this);
     this.onVolumeChange = this.onVolumeChange.bind(this);
   }
 
- // Enhanced initialization with retry logic
   async initialize(containerId) {
     this.containerId = containerId;
-
     const container = await this._waitForContainer(containerId);
     if (!container) {
-      console.error(`❌ Unable to initialize application: container "${containerId}" not found.`);
+      console.error(`Unable to initialize application: container "${containerId}" not found.`);
       return;
     }
     this.containerElement = container;
 
     try {
       this.showLoadingState();
-      
-      // Check API health first
       this.state.apiHealthy = await dataService.healthCheck();
       
       if (!this.state.apiHealthy && this.retryCount < this.maxRetries) {
@@ -61,12 +56,8 @@ export class AppController {
       this.calculateBaselineRisk();
       this.state.lastUpdate = new Date().toISOString();
       this.render();
-      
-      console.log('✅ HRDD Risk Assessment Tool initialized successfully');
-      
-      // Enable auto-save functionality
+      console.log('HRDD Risk Assessment Tool initialized successfully');
       this.startAutoSave();
-      
     } catch (error) {
       this.handleError(error);
     }
@@ -74,11 +65,8 @@ export class AppController {
 
   async _waitForContainer(containerId, timeout = 5000) {
     if (typeof document === 'undefined') return null;
-
     let container = document.getElementById(containerId);
-    if (container) {
-      return container;
-    }
+    if (container) return container;
 
     if (document.readyState === 'loading' && !this._waitingForContainer) {
       this._waitingForContainer = true;
@@ -93,16 +81,12 @@ export class AppController {
     const start = Date.now();
     while (!container && Date.now() - start < timeout) {
       container = document.getElementById(containerId);
-      if (container) {
-        return container;
-      }
+      if (container) return container;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-
     return container || null;
   }
 
-  // Enhanced loading state
   showLoadingState() {
     const container = this.containerElement || document.getElementById(this.containerId);
     if (!container) return;
@@ -117,7 +101,6 @@ export class AppController {
             Initializing application and loading country data...
           </p>
         </div>
-        
         <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center;">
           <div style="margin-bottom: 20px;">
             <div style="width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; margin: 0 auto 16px; animation: spin 1s linear infinite;"></div>
@@ -126,13 +109,11 @@ export class AppController {
               ${this.retryCount > 0 ? `Retry ${this.retryCount}/${this.maxRetries}` : 'Connecting to API and loading data...'}
             </div>
           </div>
-          
           <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 12px; border-radius: 6px; font-size: 14px;">
             <strong>Please wait:</strong> Loading country risk data and initializing interactive components.
           </div>
         </div>
       </div>
-      
       <style>
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -142,21 +123,17 @@ export class AppController {
     `;
   }
 
-  // Enhanced country loading with better error handling
   async loadCountries() {
     try {
       this.state.loading = true;
       const countries = await dataService.getAllCountries();
-      
       if (!countries || countries.length === 0) {
         throw new Error('No countries data received from API');
       }
-      
       this.state.countries = Array.isArray(countries) ? countries : [];
       this.state.loading = false;
       this.state.error = null;
-      
-      console.log(`✅ Loaded ${this.state.countries.length} countries`);
+      console.log(`Loaded ${this.state.countries.length} countries`);
     } catch (error) {
       this.state.loading = false;
       this.state.error = 'Failed to load countries: ' + error.message;
@@ -164,7 +141,6 @@ export class AppController {
     }
   }
 
-  // Enhanced risk calculations with validation
   calculateAllRisks() {
     try {
       const newCountryRisks = {};
@@ -180,22 +156,19 @@ export class AppController {
       });
       
       this.state.countryRisks = newCountryRisks;
-      console.log(`📊 Calculated risks for ${calculatedCount} countries`);
+      console.log(`Calculated risks for ${calculatedCount} countries`);
     } catch (error) {
       console.error('Error calculating country risks:', error);
       this.handleError(new Error('Failed to calculate country risks'));
     }
   }
 
-  // Validate country data before calculations
   validateCountryData(country) {
     if (!country || !country.isoCode) return false;
-    
     const requiredFields = ['itucRightsRating', 'corruptionIndex', 'migrantWorkerPrevalence', 'wjpIndex', 'walkfreeSlaveryIndex'];
     return requiredFields.some(field => typeof country[field] === 'number' && country[field] >= 0);
   }
 
-  // Enhanced baseline risk calculation
   calculateBaselineRisk() {
     try {
       this.state.baselineRisk = riskEngine.calculateBaselineRisk(
@@ -203,15 +176,13 @@ export class AppController {
         this.state.countryVolumes,
         this.state.countryRisks
       );
-      
-      console.log(`📈 Baseline risk calculated: ${this.state.baselineRisk.toFixed(2)}`);
+      console.log(`Baseline risk calculated: ${this.state.baselineRisk.toFixed(2)}`);
     } catch (error) {
       console.error('Error calculating baseline risk:', error);
       this.state.baselineRisk = 0;
     }
   }
 
-  // Enhanced weight change handler with debouncing
   onWeightsChange = (newWeights) => {
     if (!riskEngine.validateWeights(newWeights)) {
       console.warn('Invalid weights provided:', newWeights);
@@ -221,27 +192,22 @@ export class AppController {
     this.state.weights = [...newWeights];
     this.state.isDirty = true;
     
-    // Debounced recalculation
-    if (this.weightsTimeout) {
-      clearTimeout(this.weightsTimeout);
-    }
+    if (this.weightsTimeout) clearTimeout(this.weightsTimeout);
     
     this.weightsTimeout = setTimeout(() => {
       this.calculateAllRisks();
       this.calculateBaselineRisk();
       this.updateUI();
       this.state.lastUpdate = new Date().toISOString();
-    }, 300); // 300ms debounce
+    }, 300);
   }
 
-  // Enhanced country selection with validation
   onCountrySelect = (countryCode) => {
     if (!countryCode || typeof countryCode !== 'string') {
       console.warn('Invalid country code provided:', countryCode);
       return;
     }
 
-    // Verify country exists in our data
     const country = this.state.countries.find(c => c.isoCode === countryCode);
     if (!country) {
       console.warn('Country not found in data:', countryCode);
@@ -251,15 +217,13 @@ export class AppController {
     this.state.isDirty = true;
 
     if (this.state.selectedCountries.includes(countryCode)) {
-      // Remove country
       this.state.selectedCountries = this.state.selectedCountries.filter(code => code !== countryCode);
       delete this.state.countryVolumes[countryCode];
-      console.log(`➖ Removed country: ${country.name}`);
+      console.log(`Removed country: ${country.name}`);
     } else {
-      // Add country with default volume
       this.state.selectedCountries.push(countryCode);
       this.state.countryVolumes[countryCode] = 10;
-      console.log(`➕ Added country: ${country.name}`);
+      console.log(`Added country: ${country.name}`);
     }
     
     this.calculateBaselineRisk();
@@ -267,7 +231,6 @@ export class AppController {
     this.state.lastUpdate = new Date().toISOString();
   }
 
-  // Enhanced volume change handler with validation
   onVolumeChange = (countryCode, volume) => {
     const numericVolume = parseFloat(volume);
     
@@ -285,22 +248,17 @@ export class AppController {
     this.state.countryVolumes[countryCode] = Math.max(0, numericVolume);
     this.state.isDirty = true;
     
-    // Debounced recalculation
-    if (this.volumeTimeout) {
-      clearTimeout(this.volumeTimeout);
-    }
+    if (this.volumeTimeout) clearTimeout(this.volumeTimeout);
     
     this.volumeTimeout = setTimeout(() => {
       this.calculateBaselineRisk();
       this.updateUI();
       this.state.lastUpdate = new Date().toISOString();
-    }, 500); // 500ms debounce for volume changes
+    }, 500);
   }
 
-  // Enhanced error handling with user-friendly messages
   handleError(error) {
     console.error('Application error:', error);
-    
     const userFriendlyMessage = this.getUserFriendlyErrorMessage(error);
     this.state.error = userFriendlyMessage;
     this.state.loading = false;
@@ -317,11 +275,9 @@ export class AppController {
     if (error.message.includes('No countries data')) {
       return 'No country data available. The server may be experiencing issues.';
     }
-    
     return `Application error: ${error.message}`;
   }
 
-   // Enhanced rendering with better layout and responsiveness
   render() {
     const container = this.containerElement || document.getElementById(this.containerId);
     if (!container) return;
@@ -349,19 +305,18 @@ export class AppController {
                 Load Demo Data
               </button>
             </div>
-            <div style="font-size: 12px; margin-top: 16px; opacity: 0.8;">
-              If the problem persists, please contact support or try again later.
-            </div>
           </div>
         </div>
       `;
       return;
     }
 
-    // Main application layout with enhanced styling
+    // NEW LAYOUT STRUCTURE
     container.innerHTML = `
       <div style="min-height: 100vh; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;">
         <div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+          
+          <!-- Header -->
           <header style="text-align: center; margin-bottom: 40px; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <h1 style="font-size: 36px; font-weight: bold; color: #1f2937; margin-bottom: 12px; line-height: 1.2;">
               Human Rights Due Diligence Risk Assessment Tool
@@ -383,15 +338,27 @@ export class AppController {
             </div>
           </header>
 
-          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px;" id="mainGrid">
-            <div id="controlPanel" style="min-height: 600px;">
-              <!-- Control Panel will be rendered here -->
+          <!-- MAP SECTION (TOP) -->
+          <div id="mapContainer" style="margin-bottom: 32px;">
+            <!-- Map will be rendered here -->
+          </div>
+
+          <!-- MIDDLE SECTION: Country Selection + Results -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="middleGrid">
+            <div id="countrySelectionPanel">
+              <!-- Country Selection Panel will be rendered here -->
             </div>
-            <div id="mapContainer" style="min-height: 600px;">
-              <!-- Map will be rendered here -->
+            <div id="resultsPanel">
+              <!-- Results Panel will be rendered here -->
             </div>
           </div>
 
+          <!-- BOTTOM SECTION: Risk Factor Weightings -->
+          <div id="weightingsPanel" style="margin-bottom: 24px;">
+            <!-- Weightings Panel will be rendered here -->
+          </div>
+
+          <!-- Footer Info -->
           <div style="background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%); border: 1px solid #93c5fd; color: #1e40af; padding: 24px; border-radius: 12px; margin-top: 24px;">
             <div style="display: flex; align-items: start; gap: 16px;">
               <div style="font-size: 24px;">🚀</div>
@@ -411,53 +378,51 @@ export class AppController {
 
         <style>
           @media (max-width: 768px) {
-            #mainGrid {
+            #middleGrid {
               grid-template-columns: 1fr !important;
             }
-          }
-          
-          .loading-shimmer {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-          }
-          
-          @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
           }
         </style>
       </div>
     `;
 
-    // Render individual components
     this.renderComponents();
   }
 
-  // Enhanced component rendering
   renderComponents() {
     try {
-      // Render control panel
-      UIComponents.createControlPanel('controlPanel', {
-        weights: this.state.weights,
-        onWeightsChange: this.onWeightsChange,
-        countries: this.state.countries,
-        selectedCountries: this.state.selectedCountries,
-        countryVolumes: this.state.countryVolumes,
-        onCountrySelect: this.onCountrySelect,
-        onVolumeChange: this.onVolumeChange,
-        baselineRisk: this.state.baselineRisk
-      });
-
-      // Render enhanced world map
+      // Render map at top (larger size)
       UIComponents.createWorldMap('mapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
         onCountrySelect: this.onCountrySelect,
-        title: 'Baseline Risk Assessment Map',
-        height: 500,
-        width: 960
+        title: 'Global Human Rights Risk Assessment Map',
+        height: 600,
+        width: 1200
+      });
+
+      // Render country selection panel (middle left)
+      UIComponents.createCountrySelectionPanel('countrySelectionPanel', {
+        countries: this.state.countries,
+        selectedCountries: this.state.selectedCountries,
+        countryVolumes: this.state.countryVolumes,
+        onCountrySelect: this.onCountrySelect,
+        onVolumeChange: this.onVolumeChange
+      });
+
+      // Render results panel (middle right)
+      UIComponents.createResultsPanel('resultsPanel', {
+        selectedCountries: this.state.selectedCountries,
+        countries: this.state.countries,
+        countryRisks: this.state.countryRisks,
+        baselineRisk: this.state.baselineRisk
+      });
+
+      // Render weightings panel (bottom)
+      UIComponents.createWeightingsPanel('weightingsPanel', {
+        weights: this.state.weights,
+        onWeightsChange: this.onWeightsChange
       });
       
     } catch (error) {
@@ -466,42 +431,8 @@ export class AppController {
     }
   }
 
-  // Enhanced UI update method
   updateUI() {
     try {
-      // Update control panel baseline display
-      const baselineDisplay = document.getElementById('baselineDisplay');
-      if (baselineDisplay) {
-        const riskColor = riskEngine.getRiskColor(this.state.baselineRisk);
-        const riskBand = riskEngine.getRiskBand(this.state.baselineRisk);
-        
-        baselineDisplay.style.backgroundColor = `${riskColor}20`;
-        baselineDisplay.style.borderColor = riskColor;
-        baselineDisplay.innerHTML = `
-          <div style="text-align: center;">
-            <div style="font-size: 48px; font-weight: bold; color: ${riskColor}; margin-bottom: 8px;">
-              ${this.state.baselineRisk.toFixed(1)}
-            </div>
-            <div style="font-size: 20px; font-weight: 600; color: ${riskColor}; margin-bottom: 8px;">
-              ${riskBand} Risk
-            </div>
-            <div style="font-size: 14px; color: #6b7280;">
-              Based on ${this.state.selectedCountries.length} selected ${this.state.selectedCountries.length === 1 ? 'country' : 'countries'}
-            </div>
-          </div>
-        `;
-      }
-
-      // Update selected countries display
-      UIComponents.updateSelectedCountriesDisplay(
-        this.state.selectedCountries,
-        this.state.countries,
-        this.state.countryVolumes,
-        this.onCountrySelect,
-        this.onVolumeChange
-      );
-
-      // Update country dropdown
       const countrySelect = document.getElementById('countrySelect');
       if (countrySelect) {
         const currentValue = countrySelect.value;
@@ -518,37 +449,40 @@ export class AppController {
         countrySelect.value = currentValue;
       }
 
-      // Re-render map with updated data
+      UIComponents.updateSelectedCountriesDisplay(
+        this.state.selectedCountries,
+        this.state.countries,
+        this.state.countryVolumes,
+        this.onCountrySelect,
+        this.onVolumeChange
+      );
+
+      UIComponents.updateResultsPanel(this.state.selectedCountries, this.state.countries, this.state.countryRisks, this.state.baselineRisk);
+
       UIComponents.createWorldMap('mapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
         onCountrySelect: this.onCountrySelect,
-        title: 'Baseline Risk Assessment Map',
-        height: 500,
-        width: 960
+        title: 'Global Human Rights Risk Assessment Map',
+        height: 600,
+        width: 1200
       });
-
     } catch (error) {
       console.error('Error updating UI:', error);
     }
   }
 
-  // Auto-save functionality
   startAutoSave() {
-    if (this.autoSaveInterval) {
-      clearInterval(this.autoSaveInterval);
-    }
-
+    if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
     this.autoSaveInterval = setInterval(() => {
       if (this.state.isDirty) {
         this.saveState();
         this.state.isDirty = false;
       }
-    }, 30000); // Save every 30 seconds if dirty
+    }, 30000);
   }
 
-  // Save state to localStorage (if available)
   saveState() {
     try {
       const stateToSave = {
@@ -557,18 +491,15 @@ export class AppController {
         countryVolumes: this.state.countryVolumes,
         lastSaved: new Date().toISOString()
       };
-      
-      // Note: localStorage might not be available in all Wix environments
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('hrdd-risk-state', JSON.stringify(stateToSave));
-        console.log('💾 State saved automatically');
+        console.log('State saved automatically');
       }
     } catch (error) {
       console.warn('Failed to save state:', error);
     }
   }
 
-  // Load saved state
   loadSavedState() {
     try {
       if (typeof localStorage !== 'undefined') {
@@ -580,7 +511,7 @@ export class AppController {
             selectedCountries: parsedState.selectedCountries || this.state.selectedCountries,
             countryVolumes: parsedState.countryVolumes || this.state.countryVolumes
           });
-          console.log('📂 Loaded saved state from:', parsedState.lastSaved);
+          console.log('Loaded saved state from:', parsedState.lastSaved);
           return true;
         }
       }
@@ -590,7 +521,6 @@ export class AppController {
     return false;
   }
 
-  // Load demo data fallback
   loadDemoData() {
     const demoCountries = [
       { name: "United States of America", isoCode: "USA", itucRightsRating: 67.5, corruptionIndex: 35.0, migrantWorkerPrevalence: 9.9, wjpIndex: 43.7, walkfreeSlaveryIndex: 3.3, baseRiskScore: 48 },
@@ -606,21 +536,18 @@ export class AppController {
     this.state.countries = demoCountries;
     this.state.error = null;
     this.state.loading = false;
-    this.state.apiHealthy = false; // Demo mode
+    this.state.apiHealthy = false;
     
     this.calculateAllRisks();
     this.calculateBaselineRisk();
     this.render();
-    
-    console.log('📄 Loaded demo data with', demoCountries.length, 'countries');
+    console.log('Loaded demo data with', demoCountries.length, 'countries');
   }
 
-  // Get current state (useful for debugging or external access)
   getState() {
     return { ...this.state };
   }
 
-  // Set state (useful for loading saved configurations)
   setState(newState) {
     this.state = { ...this.state, ...newState };
     this.calculateAllRisks();
@@ -629,7 +556,6 @@ export class AppController {
     this.state.lastUpdate = new Date().toISOString();
   }
 
-  // Export current configuration
   exportConfiguration() {
     const config = {
       weights: this.state.weights,
@@ -649,27 +575,14 @@ export class AppController {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    console.log('📥 Configuration exported');
+    console.log('Configuration exported');
   }
 
-  // Cleanup method
   destroy() {
-    if (this.autoSaveInterval) {
-      clearInterval(this.autoSaveInterval);
-    }
-    if (this.weightsTimeout) {
-      clearTimeout(this.weightsTimeout);
-    }
-    if (this.volumeTimeout) {
-      clearTimeout(this.volumeTimeout);
-    }
-    
-    // Save final state before cleanup
-    if (this.state.isDirty) {
-      this.saveState();
-    }
-    
-    console.log('🧹 App controller cleaned up');
+    if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
+    if (this.weightsTimeout) clearTimeout(this.weightsTimeout);
+    if (this.volumeTimeout) clearTimeout(this.volumeTimeout);
+    if (this.state.isDirty) this.saveState();
+    console.log('App controller cleaned up');
   }
 }
