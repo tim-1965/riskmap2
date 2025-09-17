@@ -8,8 +8,8 @@ export class AppController {
     this.state = {
       countries: [],
       weights: [...riskEngine.defaultWeights],
-      selectedCountries: ['USA', 'CHN', 'DEU'],
-      countryVolumes: { USA: 10, CHN: 15, DEU: 8 },
+      selectedCountries: [],
+      countryVolumes: {},
       countryRisks: {},
       baselineRisk: 0,
       loading: true,
@@ -313,15 +313,10 @@ export class AppController {
       return;
     }
 
-    // DEBUG: OBVIOUS VISUAL INDICATOR - BIG RED BANNER
     container.innerHTML = `
-      <div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); color: white; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-        🎉 NEW LAYOUT ACTIVE! 🎉 Map Top → Middle Panels → Weightings Bottom
-      </div>
-      
       <div style="min-height: 100vh; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;">
         <div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
-          
+
           <!-- Header -->
           <header style="text-align: center; margin-bottom: 40px; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <h1 style="font-size: 36px; font-weight: bold; color: #1f2937; margin-bottom: 12px; line-height: 1.2;">
@@ -330,9 +325,6 @@ export class AppController {
             <p style="font-size: 18px; color: #6b7280; margin-bottom: 16px;">
               Step 1: Calculate Baseline Risk for Supply Chain Countries
             </p>
-            <div style="background: #22c55e; color: white; padding: 8px; border-radius: 6px; font-weight: bold;">
-              ✅ NEW LAYOUT LOADED - Check console for "NEW LAYOUT VERSION"
-            </div>
             <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: #6b7280; margin-top: 16px;">
               <div style="display: flex; align-items: center; gap: 4px;">
                 <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>

@@ -56,13 +56,20 @@ export class RiskEngine {
 
   // Calculate baseline risk for portfolio (sumproduct of volumes and risks)
   calculateBaselineRisk(selectedCountries, countryVolumes, countryRisks) {
+    if (!Array.isArray(selectedCountries) || selectedCountries.length === 0) {
+      return 0;
+    }
+
+    const safeVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
+    const safeRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+
     let totalVolumeRisk = 0;
     let totalVolume = 0;
 
     selectedCountries.forEach(countryCode => {
-      const volume = countryVolumes[countryCode] || 10; // Default volume is 10
-      const risk = countryRisks[countryCode] || 0;
-      
+      const volume = typeof safeVolumes[countryCode] === 'number' ? safeVolumes[countryCode] : 10; // Default volume is 10
+      const risk = typeof safeRisks[countryCode] === 'number' ? safeRisks[countryCode] : 0;
+
       totalVolumeRisk += volume * risk;
       totalVolume += volume;
     });

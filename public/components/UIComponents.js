@@ -760,27 +760,33 @@ export class UIComponents {
   }
 
   // Results Panel (Middle Right)
-  static createResultsPanel(containerId, { selectedCountries, countries, countryRisks, baselineRisk }) {
+   static createResultsPanel(containerId, { selectedCountries, countries, countryRisks, baselineRisk }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const riskColor = riskEngine.getRiskColor(baselineRisk);
-    const riskBand = riskEngine.getRiskBand(baselineRisk);
+    const hasSelections = selectedCountries.length > 0;
+    const riskColor = hasSelections ? riskEngine.getRiskColor(baselineRisk) : '#6b7280';
+    const riskBand = hasSelections ? `${riskEngine.getRiskBand(baselineRisk)} Risk` : 'No Countries Selected';
+    const selectionDetails = hasSelections
+      ? `Based on ${selectedCountries.length} selected ${selectedCountries.length === 1 ? 'country' : 'countries'}`
+      : 'Select countries to calculate a baseline risk.';
+    const baselineValue = hasSelections ? baselineRisk.toFixed(1) : '—';
+    const baselineBackground = hasSelections ? `${riskColor}15` : '#f3f4f6';
 
     container.innerHTML = `
       <div class="results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
         <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Portfolio Risk Assessment</h2>
-        
-        <div id="baselineDisplay" style="padding: 32px; border-radius: 12px; border: 3px solid ${riskColor}; background-color: ${riskColor}15; margin-bottom: 24px;">
+
+        <div id="baselineDisplay" style="padding: 32px; border-radius: 12px; border: 3px solid ${riskColor}; background-color: ${baselineBackground}; margin-bottom: 24px;">
           <div style="text-align: center;">
             <div style="font-size: 56px; font-weight: bold; color: ${riskColor}; margin-bottom: 12px;">
-              ${baselineRisk.toFixed(1)}
+              ${baselineValue}
             </div>
             <div style="font-size: 24px; font-weight: 600; color: ${riskColor}; margin-bottom: 12px;">
-              ${riskBand} Risk
+              ${riskBand}
             </div>
             <div style="font-size: 16px; color: #6b7280;">
-              Based on ${selectedCountries.length} selected ${selectedCountries.length === 1 ? 'country' : 'countries'}
+              ${selectionDetails}
             </div>
           </div>
         </div>
@@ -905,6 +911,8 @@ export class UIComponents {
     const container = document.getElementById('selectedCountries');
     if (!container) return;
 
+    const safeCountryVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
+
     if (selectedCountries.length === 0) {
       container.innerHTML = '<p style="color: #6b7280; font-style: italic; padding: 12px; text-align: center; background-color: #f9fafb; border-radius: 4px;">No countries selected. Use the dropdown above or click on the map.</p>';
       return;
@@ -918,10 +926,10 @@ export class UIComponents {
       </div>
     `;
 
-    const countryList = document.getElementById('countryList');
+     const countryList = document.getElementById('countryList');
     selectedCountries.forEach((countryCode, index) => {
       const country = countries.find(c => c.isoCode === countryCode);
-      const volume = countryVolumes[countryCode] || 10;
+      const volume = typeof safeCountryVolumes[countryCode] === 'number' ? safeCountryVolumes[countryCode] : 10;
 
       const countryItem = document.createElement('div');
       countryItem.style.cssText = `
@@ -969,21 +977,27 @@ export class UIComponents {
   static updateResultsPanel(selectedCountries, countries, countryRisks, baselineRisk) {
     const baselineDisplay = document.getElementById('baselineDisplay');
     if (baselineDisplay) {
-      const riskColor = riskEngine.getRiskColor(baselineRisk);
-      const riskBand = riskEngine.getRiskBand(baselineRisk);
-      
-      baselineDisplay.style.backgroundColor = `${riskColor}15`;
+      const hasSelections = selectedCountries.length > 0;
+      const riskColor = hasSelections ? riskEngine.getRiskColor(baselineRisk) : '#6b7280';
+      const riskBand = hasSelections ? `${riskEngine.getRiskBand(baselineRisk)} Risk` : 'No Countries Selected';
+      const selectionDetails = hasSelections
+        ? `Based on ${selectedCountries.length} selected ${selectedCountries.length === 1 ? 'country' : 'countries'}`
+        : 'Select countries to calculate a baseline risk.';
+      const baselineValue = hasSelections ? baselineRisk.toFixed(1) : '—';
+      const baselineBackground = hasSelections ? `${riskColor}15` : '#f3f4f6';
+
+      baselineDisplay.style.backgroundColor = baselineBackground;
       baselineDisplay.style.borderColor = riskColor;
       baselineDisplay.innerHTML = `
         <div style="text-align: center;">
           <div style="font-size: 56px; font-weight: bold; color: ${riskColor}; margin-bottom: 12px;">
-            ${baselineRisk.toFixed(1)}
+            ${baselineValue}
           </div>
           <div style="font-size: 24px; font-weight: 600; color: ${riskColor}; margin-bottom: 12px;">
-            ${riskBand} Risk
+            ${riskBand}
           </div>
           <div style="font-size: 16px; color: #6b7280;">
-            Based on ${selectedCountries.length} selected ${selectedCountries.length === 1 ? 'country' : 'countries'}
+            ${selectionDetails}
           </div>
         </div>
       `;
