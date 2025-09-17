@@ -1483,8 +1483,6 @@ export class UIComponents {
       </div>
     `).join('');
   }
-});
-  }
 
   static createWeightingsPanel(containerId, { weights, onWeightsChange }) {
     const container = document.getElementById(containerId);
@@ -1679,4 +1677,6 @@ export class UIComponents {
       `;
     }
 
-    this.updateRiskBreakdown(selectedCountries, countries, countryRisks
+    this.updateRiskBreakdown(selectedCountries, countries, countryRisks);
+  }
+}

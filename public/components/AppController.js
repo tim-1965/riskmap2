@@ -536,21 +536,9 @@ export class AppController {
 
       case 2:
         return `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" id="step2Grid">
-            <div id="hrddStrategyPanel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-              <h2 style="color: #1f2937; margin-bottom: 16px;">HRDD Strategy Configuration</h2>
-              <p style="color: #6b7280;">Configure your Human Rights Due Diligence strategy mix and transparency effectiveness.</p>
-              <div style="margin-top: 20px; padding: 16px; background-color: #dbeafe; border-radius: 8px;">
-                <strong>Coming Soon:</strong> Interactive HRDD strategy configuration panel
-              </div>
-            </div>
-            <div id="transparencyPanel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-              <h2 style="color: #1f2937; margin-bottom: 16px;">Transparency Effectiveness</h2>
-              <p style="color: #6b7280;">Set the effectiveness rates for each HRDD approach.</p>
-              <div style="margin-top: 20px; padding: 16px; background-color: #fef3c7; border-radius: 8px;">
-                <strong>Coming Soon:</strong> Transparency effectiveness controls
-              </div>
-            </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="step2Grid">
+            <div id="hrddStrategyPanel"></div>
+            <div id="transparencyPanel"></div>
           </div>
 
           <style>
@@ -665,7 +653,7 @@ export class AppController {
     try {
       if (this.state.currentStep === 1) {
         console.log("Rendering Step 1 components");
-        
+
         // Render Step 1 components (existing functionality)
         UIComponents.createWorldMap('baselineMapContainer', {
           countries: this.state.countries,
@@ -696,9 +684,21 @@ export class AppController {
           weights: this.state.weights,
           onWeightsChange: this.onWeightsChange
         });
+      } else if (this.state.currentStep === 2) {
+        console.log("Rendering Step 2 components");
+
+        UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
+          strategy: this.state.hrddStrategy,
+          onStrategyChange: this.onHRDDStrategyChange
+        });
+
+        UIComponents.createTransparencyPanel('transparencyPanel', {
+          transparency: this.state.transparencyEffectiveness,
+          onTransparencyChange: this.onTransparencyChange
+        });
       } else if (this.state.currentStep === 3) {
         console.log("Rendering Step 3 components");
-        
+
         // Render Step 3 components (responsiveness strategy and effectiveness)
         UIComponents.createResponsivenessPanel('responsivenessPanel', {
           responsiveness: this.state.responsivenessStrategy,
