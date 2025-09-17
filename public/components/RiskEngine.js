@@ -5,29 +5,33 @@ export class RiskEngine {
     this.defaultWeights = [20, 20, 5, 10, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
     // Step 2: HRDD Strategy defaults
-    this.defaultHRDDStrategy = [5, 20, 30, 30, 15]; // Continuous monitoring, Unannounced audit, Announced audit, SAQ, Do nothing
-    this.defaultTransparencyEffectiveness = [85, 50, 15, 5, 0]; // Effectiveness percentages for each strategy
-    
-    // Step 3: Responsiveness Strategy defaults  
-    this.defaultResponsivenessStrategy = [100, 80, 40, 20, -20, 0]; // Real time, 1 week, 2 weeks, 4 weeks, 3 months, no action
-    this.defaultResponsivenessEffectiveness = [100, 80, 60, 40, 20, 0]; // Effectiveness percentages for each responsiveness approach
-    
+   this.defaultHRDDStrategy = [30, 20, 15, 15, 10, 10]; // Mix of monitoring tools from highest to lowest transparency
+    this.defaultTransparencyEffectiveness = [85, 45, 25, 15, 10, 8]; // Mid-point transparency assumptions in percentages
+
+    // Step 3: Responsiveness Strategy defaults
+    this.defaultResponsivenessStrategy = [10, 15, 20, 25, 20, 10]; // Portfolio of response levers from weakest to strongest
+    this.defaultResponsivenessEffectiveness = [5, 25, 50, 60, 70, 80]; // Mid-point response effectiveness assumptions in percentages
+
+    // Focus defaults for directing transparency/response capacity to higher-risk countries
+    this.defaultFocus = 0.6;
+
     // Strategy labels
     this.hrddStrategyLabels = [
-      'Continuous Monitoring',
-      'Unannounced Social Audit', 
-      'Announced/Self-Arranged Social Audit',
-      'Self-Assessment Questionnaire (SAQ)',
-      'Do Nothing'
+      'Continuous Worker Voice (daily)',
+      'Worker Surveys (quarterly)',
+      'Unannounced Social Audits',
+      'Announced Social Audits',
+      'Supplier Self-Reporting',
+      'Desk-Based Risk Assessment'
     ];
-    
+
     this.responsivenessLabels = [
-      'Real Time Response',
-      '1 Week Response',
-      '2 Weeks Response', 
-      '4 Weeks Response',
-      '3 Months Response',
-      'No Action'
+      'No Formal Response',
+      'Reactive / Ad Hoc Actions',
+      'Corrective Action Plans',
+      'Supplier Development Programmes',
+      'Binding Commercial Levers',
+      'Industry Collaboration & Agreements'
     ];
     
     // Risk band definitions
@@ -64,15 +68,22 @@ export class RiskEngine {
     return totalWeight > 0 ? weightedSum / totalWeight : 0;
   }
 
-  // Step 1: Calculate baseline risk for portfolio (sumproduct of volumes and risks)
-  calculateBaselineRisk(selectedCountries, countryVolumes, countryRisks) {
+  // Step 1: Calculate portfolio risk metrics including baseline risk and concentration factor
+  calculatePortfolioMetrics(selectedCountries, countryVolumes, countryRisks) {
     if (!Array.isArray(selectedCountries) || selectedCountries.length === 0) {
-      return 0;
+      return {
+        baselineRisk: 0,
+        totalVolume: 0,
+        weightedRisk: 0,
+        weightedRiskSquares: 0,
+        riskConcentration: 1
+      };
     }
 
     const safeVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
     const safeRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
 
+    const portfolioEntries = [];
     let totalVolumeRisk = 0;
     let totalVolume = 0;
 
@@ -82,12 +93,37 @@ export class RiskEngine {
 
       totalVolumeRisk += volume * risk;
       totalVolume += volume;
+      portfolioEntries.push({ countryCode, volume, risk });
     });
 
-    return totalVolume > 0 ? totalVolumeRisk / totalVolume : 0;
+    const baselineRisk = totalVolume > 0 ? totalVolumeRisk / totalVolume : 0;
+
+    let weightedRiskSquares = 0;
+    if (totalVolume > 0) {
+      portfolioEntries.forEach(entry => {
+        const share = entry.volume / totalVolume;
+        weightedRiskSquares += share * Math.pow(entry.risk || 0, 2);
+      });
+    }
+
+    const riskConcentration = baselineRisk > 0 && weightedRiskSquares > 0
+      ? Math.max(1, weightedRiskSquares / Math.pow(baselineRisk, 2))
+      : 1;
+
+    return {
+      baselineRisk,
+      totalVolume,
+      weightedRisk: totalVolumeRisk,
+      weightedRiskSquares,
+      riskConcentration
+    };
   }
 
-  // Step 2 & 3: Calculate overall transparency effectiveness
+  // Step 1: Calculate baseline risk for portfolio (sumproduct of volumes and risks)
+  calculateBaselineRisk(selectedCountries, countryVolumes, countryRisks) {
+    return this.calculatePortfolioMetrics(selectedCountries, countryVolumes, countryRisks).baselineRisk;
+  }
+
   calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness) {
     if (!this.validateHRDDStrategy(hrddStrategy) || !this.validateTransparency(transparencyEffectiveness)) {
       return 0;
@@ -96,10 +132,12 @@ export class RiskEngine {
     let weightedEffectiveness = 0;
     let totalWeight = 0;
 
-    for (let i = 0; i < hrddStrategy.length; i++) {
-      const strategyWeight = hrddStrategy[i];
-      const effectiveness = transparencyEffectiveness[i] / 100; // Convert percentage to decimal
-      
+    const length = Math.min(hrddStrategy.length, transparencyEffectiveness.length);
+
+    for (let i = 0; i < length; i++) {
+      const strategyWeight = Math.max(0, hrddStrategy[i]);
+      const effectiveness = (transparencyEffectiveness[i] || 0) / 100; // Convert percentage to decimal
+
       weightedEffectiveness += strategyWeight * effectiveness;
       totalWeight += strategyWeight;
     }
@@ -113,33 +151,49 @@ export class RiskEngine {
       return 0;
     }
 
-    // Find the highest weighted responsiveness approach
-    let maxWeight = 0;
-    let primaryIndex = 0;
+    let weightedEffectiveness = 0;
+    let totalWeight = 0;
 
-    for (let i = 0; i < responsivenessStrategy.length; i++) {
-      if (responsivenessStrategy[i] > maxWeight) {
-        maxWeight = responsivenessStrategy[i];
-        primaryIndex = i;
-      }
+    const length = Math.min(responsivenessStrategy.length, responsivenessEffectiveness.length);
+
+    for (let i = 0; i < length; i++) {
+      const strategyWeight = Math.max(0, responsivenessStrategy[i]);
+      const effectiveness = (responsivenessEffectiveness[i] || 0) / 100; // Convert percentage to decimal
+
+      weightedEffectiveness += strategyWeight * effectiveness;
+      totalWeight += strategyWeight;
     }
 
-    return maxWeight > 0 ? responsivenessEffectiveness[primaryIndex] / 100 : 0; // Convert percentage to decimal
+    return totalWeight > 0 ? weightedEffectiveness / totalWeight : 0;
   }
 
   // Step 3: Calculate final managed risk
-  calculateManagedRisk(baselineRisk, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness) {
+  calculateManagedRisk(
+    baselineRisk,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    focus = this.defaultFocus ?? 0,
+    riskConcentration = 1
+  ) {
     if (baselineRisk <= 0) {
       return 0;
     }
 
     const overallTransparencyEffectiveness = this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
     const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
-    
-    // Formula: Managed Risk = Baseline Risk × (1 - Transparency Effectiveness × Responsiveness Effectiveness)
-    const riskReductionFactor = overallTransparencyEffectiveness * overallResponsivenessEffectiveness;
-    const managedRisk = baselineRisk * (1 - riskReductionFactor);
-    
+
+    const combinedEffectiveness = overallTransparencyEffectiveness * overallResponsivenessEffectiveness;
+
+    const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+    const sanitizedConcentration = Number.isFinite(riskConcentration) && riskConcentration > 0
+      ? Math.max(1, riskConcentration)
+      : 1;
+
+    const focusMultiplier = (1 - sanitizedFocus) + sanitizedFocus * sanitizedConcentration;
+    const managedRisk = baselineRisk * (1 - combinedEffectiveness * focusMultiplier);
+
     // Ensure managed risk doesn't go below 0
     return Math.max(0, managedRisk);
   }
@@ -189,48 +243,48 @@ export class RiskEngine {
   }
 
   validateHRDDStrategy(strategy) {
-    if (!Array.isArray(strategy) || strategy.length !== 5) {
+    if (!Array.isArray(strategy) || strategy.length !== this.hrddStrategyLabels.length) {
       return false;
     }
-    
-    return strategy.every(weight => 
-      typeof weight === 'number' && 
+
+    return strategy.every(weight =>
+      typeof weight === 'number' &&
       weight >= 0 && 
       weight <= 100
     );
   }
 
   validateTransparency(transparency) {
-    if (!Array.isArray(transparency) || transparency.length !== 5) {
+    if (!Array.isArray(transparency) || transparency.length !== this.hrddStrategyLabels.length) {
       return false;
     }
-    
-    return transparency.every(effectiveness => 
-      typeof effectiveness === 'number' && 
+
+    return transparency.every(effectiveness =>
+      typeof effectiveness === 'number' &&
       effectiveness >= 0 && 
       effectiveness <= 100
     );
   }
 
   validateResponsiveness(responsiveness) {
-    if (!Array.isArray(responsiveness) || responsiveness.length !== 6) {
+    if (!Array.isArray(responsiveness) || responsiveness.length !== this.responsivenessLabels.length) {
       return false;
     }
-    
-    return responsiveness.every(weight => 
-      typeof weight === 'number' && 
-      weight >= 0 && 
+
+    return responsiveness.every(weight =>
+      typeof weight === 'number' &&
+      weight >= 0 &&
       weight <= 100
     );
   }
 
   validateResponsivenessEffectiveness(effectiveness) {
-    if (!Array.isArray(effectiveness) || effectiveness.length !== 6) {
+    if (!Array.isArray(effectiveness) || effectiveness.length !== this.responsivenessLabels.length) {
       return false;
     }
-    
-    return effectiveness.every(eff => 
-      typeof eff === 'number' && 
+
+    return effectiveness.every(eff =>
+      typeof eff === 'number' &&
       eff >= 0 && 
       eff <= 100
     );
@@ -257,12 +311,30 @@ export class RiskEngine {
   }
 
   // Get strategy effectiveness breakdown
-  getStrategyBreakdown(hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness) {
+   getStrategyBreakdown(
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    focus = 0,
+    riskConcentration = 1
+  ) {
+    const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+    const sanitizedConcentration = Number.isFinite(riskConcentration) && riskConcentration > 0
+      ? Math.max(1, riskConcentration)
+      : 1;
+    const focusMultiplier = (1 - sanitizedFocus) + sanitizedFocus * sanitizedConcentration;
+
     const breakdown = {
       hrddStrategies: [],
       overallTransparency: this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness),
       overallResponsiveness: this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness),
-      primaryResponse: this.getPrimaryResponseMethod(responsivenessStrategy, responsivenessEffectiveness)
+      primaryResponse: this.getPrimaryResponseMethod(responsivenessStrategy, responsivenessEffectiveness),
+      focus: {
+        level: sanitizedFocus,
+        concentration: sanitizedConcentration,
+        portfolioMultiplier: focusMultiplier
+      }
     };
 
     // Calculate individual strategy contributions
@@ -299,13 +371,30 @@ export class RiskEngine {
       weight: maxWeight,
       effectiveness: responsivenessEffectiveness[primaryIndex]
     };
-  }
+   }
 
   // Generate risk assessment summary
-  generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness) {
+  generateRiskSummary(
+    baselineRisk,
+    managedRisk,
+    selectedCountries,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    focus = 0,
+    riskConcentration = 1
+  ) {
     const riskReduction = this.calculateRiskReduction(baselineRisk, managedRisk);
-    const breakdown = this.getStrategyBreakdown(hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness);
-    
+    const breakdown = this.getStrategyBreakdown(
+      hrddStrategy,
+      transparencyEffectiveness,
+      responsivenessStrategy,
+      responsivenessEffectiveness,
+      focus,
+      riskConcentration
+    );
+
     return {
       baseline: {
         score: baselineRisk,
@@ -324,7 +413,8 @@ export class RiskEngine {
       },
       portfolio: {
         countriesSelected: selectedCountries.length,
-        averageRisk: baselineRisk
+        averageRisk: baselineRisk,
+        riskConcentration
       },
       strategy: breakdown
     };
@@ -332,6 +422,12 @@ export class RiskEngine {
 
   // Export configuration for reporting
   exportConfiguration(state) {
+    const focusValue = Number.isFinite(state.focus) ? state.focus : 0;
+    const riskConcentration = Number.isFinite(state.riskConcentration) && state.riskConcentration > 0
+      ? Math.max(1, state.riskConcentration)
+      : 1;
+    const focusMultiplier = (1 - focusValue) + focusValue * riskConcentration;
+
     return {
       metadata: {
         exportDate: new Date().toISOString(),
@@ -351,7 +447,10 @@ export class RiskEngine {
       step2: {
         hrddStrategy: state.hrddStrategy,
         transparencyEffectiveness: state.transparencyEffectiveness,
-        strategyLabels: this.hrddStrategyLabels
+        strategyLabels: this.hrddStrategyLabels,
+        focus: focusValue,
+        riskConcentration,
+        focusMultiplier
       },
       step3: {
         responsivenessStrategy: state.responsivenessStrategy,
@@ -360,13 +459,15 @@ export class RiskEngine {
         responsivenessLabels: this.responsivenessLabels
       },
       results: this.generateRiskSummary(
-        state.baselineRisk, 
-        state.managedRisk, 
+        state.baselineRisk,
+        state.managedRisk,
         state.selectedCountries,
         state.hrddStrategy,
         state.transparencyEffectiveness,
         state.responsivenessStrategy,
-        state.responsivenessEffectiveness
+        state.responsivenessEffectiveness,
+        focusValue,
+        riskConcentration
       )
     };
   }

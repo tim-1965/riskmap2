@@ -12,12 +12,14 @@ export class AppController {
       countryVolumes: {},
       countryRisks: {},
       baselineRisk: 0,
-      
+      riskConcentration: 1,
+
       // New Step 2 & 3 properties (with safe defaults)
-      hrddStrategy: riskEngine.defaultHRDDStrategy || [5, 20, 30, 30, 15],
-      transparencyEffectiveness: riskEngine.defaultTransparencyEffectiveness || [85, 50, 15, 5, 0],
-      responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [100, 80, 40, 20, -20, 0],
-      responsivenessEffectiveness: riskEngine.defaultResponsivenessEffectiveness || [100, 80, 60, 40, 20, 0],
+      hrddStrategy: riskEngine.defaultHRDDStrategy || [30, 20, 15, 15, 10, 10],
+      transparencyEffectiveness: riskEngine.defaultTransparencyEffectiveness || [85, 45, 25, 15, 10, 8],
+      responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [10, 15, 20, 25, 20, 10],
+      responsivenessEffectiveness: riskEngine.defaultResponsivenessEffectiveness || [5, 25, 50, 60, 70, 80],
+      focus: typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6,
       managedRisk: 0,
       currentStep: 1,
       
@@ -44,6 +46,7 @@ export class AppController {
     this.onTransparencyChange = this.onTransparencyChange.bind(this);
     this.onResponsivenessChange = this.onResponsivenessChange.bind(this);
     this.onResponsivenessEffectivenessChange = this.onResponsivenessEffectivenessChange.bind(this);
+    this.onFocusChange = this.onFocusChange.bind(this);
     this.setCurrentStep = this.setCurrentStep.bind(this);
   }
 
@@ -183,19 +186,22 @@ export class AppController {
     return requiredFields.some(field => typeof country[field] === 'number' && country[field] >= 0);
   }
 
-  calculateBaselineRisk() {
+   calculateBaselineRisk() {
     try {
-      this.state.baselineRisk = riskEngine.calculateBaselineRisk(
+      const portfolioMetrics = riskEngine.calculatePortfolioMetrics(
         this.state.selectedCountries,
         this.state.countryVolumes,
         this.state.countryRisks
       );
-      console.log(`Baseline risk calculated: ${this.state.baselineRisk.toFixed(2)}`);
+      this.state.baselineRisk = portfolioMetrics.baselineRisk;
+      this.state.riskConcentration = portfolioMetrics.riskConcentration;
+      console.log(`Baseline risk calculated: ${this.state.baselineRisk.toFixed(2)} (K=${this.state.riskConcentration.toFixed(3)})`);
     } catch (error) {
       console.error('Error calculating baseline risk:', error);
       this.state.baselineRisk = 0;
+      this.state.riskConcentration = 1;
     }
-  }
+   }
 
   // New method - safe fallback if riskEngine doesn't have the method yet
   calculateManagedRisk() {
@@ -206,7 +212,9 @@ export class AppController {
           this.state.hrddStrategy,
           this.state.transparencyEffectiveness,
           this.state.responsivenessStrategy,
-          this.state.responsivenessEffectiveness
+          this.state.responsivenessEffectiveness,
+          this.state.focus,
+          this.state.riskConcentration
         );
         console.log(`Managed risk calculated: ${this.state.managedRisk.toFixed(2)}`);
       } else {
@@ -317,7 +325,7 @@ export class AppController {
     }, 300);
   }
 
-  onTransparencyChange = (newTransparency) => {
+   onTransparencyChange = (newTransparency) => {
     if (!newTransparency || !Array.isArray(newTransparency)) {
       console.warn('Invalid transparency values provided:', newTransparency);
       return;
@@ -325,14 +333,35 @@ export class AppController {
 
     this.state.transparencyEffectiveness = [...newTransparency];
     this.state.isDirty = true;
-    
+
     if (this.transparencyTimeout) clearTimeout(this.transparencyTimeout);
-    
+
     this.transparencyTimeout = setTimeout(() => {
       this.calculateManagedRisk();
       this.updateUI();
       this.state.lastUpdate = new Date().toISOString();
     }, 300);
+  }
+
+  onFocusChange = (newFocus) => {
+    const numericFocus = typeof newFocus === 'number' ? newFocus : parseFloat(newFocus);
+
+    if (isNaN(numericFocus)) {
+      console.warn('Invalid focus value provided:', newFocus);
+      return;
+    }
+
+    const clampedFocus = Math.max(0, Math.min(1, numericFocus));
+    this.state.focus = clampedFocus;
+    this.state.isDirty = true;
+
+    if (this.focusTimeout) clearTimeout(this.focusTimeout);
+
+    this.focusTimeout = setTimeout(() => {
+      this.calculateManagedRisk();
+      this.updateUI();
+      this.state.lastUpdate = new Date().toISOString();
+    }, 200);
   }
 
   onResponsivenessChange = (newResponsiveness) => {
@@ -687,9 +716,11 @@ export class AppController {
       } else if (this.state.currentStep === 2) {
         console.log("Rendering Step 2 components");
 
-        UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
+         UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
           strategy: this.state.hrddStrategy,
-          onStrategyChange: this.onHRDDStrategyChange
+          focus: this.state.focus,
+          onStrategyChange: this.onHRDDStrategyChange,
+          onFocusChange: this.onFocusChange
         });
 
         UIComponents.createTransparencyPanel('transparencyPanel', {
@@ -732,7 +763,9 @@ export class AppController {
           hrddStrategy: this.state.hrddStrategy,
           transparencyEffectiveness: this.state.transparencyEffectiveness,
           responsivenessStrategy: this.state.responsivenessStrategy,
-          responsivenessEffectiveness: this.state.responsivenessEffectiveness
+          responsivenessEffectiveness: this.state.responsivenessEffectiveness,
+          focus: this.state.focus,
+          riskConcentration: this.state.riskConcentration
         });
       }
 
@@ -812,6 +845,7 @@ export class AppController {
         transparencyEffectiveness: this.state.transparencyEffectiveness,
         responsivenessStrategy: this.state.responsivenessStrategy,
         responsivenessEffectiveness: this.state.responsivenessEffectiveness,
+        focus: this.state.focus,
         currentStep: this.state.currentStep,
         lastSaved: new Date().toISOString()
       };
@@ -839,6 +873,7 @@ export class AppController {
             transparencyEffectiveness: parsedState.transparencyEffectiveness || this.state.transparencyEffectiveness,
             responsivenessStrategy: parsedState.responsivenessStrategy || this.state.responsivenessStrategy,
             responsivenessEffectiveness: parsedState.responsivenessEffectiveness || this.state.responsivenessEffectiveness,
+            focus: typeof parsedState.focus === 'number' ? parsedState.focus : this.state.focus,
             currentStep: parsedState.currentStep || this.state.currentStep
           };
           console.log('Loaded saved state from:', parsedState.lastSaved);
@@ -898,6 +933,9 @@ export class AppController {
         responsivenessEffectiveness: this.state.responsivenessEffectiveness,
         baselineRisk: this.state.baselineRisk,
         managedRisk: this.state.managedRisk,
+        focus: this.state.focus,
+        riskConcentration: this.state.riskConcentration,
+        focusMultiplier: (1 - this.state.focus) + this.state.focus * Math.max(1, this.state.riskConcentration),
         exportDate: new Date().toISOString(),
         version: '3.0'
       };
@@ -925,6 +963,7 @@ export class AppController {
     if (this.transparencyTimeout) clearTimeout(this.transparencyTimeout);
     if (this.responsivenessTimeout) clearTimeout(this.responsivenessTimeout);
     if (this.responsivenessEffectivenessTimeout) clearTimeout(this.responsivenessEffectivenessTimeout);
+    if (this.focusTimeout) clearTimeout(this.focusTimeout);
     if (this.state.isDirty) this.saveState();
     console.log('App controller cleaned up');
   }

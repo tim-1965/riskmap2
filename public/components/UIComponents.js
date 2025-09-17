@@ -85,20 +85,31 @@ export class UIComponents {
   }
 
   // Step 2: HRDD Strategy Panel
-  static createHRDDStrategyPanel(containerId, { strategy, onStrategyChange }) {
+  static createHRDDStrategyPanel(containerId, { strategy, focus, onStrategyChange, onFocusChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     const strategyLabels = riskEngine.hrddStrategyLabels;
     const strategyDescriptions = [
-      'Real-time monitoring of working conditions and compliance',
-      'Surprise audits conducted without prior notice',
-      'Scheduled audits arranged by the supplier',
-      'Self-assessment questionnaires completed by suppliers',
-      'No formal due diligence activities'
+      'Always-on digital or in-person worker voice capturing daily conditions.',
+      'Structured worker surveys undertaken at least quarterly.',
+      'Surprise third-party social audits without advance warning.',
+      'Planned or supplier-arranged social audits.',
+      'Supplier self-reporting and self-assessment questionnaires.',
+      'Desk-based risk assessment only with no direct engagement.'
     ];
 
     let localStrategy = [...strategy];
+    const defaultFocus = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
+    let localFocus = typeof focus === 'number' ? focus : defaultFocus;
+
+    const describeFocus = (value) => {
+      if (value >= 0.9) return 'Crisis / SEV surge posture';
+      if (value >= 0.7) return 'Targeted worker voice & triage';
+      if (value >= 0.4) return 'Risk-led monitoring programme';
+      if (value >= 0.1) return 'Legacy calendar-led audits';
+      return 'Even portfolio coverage';
+    };
 
     const updateStrategy = () => {
       const total = localStrategy.reduce((sum, w) => sum + w, 0);
@@ -121,7 +132,7 @@ export class UIComponents {
         
         <div id="strategyContainer" style="margin-bottom: 20px;"></div>
         
-        <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
+         <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
           Total Strategy Weight: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${localStrategy.reduce((sum, w) => sum + w, 0)}</span>%
           <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy mix allocation)</span>
         </div>
@@ -129,9 +140,31 @@ export class UIComponents {
         <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
           <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Strategy Guide:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-            <li>Higher percentages = more resources allocated to that approach</li>
-            <li>Mix multiple strategies for comprehensive coverage</li>
-            <li>Each strategy has different transparency effectiveness</li>
+            <li>Higher percentages = more resources allocated to that monitoring tool.</li>
+            <li>Combine approaches to mirror your actual HRDD portfolio.</li>
+            <li>Each tool carries an evidence-based transparency assumption (Step 2B).</li>
+          </ul>
+        </div>
+
+        <div style="margin-top: 24px; padding: 20px; border-radius: 10px; border: 1px solid #bfdbfe; background-color: #eff6ff;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #1d4ed8; margin-bottom: 8px;">Focus on High-Risk Countries</h3>
+          <p style="font-size: 13px; color: #1e3a8a; margin-bottom: 12px;">
+            Focus concentrates your monitoring and remediation effort on the highest-risk countries without increasing total effort.
+          </p>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 600;">
+            Focus Level: <span id="focusValue">${localFocus.toFixed(2)}</span>
+            <span style="font-size: 13px; font-weight: 500; color: #1d4ed8;">(<span id="focusPercent">${Math.round(localFocus * 100)}</span>% effort · <span id="focusDescriptor">${describeFocus(localFocus)}</span>)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+            <input type="range" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusSlider" style="flex: 1; height: 8px; border-radius: 4px; background-color: #bfdbfe;">
+            <input type="number" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusNumber" style="width: 90px; padding: 8px 12px; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 14px; text-align: center;">
+          </div>
+          <ul style="margin-top: 12px; font-size: 12px; color: #1e3a8a; padding-left: 18px; line-height: 1.5;">
+            <li><strong>0.00 – 0.10:</strong> Even effort across the portfolio.</li>
+            <li><strong>0.10 – 0.30:</strong> Legacy audit programmes, calendar-driven.</li>
+            <li><strong>0.40 – 0.60:</strong> Risk-led programmes with targeted surveys.</li>
+            <li><strong>0.70 – 0.90:</strong> Continuous worker voice with triaged CAPs.</li>
+            <li><strong>0.90 – 1.00:</strong> Crisis posture concentrating on hotspots.</li>
           </ul>
         </div>
       </div>
@@ -170,7 +203,39 @@ export class UIComponents {
 
       rangeInput.addEventListener('input', (e) => updateStrategyWeight(e.target.value));
       numberInput.addEventListener('input', (e) => updateStrategyWeight(e.target.value));
-    });
+     });
+
+    const focusSlider = document.getElementById('focusSlider');
+    const focusNumber = document.getElementById('focusNumber');
+    const focusValueDisplay = document.getElementById('focusValue');
+    const focusPercentDisplay = document.getElementById('focusPercent');
+    const focusDescriptorDisplay = document.getElementById('focusDescriptor');
+
+    const updateFocus = (value, { emit = true } = {}) => {
+      const numericValue = parseFloat(value);
+      if (Number.isNaN(numericValue)) return;
+
+      const clamped = Math.max(0, Math.min(1, numericValue));
+      localFocus = clamped;
+
+      const formatted = clamped.toFixed(2);
+      if (focusSlider) focusSlider.value = formatted;
+      if (focusNumber) focusNumber.value = formatted;
+      if (focusValueDisplay) focusValueDisplay.textContent = formatted;
+      if (focusPercentDisplay) focusPercentDisplay.textContent = Math.round(clamped * 100);
+      if (focusDescriptorDisplay) focusDescriptorDisplay.textContent = describeFocus(clamped);
+
+      if (emit && typeof onFocusChange === 'function') {
+        onFocusChange(clamped);
+      }
+    };
+
+    if (focusSlider) {
+      focusSlider.addEventListener('input', (e) => updateFocus(e.target.value));
+    }
+    if (focusNumber) {
+      focusNumber.addEventListener('input', (e) => updateFocus(e.target.value));
+    }
 
     const resetButton = document.getElementById('resetStrategy');
     resetButton.addEventListener('click', () => {
@@ -181,7 +246,11 @@ export class UIComponents {
         document.getElementById(`strategyValue_${index}`).textContent = `(${weight}%)`;
       });
       updateStrategy();
+      updateFocus(defaultFocus);
     });
+
+    // Ensure focus displays are synced without triggering state updates on initial render
+    updateFocus(localFocus, { emit: false });
   }
 
   // Step 2: Transparency Effectiveness Panel
@@ -191,11 +260,12 @@ export class UIComponents {
 
     const strategyLabels = riskEngine.hrddStrategyLabels;
     const effectivenessDescriptions = [
-      'High transparency - real-time visibility into conditions',
-      'Moderate transparency - captures many issues but not all',
-      'Limited transparency - issues may be hidden or prepared for',
-      'Low transparency - relies on self-reporting',
-      'No transparency - no visibility into actual conditions'
+      '0.80 – 0.90 of actual risks revealed (continuous worker voice).',
+      '0.40 – 0.50 of risks revealed (quarterly worker surveys).',
+      '0.20 – 0.30 of risks revealed (unannounced audits).',
+      '0.10 – 0.20 of risks revealed (announced audits).',
+      '0.05 – 0.15 of risks revealed (supplier self-reporting).',
+      '0.05 – 0.10 of risks revealed (desk-based assessments).' 
     ];
 
     let localTransparency = [...transparency];
@@ -215,12 +285,12 @@ export class UIComponents {
         
         <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
-        <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
+         <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
           <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Transparency:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-            <li>Higher percentages = better ability to detect issues</li>
-            <li>These are fixed effectiveness rates for each strategy type</li>
-            <li>Combined with your strategy mix to calculate overall transparency</li>
+            <li>Higher percentages = a greater share of hidden labour risks uncovered.</li>
+            <li>Values represent mid-point assumptions for each monitoring tool.</li>
+            <li>Your strategy mix (Step 2A) weights these assumptions into an overall transparency score.</li>
           </ul>
         </div>
       </div>
@@ -305,12 +375,12 @@ export class UIComponents {
 
     const responsivenessLabels = riskEngine.responsivenessLabels;
     const responsivenessDescriptions = [
-      'Immediate action and remediation within hours',
-      'Fast response with corrective action within one week',
-      'Standard response timeframe of two weeks',
-      'Slower response allowing up to one month',
-      'Very slow response taking up to three months',
-      'No response or remedial action taken'
+      'No structured remediation. Issues are left unaddressed or dismissed.',
+      'Case-by-case fixes when problems surface, without systemic change.',
+      'Corrective action plans agreed with suppliers to fix identified problems.',
+      'Longer-term capability building with suppliers (training, incentives).',
+      'Commercial requirements align purchasing power to rights outcomes.',
+      'Collective agreements or binding frameworks that shift sector behaviour.'
     ];
 
     let localResponsiveness = [...responsiveness];
@@ -341,12 +411,12 @@ export class UIComponents {
           <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy allocation)</span>
         </div>
 
-        <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 20px;">
-          <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Time Strategy:</h4>
+         <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 20px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategy Portfolio:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-            <li>Higher percentages = more resources allocated to that response time</li>
-            <li>Mix multiple approaches for comprehensive coverage</li>
-            <li>Each approach has different effectiveness rates (see right panel)</li>
+            <li>Higher percentages = deeper investment in that remediation lever.</li>
+            <li>Combine quick fixes with systemic levers for durable change.</li>
+            <li>Effectiveness assumptions for each lever are set out in Step 3B.</li>
           </ul>
         </div>
       </div>
@@ -406,12 +476,12 @@ export class UIComponents {
 
     const responsivenessLabels = riskEngine.responsivenessLabels;
     const effectivenessDescriptions = [
-      'Maximum effectiveness - immediate problem resolution',
-      'High effectiveness - rapid corrective action',
-      'Good effectiveness - standard response timeframe',
-      'Moderate effectiveness - slower but still meaningful action',
-      'Low effectiveness - very delayed response',
-      'No effectiveness - problems remain unaddressed'
+      '0.00 – 0.10 reduction in risk (little to no remediation).',
+      '0.20 – 0.30 reduction when issues are handled reactively.',
+      '0.40 – 0.60 reduction delivered via corrective action plans.',
+      '0.50 – 0.70 reduction through supplier capability building.',
+      '0.60 – 0.80 reduction when commercial levers are binding.',
+      '0.70 – 0.90 reduction through industry collaboration.'
     ];
 
     let localEffectiveness = [...effectiveness];
@@ -434,9 +504,9 @@ export class UIComponents {
         <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px;">
           <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Understanding Response Effectiveness:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-            <li>Higher percentages = better ability to resolve identified issues</li>
-            <li>Faster response times typically have higher effectiveness</li>
-            <li>Combined with your response strategy to calculate overall effectiveness</li>
+            <li>Higher percentages = deeper reductions in residual risk when issues are addressed.</li>
+            <li>Ranges reflect evidence-informed assumptions for each remediation lever.</li>
+            <li>Your Step 3A portfolio weights these assumptions into an overall response effectiveness score.</li>
           </ul>
         </div>
       </div>
@@ -444,10 +514,11 @@ export class UIComponents {
 
     const effectivenessContainer = document.getElementById('responsivenessEffectivenessContainer');
     responsivenessLabels.forEach((label, index) => {
-      const effectivenessColor = localEffectiveness[index] >= 80 ? '#22c55e' : 
-                                 localEffectiveness[index] >= 60 ? '#84cc16' :
-                                 localEffectiveness[index] >= 40 ? '#f59e0b' : 
-                                 localEffectiveness[index] >= 20 ? '#ef4444' : '#991b1b';
+      const effectivenessColor = localEffectiveness[index] >= 75 ? '#15803d' :
+                                 localEffectiveness[index] >= 60 ? '#22c55e' :
+                                 localEffectiveness[index] >= 50 ? '#84cc16' :
+                                 localEffectiveness[index] >= 30 ? '#facc15' :
+                                 localEffectiveness[index] >= 15 ? '#f97316' : '#ef4444';
       
       const effectivenessControl = document.createElement('div');
       effectivenessControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
@@ -475,10 +546,11 @@ export class UIComponents {
 
       const updateEffectivenessValue = (value) => {
         const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
-        const newColor = newValue >= 80 ? '#22c55e' : 
-                        newValue >= 60 ? '#84cc16' :
-                        newValue >= 40 ? '#f59e0b' : 
-                        newValue >= 20 ? '#ef4444' : '#991b1b';
+        const newColor = newValue >= 75 ? '#15803d' :
+                        newValue >= 60 ? '#22c55e' :
+                        newValue >= 50 ? '#84cc16' :
+                        newValue >= 30 ? '#facc15' :
+                        newValue >= 15 ? '#f97316' : '#ef4444';
         
         localEffectiveness[index] = newValue;
         rangeInput.value = newValue;
@@ -503,10 +575,11 @@ export class UIComponents {
     resetButton.addEventListener('click', () => {
       localEffectiveness = [...riskEngine.defaultResponsivenessEffectiveness];
       localEffectiveness.forEach((effectiveness, index) => {
-        const newColor = effectiveness >= 80 ? '#22c55e' : 
-                        effectiveness >= 60 ? '#84cc16' :
-                        effectiveness >= 40 ? '#f59e0b' : 
-                        effectiveness >= 20 ? '#ef4444' : '#991b1b';
+        const newColor = effectiveness >= 75 ? '#15803d' :
+                        effectiveness >= 60 ? '#22c55e' :
+                        effectiveness >= 50 ? '#84cc16' :
+                        effectiveness >= 30 ? '#facc15' :
+                        effectiveness >= 15 ? '#f97316' : '#ef4444';
                         
         document.getElementById(`effectiveness_${index}`).value = effectiveness;
         document.getElementById(`effectivenessNum_${index}`).value = effectiveness;
@@ -524,13 +597,17 @@ export class UIComponents {
   }
 
   // Step 3: Final Results Panel
-  static createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness }) {
+   static createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus = 0, riskConcentration = 1 }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     const riskReduction = riskEngine.calculateRiskReduction(baselineRisk, managedRisk);
     const isImprovement = managedRisk < baselineRisk;
-    const summary = riskEngine.generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness);
+    const summary = riskEngine.generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus, riskConcentration);
+    const focusData = summary.strategy?.focus || { level: 0, portfolioMultiplier: 1, concentration: 1 };
+    const focusPercent = Math.round((focusData.level || 0) * 100);
+    const focusMultiplier = focusData.portfolioMultiplier || 1;
+    const concentrationFactor = summary.portfolio?.riskConcentration ?? 1;
 
     container.innerHTML = `
       <div class="final-results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
@@ -579,10 +656,9 @@ export class UIComponents {
           </div>
         </div>
 
-        <!-- Strategy Effectiveness Breakdown -->
         <div style="margin-bottom: 24px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
           <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">Strategy Effectiveness Analysis</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
             <div>
               <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">TRANSPARENCY EFFECTIVENESS</h4>
               <div style="font-size: 28px; font-weight: bold; color: #3b82f6; margin-bottom: 4px;">
@@ -596,6 +672,16 @@ export class UIComponents {
                 ${(summary.strategy.overallResponsiveness * 100).toFixed(1)}%
               </div>
               <div style="font-size: 12px; color: #6b7280;">Primary: ${summary.strategy.primaryResponse.method}</div>
+            </div>
+            <div>
+              <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">FOCUS ON HIGH-RISK COUNTRIES</h4>
+              <div style="font-size: 28px; font-weight: bold; color: #1d4ed8; margin-bottom: 4px;">
+                ${focusPercent}%
+              </div>
+              <div style="font-size: 12px; color: #6b7280;">Effort directed to riskiest locations</div>
+              <div style="margin-top: 8px; font-size: 12px; color: #1d4ed8;">
+                Focus multiplier: ${focusMultiplier.toFixed(2)}× · Risk convexity (K): ${concentrationFactor.toFixed(3)}
+              </div>
             </div>
           </div>
         </div>
