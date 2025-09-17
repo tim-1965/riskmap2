@@ -16,9 +16,13 @@ export class AppController {
 
       // New Step 2 & 3 properties (with safe defaults)
       hrddStrategy: riskEngine.defaultHRDDStrategy || [30, 20, 15, 15, 10, 10],
-      transparencyEffectiveness: riskEngine.defaultTransparencyEffectiveness || [85, 45, 25, 15, 10, 8],
+      transparencyEffectiveness: this.normalizeTransparencyEffectiveness(
+        riskEngine.defaultTransparencyEffectiveness || [85, 45, 25, 15, 10, 8]
+      ),
       responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [10, 15, 20, 25, 20, 10],
-      responsivenessEffectiveness: riskEngine.defaultResponsivenessEffectiveness || [5, 25, 50, 60, 70, 80],
+      responsivenessEffectiveness: this.normalizeResponsivenessEffectiveness(
+        riskEngine.defaultResponsivenessEffectiveness || [5, 25, 50, 60, 70, 80]
+      ),
       focus: typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6,
       managedRisk: 0,
       currentStep: 1,
@@ -48,6 +52,77 @@ export class AppController {
     this.onResponsivenessEffectivenessChange = this.onResponsivenessEffectivenessChange.bind(this);
     this.onFocusChange = this.onFocusChange.bind(this);
     this.setCurrentStep = this.setCurrentStep.bind(this);
+  }
+
+  normalizeEffectivenessArray(values, expectedLength, defaults, validator) {
+    const fallbackSource = Array.isArray(defaults) ? defaults : [];
+    const fallback = Array.from({ length: expectedLength }, (_, index) => {
+      const fallbackValue = fallbackSource[index];
+      return Number.isFinite(fallbackValue)
+        ? Math.max(0, Math.min(100, fallbackValue))
+        : 0;
+    });
+
+    if (!Array.isArray(values)) {
+      return [...fallback];
+    }
+
+    const numericValues = values
+      .map(value => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+          const parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+      })
+      .filter(value => Number.isFinite(value));
+
+    if (numericValues.length === 0) {
+      return [...fallback];
+    }
+
+    const trimmedValues = numericValues.slice(0, expectedLength);
+    const shouldRescale = trimmedValues.length > 0 &&
+      trimmedValues.every(value => value >= 0 && value <= 1);
+
+    const scaledValues = shouldRescale
+      ? trimmedValues.map(value => value * 100)
+      : trimmedValues;
+
+    const normalized = [];
+    for (let i = 0; i < expectedLength; i++) {
+      const value = scaledValues[i];
+      if (Number.isFinite(value)) {
+        normalized.push(Math.max(0, Math.min(100, value)));
+      } else {
+        normalized.push(fallback[i]);
+      }
+    }
+
+    if (typeof validator === 'function' && !validator(normalized)) {
+      return [...fallback];
+    }
+
+    return normalized;
+  }
+
+  normalizeTransparencyEffectiveness(values) {
+    return this.normalizeEffectivenessArray(
+      values,
+      riskEngine.hrddStrategyLabels.length,
+      riskEngine.defaultTransparencyEffectiveness,
+      array => riskEngine.validateTransparency(array)
+    );
+  }
+
+  normalizeResponsivenessEffectiveness(values) {
+    return this.normalizeEffectivenessArray(
+      values,
+      riskEngine.responsivenessLabels.length,
+      riskEngine.defaultResponsivenessEffectiveness,
+      array => riskEngine.validateResponsivenessEffectiveness(array)
+    );
   }
 
   async initialize(containerId) {
@@ -325,13 +400,14 @@ export class AppController {
     }, 300);
   }
 
-   onTransparencyChange = (newTransparency) => {
+  onTransparencyChange = (newTransparency) => {
     if (!newTransparency || !Array.isArray(newTransparency)) {
       console.warn('Invalid transparency values provided:', newTransparency);
       return;
     }
 
-    this.state.transparencyEffectiveness = [...newTransparency];
+    const normalizedTransparency = this.normalizeTransparencyEffectiveness(newTransparency);
+    this.state.transparencyEffectiveness = normalizedTransparency;
     this.state.isDirty = true;
 
     if (this.transparencyTimeout) clearTimeout(this.transparencyTimeout);
@@ -388,11 +464,12 @@ export class AppController {
       return;
     }
 
-    this.state.responsivenessEffectiveness = [...newResponsivenessEffectiveness];
+   const normalizedEffectiveness = this.normalizeResponsivenessEffectiveness(newResponsivenessEffectiveness);
+    this.state.responsivenessEffectiveness = normalizedEffectiveness;
     this.state.isDirty = true;
-    
+
     if (this.responsivenessEffectivenessTimeout) clearTimeout(this.responsivenessEffectivenessTimeout);
-    
+
     this.responsivenessEffectivenessTimeout = setTimeout(() => {
       this.calculateManagedRisk();
       this.updateUI();
@@ -870,9 +947,13 @@ export class AppController {
             selectedCountries: parsedState.selectedCountries || this.state.selectedCountries,
             countryVolumes: parsedState.countryVolumes || this.state.countryVolumes,
             hrddStrategy: parsedState.hrddStrategy || this.state.hrddStrategy,
-            transparencyEffectiveness: parsedState.transparencyEffectiveness || this.state.transparencyEffectiveness,
+            transparencyEffectiveness: Object.prototype.hasOwnProperty.call(parsedState, 'transparencyEffectiveness')
+              ? this.normalizeTransparencyEffectiveness(parsedState.transparencyEffectiveness)
+              : this.state.transparencyEffectiveness,
             responsivenessStrategy: parsedState.responsivenessStrategy || this.state.responsivenessStrategy,
-            responsivenessEffectiveness: parsedState.responsivenessEffectiveness || this.state.responsivenessEffectiveness,
+            responsivenessEffectiveness: Object.prototype.hasOwnProperty.call(parsedState, 'responsivenessEffectiveness')
+              ? this.normalizeResponsivenessEffectiveness(parsedState.responsivenessEffectiveness)
+              : this.state.responsivenessEffectiveness,
             focus: typeof parsedState.focus === 'number' ? parsedState.focus : this.state.focus,
             currentStep: parsedState.currentStep || this.state.currentStep
           };
@@ -913,7 +994,17 @@ export class AppController {
   }
 
   setState(newState) {
-    this.state = { ...this.state, ...newState };
+    const updates = { ...newState };
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'transparencyEffectiveness')) {
+      updates.transparencyEffectiveness = this.normalizeTransparencyEffectiveness(updates.transparencyEffectiveness);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'responsivenessEffectiveness')) {
+      updates.responsivenessEffectiveness = this.normalizeResponsivenessEffectiveness(updates.responsivenessEffectiveness);
+    }
+
+    this.state = { ...this.state, ...updates };
     this.calculateAllRisks();
     this.calculateBaselineRisk();
     this.calculateManagedRisk();
