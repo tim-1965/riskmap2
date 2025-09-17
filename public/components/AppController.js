@@ -320,7 +320,7 @@ export class AppController {
           <!-- Header -->
           <header style="text-align: center; margin-bottom: 40px; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <h1 style="font-size: 36px; font-weight: bold; color: #1f2937; margin-bottom: 12px; line-height: 1.2;">
-              Human Rights Due Diligence Risk Assessment
+              Labour Rights Due Diligence Risk Assessment
             </h1>
             <p style="font-size: 18px; color: #6b7280; margin-bottom: 16px;">
               Step 1: Calculate Baseline Risk for Supply Chain Countries
@@ -396,7 +396,7 @@ export class AppController {
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
         onCountrySelect: this.onCountrySelect,
-        title: 'Global Human Rights Risk Assessment Map',
+        title: 'Labour Rights Risk Assessment Map',
         height: 600,
         width: 1200
       });
@@ -468,7 +468,7 @@ export class AppController {
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
         onCountrySelect: this.onCountrySelect,
-        title: 'Global Human Rights Risk Assessment Map',
+        title: 'Labour Rights Risk Assessment Map',
         height: 600,
         width: 1200
       });
