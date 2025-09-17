@@ -1,16 +1,20 @@
-// UIComponents.js - Enhanced UI components with new layout panels
+// UIComponents.js - Complete UI components for 3-step HRDD tool
 import { riskEngine } from './RiskEngine.js';
 
 export class UIComponents {
   
-  // Enhanced D3 World Map Component
-  static async createWorldMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, height = 500, width = 960 }) {
+  // Enhanced D3 World Map Component (handles both baseline and managed risk)
+  static async createWorldMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, mapType = 'baseline', managedRisk = null, height = 500, width = 960 }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    const displayTitle = mapType === 'managed' ? 
+      `${title} - Managed Risk: ${managedRisk ? managedRisk.toFixed(1) : 'N/A'}` : 
+      title;
+
     container.innerHTML = `
       <div class="world-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
-        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${title}</h3>
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${displayTitle}</h3>
         <div id="map-loading" style="padding: 40px; color: #6b7280;">
           <div>Loading world map...</div>
           <div style="font-size: 14px; margin-top: 8px;">Please wait while we render the interactive map.</div>
@@ -39,14 +43,20 @@ export class UIComponents {
         }
       }
 
+      // For managed risk map, use the single managed risk value for all selected countries
+      const displayRisks = mapType === 'managed' && managedRisk !== null ? 
+        this._createManagedRiskDisplay(safeSelectedCountries, managedRisk) : 
+        safeCountryRisks;
+
       this._renderD3Map(worldData, {
         container: 'map-wrapper',
         countries,
-        countryRisks: safeCountryRisks,
+        countryRisks: displayRisks,
         selectedCountries: safeSelectedCountries,
         onCountrySelect,
         width,
-        height: Math.max(height, 600)
+        height: Math.max(height, 600),
+        mapType
       });
 
       this._createMapLegend('mapLegend');
@@ -54,18 +64,573 @@ export class UIComponents {
       const loadingElement = document.getElementById('map-loading');
       if (loadingElement) loadingElement.remove();
 
-        } catch (error) {
+    } catch (error) {
       console.error('Error creating world map:', error);
       this._createFallbackMap(containerId, {
         countries,
         countryRisks: safeCountryRisks,
         selectedCountries: safeSelectedCountries,
         onCountrySelect,
-        title
+        title: displayTitle
       });
     }
   }
 
+  static _createManagedRiskDisplay(selectedCountries, managedRisk) {
+    const managedRiskDisplay = {};
+    selectedCountries.forEach(countryCode => {
+      managedRiskDisplay[countryCode] = managedRisk;
+    });
+    return managedRiskDisplay;
+  }
+
+  // Step 2: HRDD Strategy Panel
+  static createHRDDStrategyPanel(containerId, { strategy, onStrategyChange }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const strategyLabels = riskEngine.hrddStrategyLabels;
+    const strategyDescriptions = [
+      'Real-time monitoring of working conditions and compliance',
+      'Surprise audits conducted without prior notice',
+      'Scheduled audits arranged by the supplier',
+      'Self-assessment questionnaires completed by suppliers',
+      'No formal due diligence activities'
+    ];
+
+    let localStrategy = [...strategy];
+
+    const updateStrategy = () => {
+      const total = localStrategy.reduce((sum, w) => sum + w, 0);
+      const totalElement = document.getElementById('totalStrategy');
+      if (totalElement) {
+        totalElement.textContent = total;
+        totalElement.style.color = '#374151';
+      }
+      if (onStrategyChange) onStrategyChange([...localStrategy]);
+    };
+
+    container.innerHTML = `
+      <div class="hrdd-strategy-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD Strategy Mix</h2>
+          <button id="resetStrategy" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            Reset to Default
+          </button>
+        </div>
+        
+        <div id="strategyContainer" style="margin-bottom: 20px;"></div>
+        
+        <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
+          Total Strategy Weight: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${localStrategy.reduce((sum, w) => sum + w, 0)}</span>%
+          <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy mix allocation)</span>
+        </div>
+
+        <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Strategy Guide:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Higher percentages = more resources allocated to that approach</li>
+            <li>Mix multiple strategies for comprehensive coverage</li>
+            <li>Each strategy has different transparency effectiveness</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    const strategyContainer = document.getElementById('strategyContainer');
+    strategyLabels.forEach((label, index) => {
+      const strategyControl = document.createElement('div');
+      strategyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+      strategyControl.innerHTML = `
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
+          ${label} <span id="strategyValue_${index}" style="font-weight: 600; color: #1f2937;">(${localStrategy[index]}%)</span>
+        </label>
+        <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
+          ${strategyDescriptions[index]}
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input type="range" min="0" max="100" value="${localStrategy[index]}" id="strategy_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+          <input type="number" min="0" max="100" value="${localStrategy[index]}" id="strategyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        </div>
+      `;
+      strategyContainer.appendChild(strategyControl);
+
+      const rangeInput = document.getElementById(`strategy_${index}`);
+      const numberInput = document.getElementById(`strategyNum_${index}`);
+      const valueDisplay = document.getElementById(`strategyValue_${index}`);
+
+      const updateStrategyWeight = (value) => {
+        const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
+        localStrategy[index] = newValue;
+        rangeInput.value = newValue;
+        numberInput.value = newValue;
+        valueDisplay.textContent = `(${newValue}%)`;
+        updateStrategy();
+      };
+
+      rangeInput.addEventListener('input', (e) => updateStrategyWeight(e.target.value));
+      numberInput.addEventListener('input', (e) => updateStrategyWeight(e.target.value));
+    });
+
+    const resetButton = document.getElementById('resetStrategy');
+    resetButton.addEventListener('click', () => {
+      localStrategy = [...riskEngine.defaultHRDDStrategy];
+      localStrategy.forEach((weight, index) => {
+        document.getElementById(`strategy_${index}`).value = weight;
+        document.getElementById(`strategyNum_${index}`).value = weight;
+        document.getElementById(`strategyValue_${index}`).textContent = `(${weight}%)`;
+      });
+      updateStrategy();
+    });
+  }
+
+  // Step 2: Transparency Effectiveness Panel
+  static createTransparencyPanel(containerId, { transparency, onTransparencyChange }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const strategyLabels = riskEngine.hrddStrategyLabels;
+    const effectivenessDescriptions = [
+      'High transparency - real-time visibility into conditions',
+      'Moderate transparency - captures many issues but not all',
+      'Limited transparency - issues may be hidden or prepared for',
+      'Low transparency - relies on self-reporting',
+      'No transparency - no visibility into actual conditions'
+    ];
+
+    let localTransparency = [...transparency];
+
+    const updateTransparency = () => {
+      if (onTransparencyChange) onTransparencyChange([...localTransparency]);
+    };
+
+    container.innerHTML = `
+      <div class="transparency-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Transparency Effectiveness</h2>
+          <button id="resetTransparency" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            Reset to Default
+          </button>
+        </div>
+        
+        <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
+
+        <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Transparency:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Higher percentages = better ability to detect issues</li>
+            <li>These are fixed effectiveness rates for each strategy type</li>
+            <li>Combined with your strategy mix to calculate overall transparency</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    const transparencyContainer = document.getElementById('transparencyContainer');
+    strategyLabels.forEach((label, index) => {
+      const effectivenessColor = localTransparency[index] >= 70 ? '#22c55e' : 
+                                 localTransparency[index] >= 40 ? '#f59e0b' : '#ef4444';
+      
+      const transparencyControl = document.createElement('div');
+      transparencyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+      transparencyControl.innerHTML = `
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
+          ${label}
+          <span id="transparencyValue_${index}" style="font-weight: 600; color: ${effectivenessColor};">(${localTransparency[index]}%)</span>
+        </label>
+        <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
+          ${effectivenessDescriptions[index]}
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+          <input type="number" min="0" max="100" value="${localTransparency[index]}" id="transparencyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        </div>
+        <div style="margin-top: 8px; height: 4px; background-color: #e5e7eb; border-radius: 2px;">
+          <div style="height: 100%; width: ${localTransparency[index]}%; background-color: ${effectivenessColor}; border-radius: 2px; transition: all 0.3s;"></div>
+        </div>
+      `;
+      transparencyContainer.appendChild(transparencyControl);
+
+      const rangeInput = document.getElementById(`transparency_${index}`);
+      const numberInput = document.getElementById(`transparencyNum_${index}`);
+      const valueDisplay = document.getElementById(`transparencyValue_${index}`);
+
+      const updateTransparencyValue = (value) => {
+        const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
+        const newColor = newValue >= 70 ? '#22c55e' : newValue >= 40 ? '#f59e0b' : '#ef4444';
+        
+        localTransparency[index] = newValue;
+        rangeInput.value = newValue;
+        numberInput.value = newValue;
+        valueDisplay.textContent = `(${newValue}%)`;
+        valueDisplay.style.color = newColor;
+        
+        const progressBar = transparencyControl.querySelector('div:last-child div');
+        if (progressBar) {
+          progressBar.style.width = `${newValue}%`;
+          progressBar.style.backgroundColor = newColor;
+        }
+        
+        updateTransparency();
+      };
+
+      rangeInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value));
+      numberInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value));
+    });
+
+    const resetButton = document.getElementById('resetTransparency');
+    resetButton.addEventListener('click', () => {
+      localTransparency = [...riskEngine.defaultTransparencyEffectiveness];
+      localTransparency.forEach((effectiveness, index) => {
+        const newColor = effectiveness >= 70 ? '#22c55e' : effectiveness >= 40 ? '#f59e0b' : '#ef4444';
+        document.getElementById(`transparency_${index}`).value = effectiveness;
+        document.getElementById(`transparencyNum_${index}`).value = effectiveness;
+        document.getElementById(`transparencyValue_${index}`).textContent = `(${effectiveness}%)`;
+        document.getElementById(`transparencyValue_${index}`).style.color = newColor;
+        
+        const progressBar = transparencyContainer.children[index].querySelector('div:last-child div');
+        if (progressBar) {
+          progressBar.style.width = `${effectiveness}%`;
+          progressBar.style.backgroundColor = newColor;
+        }
+      });
+      updateTransparency();
+    });
+  }
+
+  // Step 3: Responsiveness Strategy Panel
+  static createResponsivenessPanel(containerId, { responsiveness, onResponsivenessChange }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const responsivenessLabels = riskEngine.responsivenessLabels;
+    const responsivenessDescriptions = [
+      'Immediate action and remediation within hours',
+      'Fast response with corrective action within one week',
+      'Standard response timeframe of two weeks',
+      'Slower response allowing up to one month',
+      'Very slow response taking up to three months',
+      'No response or remedial action taken'
+    ];
+
+    const effectivenessValues = riskEngine.defaultResponsivenessStrategy;
+
+    let localResponsiveness = [...responsiveness];
+
+    const updateResponsiveness = () => {
+      if (onResponsivenessChange) onResponsivenessChange([...localResponsiveness]);
+    };
+
+    container.innerHTML = `
+      <div class="responsiveness-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Response Strategy</h2>
+          <button id="resetResponsiveness" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            Reset to Default
+          </button>
+        </div>
+        
+        <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Time Strategy:</h4>
+          <p style="font-size: 14px; margin: 0; line-height: 1.5;">
+            Select your primary response approach. Faster responses are more effective at reducing risk. 
+            The system will use the highest weighted response method for calculations.
+          </p>
+        </div>
+
+        <div id="responsivenessContainer"></div>
+
+        <div id="primaryResponse" style="margin-top: 20px; padding: 16px; background-color: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px;">
+          <!-- Primary response method will be shown here -->
+        </div>
+      </div>
+    `;
+
+    const responsivenessContainer = document.getElementById('responsivenessContainer');
+    const primaryResponseDiv = document.getElementById('primaryResponse');
+
+    const updatePrimaryResponse = () => {
+      let maxWeight = 0;
+      let primaryIndex = 0;
+      
+      localResponsiveness.forEach((weight, index) => {
+        if (weight > maxWeight) {
+          maxWeight = weight;
+          primaryIndex = index;
+        }
+      });
+
+      if (maxWeight > 0) {
+        const effectiveness = effectivenessValues[primaryIndex];
+        const effectivenessColor = effectiveness >= 80 ? '#22c55e' : 
+                                   effectiveness >= 40 ? '#f59e0b' : 
+                                   effectiveness >= 0 ? '#ef4444' : '#991b1b';
+        
+        primaryResponseDiv.innerHTML = `
+          <h4 style="font-weight: 600; color: #166534; margin-bottom: 8px;">Primary Response Method:</h4>
+          <div style="font-size: 16px; font-weight: 500; color: ${effectivenessColor};">
+            ${responsivenessLabels[primaryIndex]} (${effectiveness}% effectiveness)
+          </div>
+          <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">
+            Weight: ${maxWeight}% - ${responsivenessDescriptions[primaryIndex]}
+          </div>
+        `;
+      } else {
+        primaryResponseDiv.innerHTML = `
+          <h4 style="font-weight: 600; color: #dc2626; margin-bottom: 8px;">No Response Method Selected</h4>
+          <div style="font-size: 14px; color: #6b7280;">Please select a response approach above</div>
+        `;
+      }
+    };
+
+    responsivenessLabels.forEach((label, index) => {
+      const effectiveness = effectivenessValues[index];
+      const effectivenessColor = effectiveness >= 80 ? '#22c55e' : 
+                                 effectiveness >= 40 ? '#f59e0b' : 
+                                 effectiveness >= 0 ? '#ef4444' : '#991b1b';
+      
+      const responsivenessControl = document.createElement('div');
+      responsivenessControl.style.cssText = 'margin-bottom: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+      responsivenessControl.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <label style="font-size: 14px; font-weight: 500; color: #374151;">
+            ${label}
+          </label>
+          <div style="text-align: right;">
+            <span style="font-weight: 600; color: ${effectivenessColor};">${effectiveness}% effective</span>
+            <div style="font-size: 12px; color: #6b7280;">Weight: <span id="responsivenessValue_${index}">${localResponsiveness[index]}%</span></div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px; font-style: italic;">
+          ${responsivenessDescriptions[index]}
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input type="range" min="0" max="100" value="${localResponsiveness[index]}" id="responsiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+          <input type="number" min="0" max="100" value="${localResponsiveness[index]}" id="responsivenessNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        </div>
+      `;
+      responsivenessContainer.appendChild(responsivenessControl);
+
+      const rangeInput = document.getElementById(`responsiveness_${index}`);
+      const numberInput = document.getElementById(`responsivenessNum_${index}`);
+      const valueDisplay = document.getElementById(`responsivenessValue_${index}`);
+
+      const updateResponsivenessValue = (value) => {
+        const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
+        localResponsiveness[index] = newValue;
+        rangeInput.value = newValue;
+        numberInput.value = newValue;
+        valueDisplay.textContent = `${newValue}%`;
+        updatePrimaryResponse();
+        updateResponsiveness();
+      };
+
+      rangeInput.addEventListener('input', (e) => updateResponsivenessValue(e.target.value));
+      numberInput.addEventListener('input', (e) => updateResponsivenessValue(e.target.value));
+    });
+
+    const resetButton = document.getElementById('resetResponsiveness');
+    resetButton.addEventListener('click', () => {
+      localResponsiveness = [...riskEngine.defaultResponsivenessStrategy];
+      localResponsiveness.forEach((weight, index) => {
+        document.getElementById(`responsiveness_${index}`).value = weight;
+        document.getElementById(`responsivenessNum_${index}`).value = weight;
+        document.getElementById(`responsivenessValue_${index}`).textContent = `${weight}%`;
+      });
+      updatePrimaryResponse();
+      updateResponsiveness();
+    });
+
+    // Initialize primary response display
+    updatePrimaryResponse();
+  }
+
+  // Step 3: Final Results Panel
+  static createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const riskReduction = riskEngine.calculateRiskReduction(baselineRisk, managedRisk);
+    const isImprovement = managedRisk < baselineRisk;
+    const summary = riskEngine.generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy);
+
+    container.innerHTML = `
+      <div class="final-results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Final Risk Assessment Results</h2>
+
+        <!-- Risk Comparison Cards -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+          
+          <!-- Baseline Risk Card -->
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${summary.baseline.color}; background-color: ${summary.baseline.color}15;">
+            <div style="text-align: center;">
+              <div style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
+              <div style="font-size: 48px; font-weight: bold; color: ${summary.baseline.color}; margin-bottom: 8px;">
+                ${summary.baseline.score.toFixed(1)}
+              </div>
+              <div style="font-size: 18px; font-weight: 600; color: ${summary.baseline.color};">
+                ${summary.baseline.band}
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk Reduction Card -->
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${isImprovement ? '#22c55e' : '#6b7280'}; background-color: ${isImprovement ? '#22c55e' : '#6b7280'}15;">
+            <div style="text-align: center;">
+              <div style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">RISK REDUCTION</div>
+              <div style="font-size: 48px; font-weight: bold; color: ${isImprovement ? '#22c55e' : '#6b7280'}; margin-bottom: 8px;">
+                ${isImprovement ? '-' : ''}${Math.abs(riskReduction).toFixed(1)}%
+              </div>
+              <div style="font-size: 18px; font-weight: 600; color: ${isImprovement ? '#22c55e' : '#6b7280'};">
+                ${isImprovement ? 'Improvement' : 'No Change'}
+              </div>
+            </div>
+          </div>
+
+          <!-- Managed Risk Card -->
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${summary.managed.color}; background-color: ${summary.managed.color}15;">
+            <div style="text-align: center;">
+              <div style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
+              <div style="font-size: 48px; font-weight: bold; color: ${summary.managed.color}; margin-bottom: 8px;">
+                ${summary.managed.score.toFixed(1)}
+              </div>
+              <div style="font-size: 18px; font-weight: 600; color: ${summary.managed.color};">
+                ${summary.managed.band}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Effectiveness Breakdown -->
+        <div style="margin-bottom: 24px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
+          <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">Strategy Effectiveness Analysis</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">TRANSPARENCY EFFECTIVENESS</h4>
+              <div style="font-size: 28px; font-weight: bold; color: #3b82f6; margin-bottom: 4px;">
+                ${(summary.strategy.overallTransparency * 100).toFixed(1)}%
+              </div>
+              <div style="font-size: 12px; color: #6b7280;">Overall detection capability</div>
+            </div>
+            <div>
+              <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">RESPONSE EFFECTIVENESS</h4>
+              <div style="font-size: 28px; font-weight: bold; color: #8b5cf6; margin-bottom: 4px;">
+                ${(summary.strategy.overallResponsiveness * 100).toFixed(1)}%
+              </div>
+              <div style="font-size: 12px; color: #6b7280;">Primary: ${summary.strategy.primaryResponse.method}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Breakdown -->
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">HRDD Strategy Breakdown</h3>
+          <div id="strategyBreakdownList">
+            ${summary.strategy.hrddStrategies.map(strategy => `
+              <div style="display: flex; justify-content: between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb; background-color: ${strategy.weight > 0 ? '#f0f9ff' : '#f9fafb'};">
+                <div style="flex: 1;">
+                  <span style="font-weight: 500; color: #1f2937;">${strategy.name}</span>
+                  <div style="font-size: 12px; color: #6b7280;">
+                    Weight: ${strategy.weight}% • Transparency: ${strategy.transparency}% • Contribution: ${strategy.contribution.toFixed(1)}%
+                  </div>
+                </div>
+                <div style="width: 60px; height: 8px; background-color: #e5e7eb; border-radius: 4px; margin-left: 12px;">
+                  <div style="height: 100%; width: ${strategy.percentage}%; background-color: #3b82f6; border-radius: 4px;"></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Export & Action Buttons -->
+        <div style="display: flex; gap: 12px; justify-content: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          <button onclick="window.hrddApp.exportConfiguration()" style="padding: 12px 24px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+            Export Full Report
+          </button>
+          <button onclick="window.hrddApp.saveState()" style="padding: 12px 24px; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+            Save Configuration
+          </button>
+          <button onclick="window.hrddApp.setCurrentStep(1)" style="padding: 12px 24px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+            Modify Settings
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Risk Comparison Panel (Always Visible)
+  static createRiskComparisonPanel(container, { baselineRisk, managedRisk, selectedCountries }) {
+    if (!container) return;
+
+    const hasSelections = selectedCountries.length > 0;
+    const riskReduction = hasSelections ? riskEngine.calculateRiskReduction(baselineRisk, managedRisk) : 0;
+    const isImprovement = managedRisk < baselineRisk;
+
+    container.innerHTML = `
+      <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
+        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
+          Risk Assessment Summary
+        </h2>
+        
+        ${hasSelections ? `
+          <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 24px; align-items: center;">
+            <!-- Baseline Risk -->
+            <div style="text-align: center; padding: 20px; border-radius: 8px; background-color: ${riskEngine.getRiskColor(baselineRisk)}15; border: 2px solid ${riskEngine.getRiskColor(baselineRisk)};">
+              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
+              <div style="font-size: 36px; font-weight: bold; color: ${riskEngine.getRiskColor(baselineRisk)}; margin-bottom: 4px;">
+                ${baselineRisk.toFixed(1)}
+              </div>
+              <div style="font-size: 14px; font-weight: 500; color: ${riskEngine.getRiskColor(baselineRisk)};">
+                ${riskEngine.getRiskBand(baselineRisk)}
+              </div>
+            </div>
+
+            <!-- Arrow and Change -->
+            <div style="text-align: center;">
+              <div style="font-size: 24px; margin-bottom: 8px;">${isImprovement ? '↓' : '→'}</div>
+              <div style="font-size: 18px; font-weight: bold; color: ${isImprovement ? '#22c55e' : '#6b7280'};">
+                ${isImprovement ? '-' : ''}${Math.abs(riskReduction).toFixed(1)}%
+              </div>
+              <div style="font-size: 12px; color: #6b7280;">
+                ${isImprovement ? 'Reduction' : 'No Change'}
+              </div>
+            </div>
+
+            <!-- Managed Risk -->
+            <div style="text-align: center; padding: 20px; border-radius: 8px; background-color: ${riskEngine.getRiskColor(managedRisk)}15; border: 2px solid ${riskEngine.getRiskColor(managedRisk)};">
+              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
+              <div style="font-size: 36px; font-weight: bold; color: ${riskEngine.getRiskColor(managedRisk)}; margin-bottom: 4px;">
+                ${managedRisk.toFixed(1)}
+              </div>
+              <div style="font-size: 14px; font-weight: 500; color: ${riskEngine.getRiskColor(managedRisk)};">
+                ${riskEngine.getRiskBand(managedRisk)}
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align: center; margin-top: 16px; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
+            <span style="font-size: 14px; color: #0369a1;">
+              Portfolio: ${selectedCountries.length} countries • 
+              ${isImprovement ? 'Risk management strategy is effective' : 'Consider adjusting your HRDD approach'}
+            </span>
+          </div>
+        ` : `
+          <div style="text-align: center; padding: 40px; color: #6b7280;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🏭</div>
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No Countries Selected</h3>
+            <p style="font-size: 14px; margin-bottom: 20px;">
+              Select countries in Step 1 to see your risk assessment summary
+            </p>
+            <button onclick="window.hrddApp.setCurrentStep(1)" style="padding: 12px 24px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+              Go to Step 1
+            </button>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  // Existing methods (keeping all original functionality)
   static async _loadD3() {
     if (typeof d3 !== 'undefined') return;
     if (this._d3LoadingPromise) return this._d3LoadingPromise;
@@ -194,7 +759,7 @@ export class UIComponents {
     return { type: 'FeatureCollection', features };
   }
 
-  static _renderD3Map(worldData, { container, countries, countryRisks, selectedCountries, onCountrySelect, width, height }) {
+  static _renderD3Map(worldData, { container, countries, countryRisks, selectedCountries, onCountrySelect, width, height, mapType = 'baseline' }) {
     const wrapper = document.getElementById(container);
     if (!wrapper) return;
     wrapper.innerHTML = '';
@@ -267,7 +832,7 @@ export class UIComponents {
 
           if (onCountrySelect) onCountrySelect(countryId);
         })
-        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup))
+        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup, mapType))
         .on('mouseout', () => this._hideMapTooltip());
 
       // Enhanced zoom controls
@@ -326,6 +891,7 @@ export class UIComponents {
     }
   }
 
+  // Continue with all the existing helper methods...
   static _extractWorldFeatures(worldData) {
     if (!worldData) return [];
     if (worldData.type === 'FeatureCollection' && Array.isArray(worldData.features)) {
@@ -513,7 +1079,6 @@ export class UIComponents {
     return { type: 'FeatureCollection', features };
   }
 
-
   static _getCountryId(countryData) {
     if (!countryData) return null;
 
@@ -545,7 +1110,6 @@ export class UIComponents {
         return trimmed.toUpperCase();
       }
 
-      // If the id is purely numeric, fall back to name-based resolution
       if (/^\d+$/.test(trimmed)) {
         return null;
       }
@@ -596,7 +1160,7 @@ export class UIComponents {
     return lookup;
   }
 
-  static _showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map()) {
+  static _showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline') {
     const countryId = countryData.__isoCode;
     const countryName = countryMetadata.get(countryId)?.name || countryData.properties?.NAME || countryId || 'Unknown';
     const risk = countryId ? countryRisks[countryId] : undefined;
@@ -620,10 +1184,12 @@ export class UIComponents {
     const pageX = event.pageX || 0;
     const pageY = event.pageY || 0;
 
+    const riskLabel = mapType === 'managed' ? 'Managed Risk' : 'Baseline Risk';
+
     tooltip.html(`
       <strong>${countryName}</strong><br/>
       ${risk !== undefined ?
-        `Risk Score: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}` :
+        `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}` :
         'No data available'
       }
     `)
@@ -703,9 +1269,7 @@ export class UIComponents {
     });
   }
 
-  // NEW LAYOUT PANELS
-
-  // Country Selection Panel (Middle Left)
+  // Keep all existing Step 1 methods for backward compatibility
   static createCountrySelectionPanel(containerId, { countries, selectedCountries, countryVolumes, onCountrySelect, onVolumeChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -759,8 +1323,7 @@ export class UIComponents {
     this.updateSelectedCountriesDisplay(selectedCountries, countries, countryVolumes, onCountrySelect, onVolumeChange);
   }
 
-  // Results Panel (Middle Right)
-   static createResultsPanel(containerId, { selectedCountries, countries, countryRisks, baselineRisk }) {
+  static createResultsPanel(containerId, { selectedCountries, countries, countryRisks, baselineRisk }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -809,7 +1372,6 @@ export class UIComponents {
     this.updateRiskBreakdown(selectedCountries, countries, countryRisks);
   }
 
-  // Risk Factor Weightings Panel (Bottom)
   static createWeightingsPanel(containerId, { weights, onWeightsChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;

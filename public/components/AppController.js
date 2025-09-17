@@ -1,4 +1,4 @@
-// AppController.js - DEBUG VERSION with obvious visual changes
+// AppController.js - Complete 3-Step HRDD Risk Assessment Tool
 import { dataService } from './DataService.js';
 import { riskEngine } from './RiskEngine.js';
 import { UIComponents } from './UIComponents.js';
@@ -12,11 +12,21 @@ export class AppController {
       countryVolumes: {},
       countryRisks: {},
       baselineRisk: 0,
+      
+      // Step 2: HRDD Strategy
+      hrddStrategy: [...riskEngine.defaultHRDDStrategy],
+      transparencyEffectiveness: [...riskEngine.defaultTransparencyEffectiveness],
+      
+      // Step 3: Responsiveness Strategy
+      responsivenessStrategy: [...riskEngine.defaultResponsivenessStrategy],
+      managedRisk: 0,
+      
       loading: true,
       error: null,
       apiHealthy: false,
       lastUpdate: null,
-      isDirty: false
+      isDirty: false,
+      currentStep: 1
     };
 
     this.retryCount = 0;
@@ -25,10 +35,15 @@ export class AppController {
     this.containerElement = null;
     this._waitingForContainer = false;
 
+    // Bind methods
     this.initialize = this.initialize.bind(this);
     this.onWeightsChange = this.onWeightsChange.bind(this);
     this.onCountrySelect = this.onCountrySelect.bind(this);
     this.onVolumeChange = this.onVolumeChange.bind(this);
+    this.onHRDDStrategyChange = this.onHRDDStrategyChange.bind(this);
+    this.onTransparencyChange = this.onTransparencyChange.bind(this);
+    this.onResponsivenessChange = this.onResponsivenessChange.bind(this);
+    this.setCurrentStep = this.setCurrentStep.bind(this);
   }
 
   async initialize(containerId) {
@@ -54,9 +69,10 @@ export class AppController {
       await this.loadCountries();
       this.calculateAllRisks();
       this.calculateBaselineRisk();
+      this.calculateManagedRisk();
       this.state.lastUpdate = new Date().toISOString();
       this.render();
-      console.log('HRDD Risk Assessment Tool initialized successfully - NEW LAYOUT VERSION');
+      console.log('HRDD Risk Assessment Tool (3 Steps) initialized successfully');
       this.startAutoSave();
     } catch (error) {
       this.handleError(error);
@@ -95,10 +111,10 @@ export class AppController {
       <div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
         <div style="text-align: center; margin-bottom: 40px;">
           <h1 style="font-size: 28px; font-weight: bold; color: #1f2937; margin-bottom: 12px;">
-            Measuring the effectiveness of supply chain due diligence
+            Labour Rights Due Diligence Risk Assessment
           </h1>
           <p style="font-size: 16px; color: #6b7280;">
-            Initializing application and loading country data...
+            Complete 3-Step Risk Management Tool
           </p>
         </div>
         <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center;">
@@ -106,11 +122,8 @@ export class AppController {
             <div style="width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; margin: 0 auto 16px; animation: spin 1s linear infinite;"></div>
             <div style="font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">Loading Components</div>
             <div style="font-size: 14px; color: #6b7280;">
-              ${this.retryCount > 0 ? `Retry ${this.retryCount}/${this.maxRetries}` : 'Connecting to API and loading data...'}
+              ${this.retryCount > 0 ? `Retry ${this.retryCount}/${this.maxRetries}` : 'Initializing 3-step risk assessment...'}
             </div>
-          </div>
-          <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 12px; border-radius: 6px; font-size: 14px;">
-            <strong>Please wait:</strong> Loading country risk data and initializing interactive components.
           </div>
         </div>
       </div>
@@ -183,6 +196,22 @@ export class AppController {
     }
   }
 
+  calculateManagedRisk() {
+    try {
+      this.state.managedRisk = riskEngine.calculateManagedRisk(
+        this.state.baselineRisk,
+        this.state.hrddStrategy,
+        this.state.transparencyEffectiveness,
+        this.state.responsivenessStrategy
+      );
+      console.log(`Managed risk calculated: ${this.state.managedRisk.toFixed(2)}`);
+    } catch (error) {
+      console.error('Error calculating managed risk:', error);
+      this.state.managedRisk = this.state.baselineRisk;
+    }
+  }
+
+  // Event Handlers
   onWeightsChange = (newWeights) => {
     if (!riskEngine.validateWeights(newWeights)) {
       console.warn('Invalid weights provided:', newWeights);
@@ -197,6 +226,7 @@ export class AppController {
     this.weightsTimeout = setTimeout(() => {
       this.calculateAllRisks();
       this.calculateBaselineRisk();
+      this.calculateManagedRisk();
       this.updateUI();
       this.state.lastUpdate = new Date().toISOString();
     }, 300);
@@ -227,6 +257,7 @@ export class AppController {
     }
     
     this.calculateBaselineRisk();
+    this.calculateManagedRisk();
     this.updateUI();
     this.state.lastUpdate = new Date().toISOString();
   }
@@ -252,9 +283,71 @@ export class AppController {
     
     this.volumeTimeout = setTimeout(() => {
       this.calculateBaselineRisk();
+      this.calculateManagedRisk();
       this.updateUI();
       this.state.lastUpdate = new Date().toISOString();
     }, 500);
+  }
+
+  onHRDDStrategyChange = (newStrategy) => {
+    if (!riskEngine.validateHRDDStrategy(newStrategy)) {
+      console.warn('Invalid HRDD strategy provided:', newStrategy);
+      return;
+    }
+
+    this.state.hrddStrategy = [...newStrategy];
+    this.state.isDirty = true;
+    
+    if (this.strategyTimeout) clearTimeout(this.strategyTimeout);
+    
+    this.strategyTimeout = setTimeout(() => {
+      this.calculateManagedRisk();
+      this.updateUI();
+      this.state.lastUpdate = new Date().toISOString();
+    }, 300);
+  }
+
+  onTransparencyChange = (newTransparency) => {
+    if (!riskEngine.validateTransparency(newTransparency)) {
+      console.warn('Invalid transparency values provided:', newTransparency);
+      return;
+    }
+
+    this.state.transparencyEffectiveness = [...newTransparency];
+    this.state.isDirty = true;
+    
+    if (this.transparencyTimeout) clearTimeout(this.transparencyTimeout);
+    
+    this.transparencyTimeout = setTimeout(() => {
+      this.calculateManagedRisk();
+      this.updateUI();
+      this.state.lastUpdate = new Date().toISOString();
+    }, 300);
+  }
+
+  onResponsivenessChange = (newResponsiveness) => {
+    if (!riskEngine.validateResponsiveness(newResponsiveness)) {
+      console.warn('Invalid responsiveness values provided:', newResponsiveness);
+      return;
+    }
+
+    this.state.responsivenessStrategy = [...newResponsiveness];
+    this.state.isDirty = true;
+    
+    if (this.responsivenessTimeout) clearTimeout(this.responsivenessTimeout);
+    
+    this.responsivenessTimeout = setTimeout(() => {
+      this.calculateManagedRisk();
+      this.updateUI();
+      this.state.lastUpdate = new Date().toISOString();
+    }, 300);
+  }
+
+  setCurrentStep = (step) => {
+    if (step >= 1 && step <= 3) {
+      this.state.currentStep = step;
+      this.updateUI();
+    }
   }
 
   handleError(error) {
@@ -279,7 +372,7 @@ export class AppController {
   }
 
   render() {
-    console.log("DEBUG: render() method called - NEW LAYOUT VERSION");
+    console.log("Rendering complete 3-step HRDD tool");
     
     const container = this.containerElement || document.getElementById(this.containerId);
     if (!container) return;
@@ -315,23 +408,52 @@ export class AppController {
 
     container.innerHTML = `
       <div style="min-height: 100vh; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;">
-        <div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+        <div style="max-width: 1600px; margin: 0 auto; padding: 20px;">
 
-          <!-- Header -->
-          <header style="text-align: center; margin-bottom: 40px; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header with Step Navigation -->
+          <header style="text-align: center; margin-bottom: 32px; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <h1 style="font-size: 36px; font-weight: bold; color: #1f2937; margin-bottom: 12px; line-height: 1.2;">
               Labour Rights Due Diligence Risk Assessment
             </h1>
-            <p style="font-size: 18px; color: #6b7280; margin-bottom: 16px;">
-              Step 1: Calculate Baseline Risk for Supply Chain Countries
+            <p style="font-size: 18px; color: #6b7280; margin-bottom: 24px;">
+              Complete 3-Step Risk Management and Effectiveness Analysis
             </p>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: #6b7280; margin-top: 16px;">
+            
+            <!-- Step Navigation -->
+            <div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 16px;">
+              <button onclick="window.hrddApp.setCurrentStep(1)" 
+                      style="padding: 12px 24px; border: 2px solid ${this.state.currentStep === 1 ? '#3b82f6' : '#d1d5db'}; 
+                             background: ${this.state.currentStep === 1 ? '#3b82f6' : 'white'}; 
+                             color: ${this.state.currentStep === 1 ? 'white' : '#6b7280'}; 
+                             border-radius: 8px; cursor: pointer; font-weight: 600;">
+                Step 1: Baseline Risk
+              </button>
+              <button onclick="window.hrddApp.setCurrentStep(2)" 
+                      style="padding: 12px 24px; border: 2px solid ${this.state.currentStep === 2 ? '#3b82f6' : '#d1d5db'}; 
+                             background: ${this.state.currentStep === 2 ? '#3b82f6' : 'white'}; 
+                             color: ${this.state.currentStep === 2 ? 'white' : '#6b7280'}; 
+                             border-radius: 8px; cursor: pointer; font-weight: 600;">
+                Step 2: HRDD Strategy
+              </button>
+              <button onclick="window.hrddApp.setCurrentStep(3)" 
+                      style="padding: 12px 24px; border: 2px solid ${this.state.currentStep === 3 ? '#3b82f6' : '#d1d5db'}; 
+                             background: ${this.state.currentStep === 3 ? '#3b82f6' : 'white'}; 
+                             color: ${this.state.currentStep === 3 ? 'white' : '#6b7280'}; 
+                             border-radius: 8px; cursor: pointer; font-weight: 600;">
+                Step 3: Managed Risk
+              </button>
+            </div>
+
+            <!-- Status Bar -->
+            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: #6b7280;">
               <div style="display: flex; align-items: center; gap: 4px;">
                 <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
                 <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
               </div>
               <div>•</div>
-              <div>${this.state.countries.length} Countries Loaded</div>
+              <div>${this.state.countries.length} Countries</div>
+              <div>•</div>
+              <div>${this.state.selectedCountries.length} Selected</div>
               ${this.state.lastUpdate ? `
                 <div>•</div>
                 <div>Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}</div>
@@ -339,104 +461,178 @@ export class AppController {
             </div>
           </header>
 
-          <!-- MAP SECTION (TOP) - FULL WIDTH -->
-          <div id="mapContainer" style="margin-bottom: 32px; background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; padding: 10px;">
-          <div style="background: #ffc107; color: #856404; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">␊
-              Labour rights: base line risk
-            </div>
-            <!-- Map will be rendered here -->
-          </div>
+          <!-- Step Content -->
+          <div id="stepContent"></div>
 
-          <!-- MIDDLE SECTION: Country Selection + Results -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; background: #d1ecf1; border: 3px solid #17a2b8; border-radius: 8px; padding: 10px;" id="middleGrid">
-            <div id="countrySelectionPanel" style="background: #f8d7da; border: 2px solid #dc3545; border-radius: 4px; padding: 10px;">
-              <div style="background: #dc3545; color: white; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
-                📋 COUNTRY SELECTION - LEFT PANEL
-              </div>
-              <!-- Country Selection Panel will be rendered here -->
-            </div>
-            <div id="resultsPanel" style="background: #d4edda; border: 2px solid #28a745; border-radius: 4px; padding: 10px;">
-              <div style="background: #28a745; color: white; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
-                📊 RESULTS - RIGHT PANEL
-              </div>
-              <!-- Results Panel will be rendered here -->
-            </div>
-          </div>
+          <!-- Always visible risk comparison at bottom -->
+          <div id="riskComparison" style="margin-top: 32px;"></div>
 
-          <!-- BOTTOM SECTION: Risk Factor Weightings -->
-          <div id="weightingsPanel" style="margin-bottom: 24px; background: #e2e3e5; border: 3px solid #6c757d; border-radius: 8px; padding: 10px;">
-            <div style="background: #6c757d; color: white; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
-              ⚖️ WEIGHTINGS PANEL - NOW AT BOTTOM (FULL WIDTH)
-            </div>
-            <!-- Weightings Panel will be rendered here -->
-          </div>
         </div>
-
-        <style>
-          @media (max-width: 768px) {
-            #middleGrid {
-              grid-template-columns: 1fr !important;
-            }
-          }
-        </style>
       </div>
     `;
 
-    console.log("DEBUG: About to call renderComponents()");
-    this.renderComponents();
+    this.renderStepContent();
+    this.renderRiskComparison();
   }
 
-  renderComponents() {
-    console.log("DEBUG: renderComponents() called");
-    try {
-      // Render map at top (larger size)
-      console.log("DEBUG: Rendering map component");
-      UIComponents.createWorldMap('mapContainer', {
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        selectedCountries: this.state.selectedCountries,
-        onCountrySelect: this.onCountrySelect,
-        title: 'Labour Rights Risk Assessment Map',
-        height: 600,
-        width: 1200
-      });
+  renderStepContent() {
+    const stepContent = document.getElementById('stepContent');
+    if (!stepContent) return;
 
-      // Render country selection panel (middle left)
-      console.log("DEBUG: Rendering country selection panel");
-      UIComponents.createCountrySelectionPanel('countrySelectionPanel', {
-        countries: this.state.countries,
-        selectedCountries: this.state.selectedCountries,
-        countryVolumes: this.state.countryVolumes,
-        onCountrySelect: this.onCountrySelect,
-        onVolumeChange: this.onVolumeChange
-      });
-
-      // Render results panel (middle right)
-      console.log("DEBUG: Rendering results panel");
-      UIComponents.createResultsPanel('resultsPanel', {
-        selectedCountries: this.state.selectedCountries,
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        baselineRisk: this.state.baselineRisk
-      });
-
-      // Render weightings panel (bottom)
-      console.log("DEBUG: Rendering weightings panel");
-      UIComponents.createWeightingsPanel('weightingsPanel', {
-        weights: this.state.weights,
-        onWeightsChange: this.onWeightsChange
-      });
-
-      console.log("DEBUG: All components rendered successfully");
-      
-    } catch (error) {
-      console.error('DEBUG: Error rendering components:', error);
-      this.handleError(new Error('Failed to render application components'));
+    switch (this.state.currentStep) {
+      case 1:
+        this.renderStep1(stepContent);
+        break;
+      case 2:
+        this.renderStep2(stepContent);
+        break;
+      case 3:
+        this.renderStep3(stepContent);
+        break;
     }
+  }
+
+  renderStep1(container) {
+    container.innerHTML = `
+      <!-- BASELINE RISK MAP -->
+      <div id="baselineMapContainer" style="margin-bottom: 32px;"></div>
+
+      <!-- COUNTRY SELECTION & RESULTS -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="selectionGrid">
+        <div id="countrySelectionPanel"></div>
+        <div id="resultsPanel"></div>
+      </div>
+
+      <!-- WEIGHTINGS PANEL -->
+      <div id="weightingsPanel"></div>
+
+      <style>
+        @media (max-width: 768px) {
+          #selectionGrid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      </style>
+    `;
+
+    // Render Step 1 components
+    UIComponents.createWorldMap('baselineMapContainer', {
+      countries: this.state.countries,
+      countryRisks: this.state.countryRisks,
+      selectedCountries: this.state.selectedCountries,
+      onCountrySelect: this.onCountrySelect,
+      title: 'Step 1: Baseline Risk Assessment',
+      mapType: 'baseline',
+      height: 500,
+      width: 1200
+    });
+
+    UIComponents.createCountrySelectionPanel('countrySelectionPanel', {
+      countries: this.state.countries,
+      selectedCountries: this.state.selectedCountries,
+      countryVolumes: this.state.countryVolumes,
+      onCountrySelect: this.onCountrySelect,
+      onVolumeChange: this.onVolumeChange
+    });
+
+    UIComponents.createResultsPanel('resultsPanel', {
+      selectedCountries: this.state.selectedCountries,
+      countries: this.state.countries,
+      countryRisks: this.state.countryRisks,
+      baselineRisk: this.state.baselineRisk
+    });
+
+    UIComponents.createWeightingsPanel('weightingsPanel', {
+      weights: this.state.weights,
+      onWeightsChange: this.onWeightsChange
+    });
+  }
+
+  renderStep2(container) {
+    container.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;" id="step2Grid">
+        <div id="hrddStrategyPanel"></div>
+        <div id="transparencyPanel"></div>
+      </div>
+
+      <style>
+        @media (max-width: 768px) {
+          #step2Grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      </style>
+    `;
+
+    UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
+      strategy: this.state.hrddStrategy,
+      onStrategyChange: this.onHRDDStrategyChange
+    });
+
+    UIComponents.createTransparencyPanel('transparencyPanel', {
+      transparency: this.state.transparencyEffectiveness,
+      onTransparencyChange: this.onTransparencyChange
+    });
+  }
+
+  renderStep3(container) {
+    container.innerHTML = `
+      <!-- MANAGED RISK MAP -->
+      <div id="managedMapContainer" style="margin-bottom: 32px;"></div>
+
+      <!-- RESPONSIVENESS STRATEGY -->
+      <div id="responsivenessPanel" style="margin-bottom: 32px;"></div>
+
+      <!-- FINAL RESULTS -->
+      <div id="finalResultsPanel"></div>
+    `;
+
+    UIComponents.createWorldMap('managedMapContainer', {
+      countries: this.state.countries,
+      countryRisks: this.state.countryRisks,
+      selectedCountries: this.state.selectedCountries,
+      onCountrySelect: this.onCountrySelect,
+      title: 'Step 3: Managed Risk After HRDD Implementation',
+      mapType: 'managed',
+      managedRisk: this.state.managedRisk,
+      height: 500,
+      width: 1200
+    });
+
+    UIComponents.createResponsivenessPanel('responsivenessPanel', {
+      responsiveness: this.state.responsivenessStrategy,
+      onResponsivenessChange: this.onResponsivenessChange
+    });
+
+    UIComponents.createFinalResultsPanel('finalResultsPanel', {
+      baselineRisk: this.state.baselineRisk,
+      managedRisk: this.state.managedRisk,
+      selectedCountries: this.state.selectedCountries,
+      countries: this.state.countries,
+      hrddStrategy: this.state.hrddStrategy,
+      transparencyEffectiveness: this.state.transparencyEffectiveness,
+      responsivenessStrategy: this.state.responsivenessStrategy
+    });
+  }
+
+  renderRiskComparison() {
+    const container = document.getElementById('riskComparison');
+    if (!container) return;
+
+    UIComponents.createRiskComparisonPanel(container, {
+      baselineRisk: this.state.baselineRisk,
+      managedRisk: this.state.managedRisk,
+      selectedCountries: this.state.selectedCountries
+    });
   }
 
   updateUI() {
     try {
+      // Update current step content
+      this.renderStepContent();
+      this.renderRiskComparison();
+
+      // Update any dropdowns
       const countrySelect = document.getElementById('countrySelect');
       if (countrySelect) {
         const currentValue = countrySelect.value;
@@ -453,30 +649,12 @@ export class AppController {
         countrySelect.value = currentValue;
       }
 
-      UIComponents.updateSelectedCountriesDisplay(
-        this.state.selectedCountries,
-        this.state.countries,
-        this.state.countryVolumes,
-        this.onCountrySelect,
-        this.onVolumeChange
-      );
-
-      UIComponents.updateResultsPanel(this.state.selectedCountries, this.state.countries, this.state.countryRisks, this.state.baselineRisk);
-
-      UIComponents.createWorldMap('mapContainer', {
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        selectedCountries: this.state.selectedCountries,
-        onCountrySelect: this.onCountrySelect,
-        title: 'Labour Rights Risk Assessment Map',
-        height: 600,
-        width: 1200
-      });
     } catch (error) {
       console.error('Error updating UI:', error);
     }
   }
 
+  // Utility methods
   startAutoSave() {
     if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
     this.autoSaveInterval = setInterval(() => {
@@ -493,6 +671,10 @@ export class AppController {
         weights: this.state.weights,
         selectedCountries: this.state.selectedCountries,
         countryVolumes: this.state.countryVolumes,
+        hrddStrategy: this.state.hrddStrategy,
+        transparencyEffectiveness: this.state.transparencyEffectiveness,
+        responsivenessStrategy: this.state.responsivenessStrategy,
+        currentStep: this.state.currentStep,
         lastSaved: new Date().toISOString()
       };
       if (typeof localStorage !== 'undefined') {
@@ -513,7 +695,11 @@ export class AppController {
           this.setState({
             weights: parsedState.weights || this.state.weights,
             selectedCountries: parsedState.selectedCountries || this.state.selectedCountries,
-            countryVolumes: parsedState.countryVolumes || this.state.countryVolumes
+            countryVolumes: parsedState.countryVolumes || this.state.countryVolumes,
+            hrddStrategy: parsedState.hrddStrategy || this.state.hrddStrategy,
+            transparencyEffectiveness: parsedState.transparencyEffectiveness || this.state.transparencyEffectiveness,
+            responsivenessStrategy: parsedState.responsivenessStrategy || this.state.responsivenessStrategy,
+            currentStep: parsedState.currentStep || this.state.currentStep
           });
           console.log('Loaded saved state from:', parsedState.lastSaved);
           return true;
@@ -544,6 +730,7 @@ export class AppController {
     
     this.calculateAllRisks();
     this.calculateBaselineRisk();
+    this.calculateManagedRisk();
     this.render();
     console.log('Loaded demo data with', demoCountries.length, 'countries');
   }
@@ -556,36 +743,18 @@ export class AppController {
     this.state = { ...this.state, ...newState };
     this.calculateAllRisks();
     this.calculateBaselineRisk();
+    this.calculateManagedRisk();
     this.updateUI();
     this.state.lastUpdate = new Date().toISOString();
-  }
-
-  exportConfiguration() {
-    const config = {
-      weights: this.state.weights,
-      selectedCountries: this.state.selectedCountries,
-      countryVolumes: this.state.countryVolumes,
-      baselineRisk: this.state.baselineRisk,
-      exportDate: new Date().toISOString(),
-      version: '1.0'
-    };
-    
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hrdd-risk-config-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    console.log('Configuration exported');
   }
 
   destroy() {
     if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
     if (this.weightsTimeout) clearTimeout(this.weightsTimeout);
     if (this.volumeTimeout) clearTimeout(this.volumeTimeout);
+    if (this.strategyTimeout) clearTimeout(this.strategyTimeout);
+    if (this.transparencyTimeout) clearTimeout(this.transparencyTimeout);
+    if (this.responsivenessTimeout) clearTimeout(this.responsivenessTimeout);
     if (this.state.isDirty) this.saveState();
     console.log('App controller cleaned up');
   }
