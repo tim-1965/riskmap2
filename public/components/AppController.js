@@ -1,4 +1,4 @@
-// AppController.js - Enhanced application controller with new layout
+// AppController.js - DEBUG VERSION with obvious visual changes
 import { dataService } from './DataService.js';
 import { riskEngine } from './RiskEngine.js';
 import { UIComponents } from './UIComponents.js';
@@ -56,7 +56,7 @@ export class AppController {
       this.calculateBaselineRisk();
       this.state.lastUpdate = new Date().toISOString();
       this.render();
-      console.log('HRDD Risk Assessment Tool initialized successfully');
+      console.log('HRDD Risk Assessment Tool initialized successfully - NEW LAYOUT VERSION');
       this.startAutoSave();
     } catch (error) {
       this.handleError(error);
@@ -279,6 +279,8 @@ export class AppController {
   }
 
   render() {
+    console.log("DEBUG: render() method called - NEW LAYOUT VERSION");
+    
     const container = this.containerElement || document.getElementById(this.containerId);
     if (!container) return;
     this.containerElement = container;
@@ -311,8 +313,12 @@ export class AppController {
       return;
     }
 
-    // NEW LAYOUT STRUCTURE
+    // DEBUG: OBVIOUS VISUAL INDICATOR - BIG RED BANNER
     container.innerHTML = `
+      <div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4); color: white; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        🎉 NEW LAYOUT ACTIVE! 🎉 Map Top → Middle Panels → Weightings Bottom
+      </div>
+      
       <div style="min-height: 100vh; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;">
         <div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
           
@@ -324,7 +330,10 @@ export class AppController {
             <p style="font-size: 18px; color: #6b7280; margin-bottom: 16px;">
               Step 1: Calculate Baseline Risk for Supply Chain Countries
             </p>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: #6b7280;">
+            <div style="background: #22c55e; color: white; padding: 8px; border-radius: 6px; font-weight: bold;">
+              ✅ NEW LAYOUT LOADED - Check console for "NEW LAYOUT VERSION"
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: #6b7280; margin-top: 16px;">
               <div style="display: flex; align-items: center; gap: 4px;">
                 <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
                 <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
@@ -338,23 +347,35 @@ export class AppController {
             </div>
           </header>
 
-          <!-- MAP SECTION (TOP) -->
-          <div id="mapContainer" style="margin-bottom: 32px;">
+          <!-- MAP SECTION (TOP) - FULL WIDTH -->
+          <div id="mapContainer" style="margin-bottom: 32px; background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px; padding: 10px;">
+            <div style="background: #ffc107; color: #856404; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
+              📍 MAP SECTION - NOW AT TOP (FULL WIDTH)
+            </div>
             <!-- Map will be rendered here -->
           </div>
 
           <!-- MIDDLE SECTION: Country Selection + Results -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="middleGrid">
-            <div id="countrySelectionPanel">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; background: #d1ecf1; border: 3px solid #17a2b8; border-radius: 8px; padding: 10px;" id="middleGrid">
+            <div id="countrySelectionPanel" style="background: #f8d7da; border: 2px solid #dc3545; border-radius: 4px; padding: 10px;">
+              <div style="background: #dc3545; color: white; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
+                📋 COUNTRY SELECTION - LEFT PANEL
+              </div>
               <!-- Country Selection Panel will be rendered here -->
             </div>
-            <div id="resultsPanel">
+            <div id="resultsPanel" style="background: #d4edda; border: 2px solid #28a745; border-radius: 4px; padding: 10px;">
+              <div style="background: #28a745; color: white; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
+                📊 RESULTS - RIGHT PANEL
+              </div>
               <!-- Results Panel will be rendered here -->
             </div>
           </div>
 
           <!-- BOTTOM SECTION: Risk Factor Weightings -->
-          <div id="weightingsPanel" style="margin-bottom: 24px;">
+          <div id="weightingsPanel" style="margin-bottom: 24px; background: #e2e3e5; border: 3px solid #6c757d; border-radius: 8px; padding: 10px;">
+            <div style="background: #6c757d; color: white; padding: 5px; text-align: center; font-weight: bold; margin-bottom: 10px; border-radius: 4px;">
+              ⚖️ WEIGHTINGS PANEL - NOW AT BOTTOM (FULL WIDTH)
+            </div>
             <!-- Weightings Panel will be rendered here -->
           </div>
 
@@ -363,14 +384,11 @@ export class AppController {
             <div style="display: flex; align-items: start; gap: 16px;">
               <div style="font-size: 24px;">🚀</div>
               <div>
-                <h3 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Next Steps:</h3>
+                <h3 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Layout Change Successful!</h3>
                 <p style="font-size: 14px; margin-bottom: 8px;">
-                  Step 2 will allow you to configure HRDD strategies (monitoring, audits, etc.)<br>
-                  Step 3 will measure responsiveness effectiveness to calculate managed risk levels.
+                  The layout has been restructured: Map moved to top, controls split into 3 sections below.
+                  Step 2 will allow you to configure HRDD strategies, Step 3 will calculate managed risk levels.
                 </p>
-                <div style="font-size: 12px; opacity: 0.8;">
-                  Your current configuration is automatically saved and can be restored when you return.
-                </div>
               </div>
             </div>
           </div>
@@ -386,12 +404,15 @@ export class AppController {
       </div>
     `;
 
+    console.log("DEBUG: About to call renderComponents()");
     this.renderComponents();
   }
 
   renderComponents() {
+    console.log("DEBUG: renderComponents() called");
     try {
       // Render map at top (larger size)
+      console.log("DEBUG: Rendering map component");
       UIComponents.createWorldMap('mapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
@@ -403,6 +424,7 @@ export class AppController {
       });
 
       // Render country selection panel (middle left)
+      console.log("DEBUG: Rendering country selection panel");
       UIComponents.createCountrySelectionPanel('countrySelectionPanel', {
         countries: this.state.countries,
         selectedCountries: this.state.selectedCountries,
@@ -412,6 +434,7 @@ export class AppController {
       });
 
       // Render results panel (middle right)
+      console.log("DEBUG: Rendering results panel");
       UIComponents.createResultsPanel('resultsPanel', {
         selectedCountries: this.state.selectedCountries,
         countries: this.state.countries,
@@ -420,13 +443,16 @@ export class AppController {
       });
 
       // Render weightings panel (bottom)
+      console.log("DEBUG: Rendering weightings panel");
       UIComponents.createWeightingsPanel('weightingsPanel', {
         weights: this.state.weights,
         onWeightsChange: this.onWeightsChange
       });
+
+      console.log("DEBUG: All components rendered successfully");
       
     } catch (error) {
-      console.error('Error rendering components:', error);
+      console.error('DEBUG: Error rendering components:', error);
       this.handleError(new Error('Failed to render application components'));
     }
   }
