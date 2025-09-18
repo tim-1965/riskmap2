@@ -3,10 +3,10 @@ import { riskEngine } from './RiskEngine.js';
 let panel3ResizeListenerAttached = false;
 
 function describeFocusLevel(value) {
-  if (value >= 0.9) return 'Crisis / SEV surge posture';
-  if (value >= 0.7) return 'Targeted worker voice & triage';
-  if (value >= 0.4) return 'Risk-led monitoring programme';
-  if (value >= 0.1) return 'Legacy calendar-led audits';
+  if (value >= 0.9) return 'Active monitoring only for crisis situations.';
+  if (value >= 0.7) return 'Only high risk suppliers are actively monitored.';
+  if (value >= 0.4) return 'Active monitoring for medium and high risk suppliers.';
+  if (value >= 0.1) return 'Most suppliers are actively monitored.';
   return 'Even portfolio coverage';
 }
 
@@ -313,10 +313,10 @@ export function createFocusPanel(containerId, { focus, onFocusChange }) {
 
       <ul style="margin: 0; font-size: 13px; color: #1e3a8a; padding-left: 20px; line-height: 1.6;">
         <li><strong>0.00 – 0.10:</strong> Even effort across the portfolio.</li>
-        <li><strong>0.10 – 0.30:</strong> Legacy audit programmes, calendar-driven.</li>
-        <li><strong>0.40 – 0.60:</strong> Risk-led programmes with targeted surveys.</li>
-        <li><strong>0.70 – 0.90:</strong> Continuous worker voice with triaged CAPs.</li>
-        <li><strong>0.90 – 1.00:</strong> Crisis posture concentrating on hotspots.</li>
+        <li><strong>0.10 – 0.30:</strong> Most suppliers are actively monitored.</li>
+        <li><strong>0.40 – 0.60:</strong> Active monitoring for medium and high risk suppliers.</li>
+        <li><strong>0.70 – 0.90:</strong> Only high risk suppliers are actively monitored.</li>
+        <li><strong>0.90 – 1.00:</strong> Active monitoring only for crisis situations.</li>
       </ul>
     </div>
   `;

@@ -17,8 +17,8 @@ export class RiskEngine {
 
     // Strategy labels
     this.hrddStrategyLabels = [
-      'Continuous Worker Voice (daily)',
-      'Worker Surveys (quarterly)',
+      'Continuous Worker Voice',
+      'Worker Surveys (annual)',
       'Unannounced Social Audits',
       'Announced Social Audits',
       'Supplier Self-Reporting',
@@ -26,12 +26,12 @@ export class RiskEngine {
     ];
 
     this.responsivenessLabels = [
-      'No Formal Response',
-      'Reactive / Ad Hoc Actions',
-      'Corrective Action Plans',
-      'Supplier Development Programmes',
+      'Suppliers see risks and remedy-impact in realtime',
       'Binding Commercial Levers',
-      'Industry Collaboration & Agreements'
+      'Corrective Action Plans with quarterly follow-up',
+      'Supplier Development Programmes',
+      'Industry Collaboration & Agreements',
+      'Follow up only on crisis situations'
     ];
     
     // Risk band definitions
