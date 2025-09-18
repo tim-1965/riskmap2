@@ -636,11 +636,8 @@ export class AppController {
           <div id="globalRiskSummary"></div>
         `;
 
-      case 2: // Baseline Risk
+       case 2: // Baseline Risk
         return `
-          <!-- RISK ASSESSMENT SUMMARY -->
-          <div id="baselineRiskSummary" style="margin-bottom: 32px;"></div>
-
           <!-- BASELINE RISK MAP -->
           <div id="baselineMapContainer" style="margin-bottom: 32px;"></div>
 
@@ -661,6 +658,9 @@ export class AppController {
 
      case 3: // HRDD Strategy
         return `
+          <!-- RISK ASSESSMENT SUMMARY -->
+          <div id="strategyRiskSummary" style="margin-bottom: 32px;"></div>
+
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="panel3Grid">
             <div id="hrddStrategyPanel"></div>
             <div id="transparencyPanel"></div>
@@ -768,14 +768,14 @@ export class AppController {
           baselineRisk: this.state.baselineRisk
         });
 
-        UIComponents.createRiskComparisonPanel('baselineRiskSummary', {
+      } else if (panel === 3) {
+        // Panel 3: HRDD Strategy
+        UIComponents.createRiskComparisonPanel('strategyRiskSummary', {
           baselineRisk: this.state.baselineRisk,
           managedRisk: this.state.managedRisk,
           selectedCountries: this.state.selectedCountries
         });
 
-      } else if (panel === 3) {
-        // Panel 3: HRDD Strategy
         UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
           strategy: this.state.hrddStrategy,
           onStrategyChange: this.onHRDDStrategyChange,

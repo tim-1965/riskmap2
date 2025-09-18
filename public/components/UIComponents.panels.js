@@ -200,7 +200,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   container.innerHTML = `
     <div class="hrdd-strategy-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD Strategy Coverage</h2>
+        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD strategies in use</h2>
         <button id="resetStrategy" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
           Reset to Default
         </button>
@@ -216,10 +216,10 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
       <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Coverage-Based Strategy:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li>Each percentage represents supplier base coverage for that monitoring tool.</li>
-          <li>Higher coverage increases total transparency with diminishing returns.</li>
+          <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
+          <li>Higher coverage increases total transparency but with diminishing returns.</li>
           <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Passive</span>.</li>
-          <li>Maximum achievable transparency: 90% (some issues always remain hidden).</li>
+          <li>It is assumed that the maximum achievable detection of issues (ie: transparency) is 90% (some issues always remain hidden).</li>
         </ul>
       </div>
     </div>
@@ -397,21 +397,21 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
   container.innerHTML = `
     <div class="transparency-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Tool Effectiveness Assumptions</h2>
+        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Transparency Effectiveness</h2>
         <button id="resetTransparency" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-          Reset to Research Defaults
+          Reset to Default
         </button>
       </div>
 
        <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
       <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Tool Effectiveness:</h4>
+        <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Transparency Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li><strong>Base Effectiveness:</strong> Research-backed rates of issue detection per tool.</li>
-          <li><strong>Diminishing Returns:</strong> Additional coverage yields decreasing marginal benefits.</li>
-          <li><strong>Category Overlap:</strong> Tools within categories have overlapping coverage.</li>
-          <li><strong>Maximum Transparency:</strong> 90% cap reflects reality that some issues remain hidden.</li>
+          <li><strong>Base Effectiveness:</strong> Baseline rates of issue detection per tool.</li>
+          <li><strong>Diminishing Returns:</strong> Note that coverage by multiple tools yields decreasing marginal benefits.</li>
+          <li><strong>Category Overlap:</strong> Tools within categories are assumed to have overlapping coverage.</li>
+          <li><strong>Maximum Transparency:</strong> A 90% cap on detection is assumed on the basis some issues remain hidden.</li>
         </ul>
       </div>
     </div>
