@@ -222,6 +222,74 @@ export class RiskEngine {
     return Math.max(0, managedRisk);
   }
 
+  calculateManagedRiskDetails(
+    selectedCountries,
+    countryVolumes,
+    countryRisks,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    focus = this.defaultFocus ?? 0
+  ) {
+    const safeSelected = Array.isArray(selectedCountries) ? selectedCountries : [];
+    if (safeSelected.length === 0) {
+      const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+      return {
+        managedRisk: 0,
+        baselineRisk: 0,
+        riskConcentration: 1,
+        focusMultiplier: (1 - sanitizedFocus) + sanitizedFocus * 1,
+        combinedEffectiveness: 0,
+        countryManagedRisks: {}
+      };
+    }
+
+    const metrics = this.calculatePortfolioMetrics(safeSelected, countryVolumes, countryRisks);
+    const baselineRisk = metrics.baselineRisk;
+    const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+    const sanitizedConcentration = Number.isFinite(metrics.riskConcentration) && metrics.riskConcentration > 0
+      ? Math.max(1, metrics.riskConcentration)
+      : 1;
+
+    const overallTransparencyEffectiveness = this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
+    const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
+    const combinedEffectiveness = overallTransparencyEffectiveness * overallResponsivenessEffectiveness;
+
+    const focusMultiplier = (1 - sanitizedFocus) + sanitizedFocus * sanitizedConcentration;
+
+    const managedRisk = baselineRisk > 0
+      ? Math.max(0, baselineRisk * (1 - combinedEffectiveness * focusMultiplier))
+      : 0;
+
+    const managedRisksByCountry = {};
+    const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+
+    safeSelected.forEach(countryCode => {
+      const countryRisk = Number.isFinite(safeCountryRisks[countryCode]) ? safeCountryRisks[countryCode] : 0;
+
+      if (baselineRisk <= 0 || combinedEffectiveness <= 0) {
+        managedRisksByCountry[countryCode] = Math.max(0, countryRisk);
+        return;
+      }
+
+      const relativeRisk = baselineRisk > 0 ? countryRisk / baselineRisk : 1;
+      const focusWeight = (1 - sanitizedFocus) + sanitizedFocus * relativeRisk;
+      const reductionFactor = combinedEffectiveness * focusWeight;
+      const managedValue = countryRisk * (1 - Math.min(1, Math.max(0, reductionFactor)));
+      managedRisksByCountry[countryCode] = Math.max(0, managedValue);
+    });
+
+    return {
+      managedRisk,
+      baselineRisk,
+      riskConcentration: sanitizedConcentration,
+      focusMultiplier,
+      combinedEffectiveness,
+      countryManagedRisks: managedRisksByCountry
+    };
+  }
+
   // Calculate risk reduction percentage
   calculateRiskReduction(baselineRisk, managedRisk) {
     if (baselineRisk <= 0) return 0;

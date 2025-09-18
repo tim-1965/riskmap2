@@ -390,13 +390,26 @@ function getFeatureIsoCode(feature, metadataMap, nameLookup) {
   return resolveCountryCodeFromName(feature, metadataMap, nameLookup);
 }
 
-function createManagedRiskDisplay(selectedCountries, managedRisk) {
+function createManagedRiskDisplay(selectedCountries, managedRisk, managedRisksByCountry = null, fallbackRisks = {}) {
   const managedRiskDisplay = {};
   selectedCountries.forEach(countryCode => {
-    managedRiskDisplay[countryCode] = managedRisk;
+    if (managedRisksByCountry && Number.isFinite(managedRisksByCountry[countryCode])) {
+      managedRiskDisplay[countryCode] = managedRisksByCountry[countryCode];
+      return;
+    }
+
+    if (Number.isFinite(managedRisk)) {
+      managedRiskDisplay[countryCode] = managedRisk;
+      return;
+    }
+
+    if (fallbackRisks && Number.isFinite(fallbackRisks[countryCode])) {
+      managedRiskDisplay[countryCode] = fallbackRisks[countryCode];
+    }
   });
   return managedRiskDisplay;
 }
+
 
 function addZoomControls(svg, zoom) {
   const zoomControls = svg.append('g')
@@ -474,10 +487,18 @@ function showMapTooltip(event, countryData, countryRisks, countryMetadata = new 
   .style('top', (pageY - 10) + 'px');
 }
 
-function showComparisonMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline') {
+function showComparisonMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline', options = {}) {
   const countryId = countryData.__isoCode;
   const countryName = countryMetadata.get(countryId)?.name || countryData.properties?.NAME || countryId || 'Unknown';
-  const risk = countryId ? countryRisks[countryId] : undefined;
+  const { highlight = false, fallbackRisks = null } = options;
+
+  let risk = countryId ? countryRisks?.[countryId] : undefined;
+  if (!Number.isFinite(risk) && fallbackRisks && countryId) {
+    const fallbackRisk = fallbackRisks[countryId];
+    if (Number.isFinite(fallbackRisk)) {
+      risk = fallbackRisk;
+    }
+  }
 
   d3.selectAll('.map-tooltip').remove();
 
@@ -498,11 +519,12 @@ function showComparisonMapTooltip(event, countryData, countryRisks, countryMetad
   const pageX = event.pageX || 0;
   const pageY = event.pageY || 0;
   const riskLabel = mapType === 'managed' ? 'Managed Risk' : 'Baseline Risk';
+  const highlightNote = highlight ? '<br/><em>Selected Country</em>' : '';
 
   tooltip.html(`
     <strong>${countryName}</strong><br/>
-    ${risk !== undefined ?
-      `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}<br/><em>Selected Country</em>` :
+    ${Number.isFinite(risk) ?
+      `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}${highlightNote}` :
       'No data available'}
   `)
   .style('left', (pageX + 10) + 'px')
@@ -674,7 +696,7 @@ function renderGlobalD3Map(worldData, { container, countries, countryRisks, widt
   }
 }
 
-function renderComparisonD3Map(worldData, { container, countries, countryRisks, selectedCountries, width, height, mapType }) {
+function renderComparisonD3Map(worldData, { container, countries, countryRisks, selectedCountryRisks, selectedCountries, width, height, mapType }) {
   const wrapper = document.getElementById(container);
   if (!wrapper) return;
   wrapper.innerHTML = '';
@@ -690,8 +712,9 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
       feature.__isoCode = getFeatureIsoCode(feature, metadataMap, nameLookup);
     });
 
+    const selectedSet = new Set(selectedCountries);
     const selectedFeatures = features.filter(feature =>
-      feature.__isoCode && selectedCountries.includes(feature.__isoCode)
+      feature.__isoCode && selectedSet.has(feature.__isoCode)
     );
 
     if (selectedFeatures.length === 0) {
@@ -704,7 +727,7 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
       return;
     }
 
-    const featureCollection = { type: 'FeatureCollection', features: selectedFeatures };
+    const featureCollection = { type: 'FeatureCollection', features };
     const svg = d3.select(wrapper)
       .append('svg')
       .attr('viewBox', `0 0 ${width} ${height}`)
@@ -728,6 +751,42 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
       .attr('stroke-width', 0.6)
       .attr('pointer-events', 'none');
 
+    const backgroundGroup = mapGroup.append('g').attr('class', 'background-countries');
+    backgroundGroup.selectAll('path.background-country')
+      .data(features)
+      .enter()
+      .append('path')
+      .attr('class', 'background-country')
+      .attr('data-iso-code', d => d.__isoCode || '')
+      .attr('d', path)
+      .style('cursor', 'default')
+      .style('fill', d => {
+        const countryId = d.__isoCode;
+        const risk = Number.isFinite(countryRisks?.[countryId]) ? countryRisks[countryId] : null;
+        return risk !== null ? riskEngine.getRiskColor(risk) : '#e2e8f0';
+      })
+      .style('stroke', '#e5e7eb')
+      .style('stroke-width', 0.5)
+      .style('opacity', d => selectedSet.has(d.__isoCode) ? 0.35 : 0.22)
+      .style('pointer-events', d => selectedSet.has(d.__isoCode) ? 'none' : 'auto')
+      .on('mouseover', (event, d) => showComparisonMapTooltip(event, d, countryRisks, metadataMap, nameLookup, 'baseline'))
+      .on('mouseout', () => hideMapTooltip());
+
+    const highlightRisks = (selectedCountryRisks && typeof selectedCountryRisks === 'object')
+      ? selectedCountryRisks
+      : {};
+
+    const getSelectedRisk = (countryId) => {
+      if (!countryId) return undefined;
+      if (Number.isFinite(highlightRisks[countryId])) {
+        return highlightRisks[countryId];
+      }
+      if (mapType === 'managed' && Number.isFinite(countryRisks?.[countryId])) {
+        return countryRisks[countryId];
+      }
+      return undefined;
+    };
+
     const countryGroup = mapGroup.append('g').attr('class', 'countries');
 
     countryGroup.selectAll('path.country')
@@ -740,13 +799,16 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
       .style('cursor', 'default')
       .style('fill', d => {
         const countryId = d.__isoCode;
-        const risk = countryRisks[countryId];
-        return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
+        const risk = getSelectedRisk(countryId);
+        return Number.isFinite(risk) ? riskEngine.getRiskColor(risk) : '#e5e7eb';
       })
       .style('stroke', '#111827')
       .style('stroke-width', 1.5)
       .style('opacity', 0.95)
-      .on('mouseover', (event, d) => showComparisonMapTooltip(event, d, countryRisks, metadataMap, nameLookup, mapType))
+      .on('mouseover', (event, d) => showComparisonMapTooltip(event, d, highlightRisks, metadataMap, nameLookup, mapType, {
+        highlight: true,
+        fallbackRisks: countryRisks
+      }))
       .on('mouseout', () => hideMapTooltip());
 
     const zoom = d3.zoom()
@@ -872,6 +934,8 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
 
   const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
 
+   let highlightRisks = {};
+
   try {
     await loadD3();
     const worldData = await loadWorldData();
@@ -907,7 +971,7 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
   }
 }
 
-export async function createComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType = 'baseline', managedRisk = null, height = 400, width = 960 }) {
+export async function createComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType = 'baseline', managedRisk = null, selectedCountryRisks = null, height = 400, width = 960 }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -962,14 +1026,43 @@ export async function createComparisonMap(containerId, { countries, countryRisks
       }
     }
 
-    const displayRisks = mapType === 'managed' && managedRisk !== null ?
-      createManagedRiskDisplay(safeSelectedCountries, managedRisk) :
-      safeCountryRisks;
+    const safeSelectedRiskMap = (selectedCountryRisks && typeof selectedCountryRisks === 'object')
+      ? selectedCountryRisks
+      : null;
+
+    highlightRisks = (() => {
+      if (mapType === 'managed') {
+        return createManagedRiskDisplay(
+          safeSelectedCountries,
+          managedRisk,
+          safeSelectedRiskMap,
+          safeCountryRisks
+        );
+      }
+
+      if (safeSelectedRiskMap) {
+        return createManagedRiskDisplay(
+          safeSelectedCountries,
+          null,
+          safeSelectedRiskMap,
+          safeCountryRisks
+        );
+      }
+
+      const baselineHighlight = {};
+      safeSelectedCountries.forEach(countryCode => {
+        if (Number.isFinite(safeCountryRisks[countryCode])) {
+          baselineHighlight[countryCode] = safeCountryRisks[countryCode];
+        }
+      });
+      return baselineHighlight;
+    })();
 
     renderComparisonD3Map(worldData, {
       container: `comp-map-wrapper-${mapType}`,
-      countries: selectedCountriesData,
-      countryRisks: displayRisks,
+      countries,
+      countryRisks: safeCountryRisks,
+      selectedCountryRisks: highlightRisks,
       selectedCountries: safeSelectedCountries,
       width,
       height: Math.max(height, 300),
@@ -980,11 +1073,11 @@ export async function createComparisonMap(containerId, { countries, countryRisks
 
     const loadingElement = document.getElementById(`comp-map-loading-${mapType}`);
     if (loadingElement) loadingElement.remove();
-  } catch (error) {
+   } catch (error) {
     console.error('Error creating comparison map:', error);
     createFallbackComparisonMap(containerId, {
       countries: selectedCountriesData,
-      countryRisks: safeCountryRisks,
+      countryRisks: Object.keys(highlightRisks).length > 0 ? highlightRisks : safeCountryRisks,
       selectedCountries: safeSelectedCountries,
       title: displayTitle,
       mapType

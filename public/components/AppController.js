@@ -6,11 +6,12 @@ import { UIComponents } from './UIComponents.js';
 export class AppController {
   constructor() {
     this.state = {
-      countries: [],
+     countries: [],
       weights: [...riskEngine.defaultWeights],
       selectedCountries: [],
       countryVolumes: {},
       countryRisks: {},
+      countryManagedRisks: {},
       baselineRisk: 0,
       riskConcentration: 1,
 
@@ -271,7 +272,31 @@ export class AppController {
 
   calculateManagedRisk() {
     try {
-      if (typeof riskEngine.calculateManagedRisk === 'function') {
+      if (typeof riskEngine.calculateManagedRiskDetails === 'function') {
+        const details = riskEngine.calculateManagedRiskDetails(
+          this.state.selectedCountries,
+          this.state.countryVolumes,
+          this.state.countryRisks,
+          this.state.hrddStrategy,
+          this.state.transparencyEffectiveness,
+          this.state.responsivenessStrategy,
+          this.state.responsivenessEffectiveness,
+          this.state.focus
+        );
+
+        this.state.managedRisk = Number.isFinite(details?.managedRisk)
+          ? details.managedRisk
+          : this.state.baselineRisk;
+        this.state.countryManagedRisks = (details && details.countryManagedRisks)
+          ? { ...details.countryManagedRisks }
+          : {};
+
+        if (Number.isFinite(details?.riskConcentration) && details.riskConcentration > 0) {
+          this.state.riskConcentration = Math.max(1, details.riskConcentration);
+        }
+
+        console.log(`Managed risk calculated: ${this.state.managedRisk.toFixed(2)}`);
+      } else if (typeof riskEngine.calculateManagedRisk === 'function') {
         this.state.managedRisk = riskEngine.calculateManagedRisk(
           this.state.baselineRisk,
           this.state.hrddStrategy,
@@ -281,14 +306,17 @@ export class AppController {
           this.state.focus,
           this.state.riskConcentration
         );
+        this.state.countryManagedRisks = {};
         console.log(`Managed risk calculated: ${this.state.managedRisk.toFixed(2)}`);
       } else {
         this.state.managedRisk = this.state.baselineRisk;
+        this.state.countryManagedRisks = {};
         console.log('Using baseline risk as managed risk (fallback)');
       }
     } catch (error) {
       console.error('Error calculating managed risk:', error);
       this.state.managedRisk = this.state.baselineRisk;
+      this.state.countryManagedRisks = {};
     }
   }
 
@@ -797,17 +825,16 @@ export class AppController {
           width: 1200
         });
 
-        UIComponents.createFinalResultsPanel('finalResultsPanel', {
-          baselineRisk: this.state.baselineRisk,
-          managedRisk: this.state.managedRisk,
-          selectedCountries: this.state.selectedCountries,
+         UIComponents.createComparisonMap('managedComparisonMapContainer', {
           countries: this.state.countries,
-          hrddStrategy: this.state.hrddStrategy,
-          transparencyEffectiveness: this.state.transparencyEffectiveness,
-          responsivenessStrategy: this.state.responsivenessStrategy,
-          responsivenessEffectiveness: this.state.responsivenessEffectiveness,
-          focus: this.state.focus,
-          riskConcentration: this.state.riskConcentration
+          countryRisks: this.state.countryRisks,
+          selectedCountries: this.state.selectedCountries,
+          title: 'Managed Risk - Selected Countries Only',
+          mapType: 'managed',
+          managedRisk: this.state.managedRisk,
+          selectedCountryRisks: this.state.countryManagedRisks,
+          height: 400,
+          width: 1200
         });
       }
 
