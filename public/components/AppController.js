@@ -659,17 +659,21 @@ export class AppController {
           </style>
         `;
 
-      case 3: // HRDD Strategy
+     case 3: // HRDD Strategy
         return `
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="panel3Grid">
             <div id="hrddStrategyPanel"></div>
             <div id="transparencyPanel"></div>
+            <div id="focusPanel" style="grid-column: 1 / -1;"></div>
           </div>
 
           <style>
             @media (max-width: 768px) {
               #panel3Grid {
                 grid-template-columns: 1fr !important;
+              }
+              #focusPanel {
+                grid-column: 1 / -1 !important;
               }
             }
           </style>
@@ -771,10 +775,10 @@ export class AppController {
         });
 
       } else if (panel === 3) {
+       } else if (panel === 3) {
         // Panel 3: HRDD Strategy
         UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
           strategy: this.state.hrddStrategy,
-          focus: this.state.focus,
           onStrategyChange: this.onHRDDStrategyChange,
           onFocusChange: this.onFocusChange
         });
@@ -782,6 +786,11 @@ export class AppController {
         UIComponents.createTransparencyPanel('transparencyPanel', {
           transparency: this.state.transparencyEffectiveness,
           onTransparencyChange: this.onTransparencyChange
+        });
+
+        UIComponents.createFocusPanel('focusPanel', {
+          focus: this.state.focus,
+          onFocusChange: this.onFocusChange
         });
 
       } else if (panel === 4) {

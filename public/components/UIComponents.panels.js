@@ -1,5 +1,63 @@
 import { riskEngine } from './RiskEngine.js';
 
+let panel3ResizeListenerAttached = false;
+
+function describeFocusLevel(value) {
+  if (value >= 0.9) return 'Crisis / SEV surge posture';
+  if (value >= 0.7) return 'Targeted worker voice & triage';
+  if (value >= 0.4) return 'Risk-led monitoring programme';
+  if (value >= 0.1) return 'Legacy calendar-led audits';
+  return 'Even portfolio coverage';
+}
+
+function alignPanel3Rows() {
+  if (typeof document === 'undefined') return;
+
+  const strategyContainer = document.getElementById('strategyContainer');
+  const transparencyContainer = document.getElementById('transparencyContainer');
+  if (!strategyContainer || !transparencyContainer) return;
+
+  const strategyControls = strategyContainer.querySelectorAll('[data-strategy-index]');
+  const transparencyControls = transparencyContainer.querySelectorAll('[data-transparency-index]');
+
+  const totalControls = Math.max(strategyControls.length, transparencyControls.length);
+  for (let i = 0; i < totalControls; i++) {
+    if (strategyControls[i]) strategyControls[i].style.minHeight = '';
+    if (transparencyControls[i]) transparencyControls[i].style.minHeight = '';
+  }
+
+  const shouldAlign = typeof window !== 'undefined' ? window.innerWidth > 768 : true;
+  if (!shouldAlign) return;
+
+  const pairCount = Math.min(strategyControls.length, transparencyControls.length);
+  for (let i = 0; i < pairCount; i++) {
+    const left = strategyControls[i];
+    const right = transparencyControls[i];
+    if (!left || !right) continue;
+
+    const maxHeight = Math.max(left.offsetHeight, right.offsetHeight);
+    left.style.minHeight = `${maxHeight}px`;
+    right.style.minHeight = `${maxHeight}px`;
+  }
+}
+
+function schedulePanel3Alignment() {
+  if (typeof window === 'undefined') return;
+
+  const callback = () => alignPanel3Rows();
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(callback);
+  } else {
+    setTimeout(callback, 50);
+  }
+}
+
+function ensurePanel3ResizeListener() {
+  if (typeof window === 'undefined' || panel3ResizeListenerAttached) return;
+  window.addEventListener('resize', () => schedulePanel3Alignment());
+  panel3ResizeListenerAttached = true;
+}
+
 export function createRiskComparisonPanel(containerId, { baselineRisk, managedRisk, selectedCountries }) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -105,7 +163,7 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
   `;
 }
 
-export function createHRDDStrategyPanel(containerId, { strategy, focus, onStrategyChange, onFocusChange }) {
+export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChange, onFocusChange }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -120,16 +178,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, focus, onStrate
   ];
 
   let localStrategy = [...strategy];
-  const defaultFocus = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
-  let localFocus = typeof focus === 'number' ? focus : defaultFocus;
-
-  const describeFocus = (value) => {
-    if (value >= 0.9) return 'Crisis / SEV surge posture';
-    if (value >= 0.7) return 'Targeted worker voice & triage';
-    if (value >= 0.4) return 'Risk-led monitoring programme';
-    if (value >= 0.1) return 'Legacy calendar-led audits';
-    return 'Even portfolio coverage';
-  };
+  const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
 
   const updateStrategy = () => {
     const total = localStrategy.reduce((sum, w) => sum + w, 0);
@@ -157,6 +206,11 @@ export function createHRDDStrategyPanel(containerId, { strategy, focus, onStrate
         <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy mix allocation)</span>
       </div>
 
+      <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
+        Total Strategy Weight: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${localStrategy.reduce((sum, w) => sum + w, 0)}</span>%
+        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy mix allocation)</span>
+      </div>
+
       <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Strategy Guide:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
@@ -165,40 +219,19 @@ export function createHRDDStrategyPanel(containerId, { strategy, focus, onStrate
           <li>Each tool carries an evidence-based transparency assumption (Step 2B).</li>
         </ul>
       </div>
-
-      <div style="margin-top: 24px; padding: 20px; border-radius: 10px; border: 1px solid #bfdbfe; background-color: #eff6ff;">
-        <h3 style="font-size: 16px; font-weight: 600; color: #1d4ed8; margin-bottom: 8px;">Focus on High-Risk Countries</h3>
-        <p style="font-size: 13px; color: #1e3a8a; margin-bottom: 12px;">
-          Focus concentrates your monitoring and remediation effort on the highest-risk countries without increasing total effort.
-        </p>
-        <div style="font-size: 14px; color: #1f2937; font-weight: 600;">
-          Focus Level: <span id="focusValue">${localFocus.toFixed(2)}</span>
-          <span style="font-size: 13px; font-weight: 500; color: #1d4ed8;">(<span id="focusPercent">${Math.round(localFocus * 100)}</span>% effort • <span id="focusDescriptor">${describeFocus(localFocus)}</span>)</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
-          <input type="range" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusSlider" style="flex: 1; height: 8px; border-radius: 4px; background-color: #bfdbfe;">
-          <input type="number" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusNumber" style="width: 90px; padding: 8px 12px; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 14px; text-align: center;">
-        </div>
-        <ul style="margin-top: 12px; font-size: 12px; color: #1e3a8a; padding-left: 18px; line-height: 1.5;">
-          <li><strong>0.00 – 0.10:</strong> Even effort across the portfolio.</li>
-          <li><strong>0.10 – 0.30:</strong> Legacy audit programmes, calendar-driven.</li>
-          <li><strong>0.40 – 0.60:</strong> Risk-led programmes with targeted surveys.</li>
-          <li><strong>0.70 – 0.90:</strong> Continuous worker voice with triaged CAPs.</li>
-          <li><strong>0.90 – 1.00:</strong> Crisis posture concentrating on hotspots.</li>
-        </ul>
-      </div>
     </div>
   `;
 
   const strategyContainer = document.getElementById('strategyContainer');
   strategyLabels.forEach((label, index) => {
     const strategyControl = document.createElement('div');
-    strategyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+    strategyControl.dataset.strategyIndex = index;
+    strategyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa; display: flex; flex-direction: column; gap: 12px;';
     strategyControl.innerHTML = `
-      <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
+      <label style="display: block; font-size: 14px; font-weight: 500; color: #374151;">
         ${label} <span id="strategyValue_${index}" style="font-weight: 600; color: #1f2937;">(${localStrategy[index]}%)</span>
       </label>
-      <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
+      <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${strategyDescriptions[index]}
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -223,27 +256,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, focus, onStrate
 
     rangeInput.addEventListener('input', (e) => updateStrategyValue(e.target.value));
     numberInput.addEventListener('input', (e) => updateStrategyValue(e.target.value));
-  });
-
-  const focusSlider = document.getElementById('focusSlider');
-  const focusNumber = document.getElementById('focusNumber');
-  const focusValue = document.getElementById('focusValue');
-  const focusPercent = document.getElementById('focusPercent');
-  const focusDescriptor = document.getElementById('focusDescriptor');
-
-  const updateFocus = (value) => {
-    const newValue = Math.max(0, Math.min(1, parseFloat(value) || 0));
-    localFocus = newValue;
-    focusSlider.value = newValue.toFixed(2);
-    focusNumber.value = newValue.toFixed(2);
-    focusValue.textContent = newValue.toFixed(2);
-    focusPercent.textContent = Math.round(newValue * 100);
-    focusDescriptor.textContent = describeFocus(newValue);
-    if (onFocusChange) onFocusChange(newValue);
-  };
-
-  focusSlider.addEventListener('input', (e) => updateFocus(e.target.value));
-  focusNumber.addEventListener('input', (e) => updateFocus(e.target.value));
+   });
 
   const resetButton = document.getElementById('resetStrategy');
   resetButton.addEventListener('click', () => {
@@ -254,10 +267,100 @@ export function createHRDDStrategyPanel(containerId, { strategy, focus, onStrate
       document.getElementById(`strategyValue_${index}`).textContent = `(${weight}%)`;
     });
     updateStrategy();
+    schedulePanel3Alignment();
 
-    const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
-    updateFocus(defaultFocusValue);
+    const targetValue = defaultFocusValue;
+    if (typeof window !== 'undefined' && window.hrddApp?.updateFocusUI) {
+      window.hrddApp.updateFocusUI(targetValue, { notify: true });
+    } else if (typeof onFocusChange === 'function') {
+      onFocusChange(targetValue);
+    }
   });
+
+  ensurePanel3ResizeListener();
+  schedulePanel3Alignment();
+}
+
+export function createFocusPanel(containerId, { focus, onFocusChange }) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
+  let localFocus = typeof focus === 'number' ? focus : defaultFocusValue;
+
+  container.innerHTML = `
+    <div class="focus-panel" style="background: white; padding: 28px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #bfdbfe;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 240px;">
+          <h3 style="font-size: 20px; font-weight: 600; color: #1d4ed8; margin-bottom: 8px;">Focus on High-Risk Countries</h3>
+          <p style="font-size: 14px; color: #1e3a8a; margin: 0;">
+            Focus concentrates your monitoring and remediation effort on the highest-risk countries without increasing total effort.
+          </p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px 16px; min-width: 220px;">
+          <span style="font-size: 12px; font-weight: 600; color: #1d4ed8; text-transform: uppercase;">Current Focus</span>
+          <span style="font-size: 32px; font-weight: 700; color: #1d4ed8;"><span id="focusPercent">${Math.round(localFocus * 100)}</span>%</span>
+          <span style="font-size: 13px; font-weight: 500; color: #1e3a8a;">
+            Ratio <span id="focusValue">${localFocus.toFixed(2)}</span> • <span id="focusDescriptor">${describeFocusLevel(localFocus)}</span>
+          </span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+        <input type="range" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusSlider" style="flex: 1; height: 8px; border-radius: 4px; background-color: #bfdbfe;">
+        <input type="number" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusNumber" style="width: 100px; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 14px; text-align: center;">
+      </div>
+
+      <ul style="margin: 0; font-size: 13px; color: #1e3a8a; padding-left: 20px; line-height: 1.6;">
+        <li><strong>0.00 – 0.10:</strong> Even effort across the portfolio.</li>
+        <li><strong>0.10 – 0.30:</strong> Legacy audit programmes, calendar-driven.</li>
+        <li><strong>0.40 – 0.60:</strong> Risk-led programmes with targeted surveys.</li>
+        <li><strong>0.70 – 0.90:</strong> Continuous worker voice with triaged CAPs.</li>
+        <li><strong>0.90 – 1.00:</strong> Crisis posture concentrating on hotspots.</li>
+      </ul>
+    </div>
+  `;
+
+  const focusSlider = container.querySelector('#focusSlider');
+  const focusNumber = container.querySelector('#focusNumber');
+  const focusValueElement = container.querySelector('#focusValue');
+  const focusPercentElement = container.querySelector('#focusPercent');
+  const focusDescriptorElement = container.querySelector('#focusDescriptor');
+
+  const updateFocus = (value, notify = true) => {
+    const parsed = Math.max(0, Math.min(1, parseFloat(value) || 0));
+    localFocus = parsed;
+    const formatted = parsed.toFixed(2);
+    const percent = Math.round(parsed * 100);
+
+    if (focusSlider) focusSlider.value = formatted;
+    if (focusNumber) focusNumber.value = formatted;
+    if (focusValueElement) focusValueElement.textContent = formatted;
+    if (focusPercentElement) focusPercentElement.textContent = percent;
+    if (focusDescriptorElement) focusDescriptorElement.textContent = describeFocusLevel(parsed);
+
+    if (notify && typeof onFocusChange === 'function') {
+      onFocusChange(parsed);
+    }
+  };
+
+  if (focusSlider) {
+    focusSlider.addEventListener('input', (event) => updateFocus(event.target.value));
+  }
+
+  if (focusNumber) {
+    focusNumber.addEventListener('input', (event) => updateFocus(event.target.value));
+  }
+
+  updateFocus(localFocus, false);
+
+  if (typeof window !== 'undefined') {
+    if (window.hrddApp) {
+      window.hrddApp.updateFocusUI = (value, options = {}) => updateFocus(value, options.notify !== false);
+    } else {
+      window.updateFocusUI = (value, options = {}) => updateFocus(value, options.notify !== false);
+    }
+  }
 }
 
 export function createTransparencyPanel(containerId, { transparency, onTransparencyChange }) {
@@ -302,19 +405,20 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     </div>
   `;
 
-  const transparencyContainer = document.getElementById('transparencyContainer');
+   const transparencyContainer = document.getElementById('transparencyContainer');
   strategyLabels.forEach((label, index) => {
     const effectivenessColor = localTransparency[index] >= 70 ? '#22c55e' :
                                localTransparency[index] >= 40 ? '#f59e0b' : '#ef4444';
 
     const transparencyControl = document.createElement('div');
-    transparencyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+    transparencyControl.dataset.transparencyIndex = index;
+    transparencyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa; display: flex; flex-direction: column; gap: 12px;';
     transparencyControl.innerHTML = `
-      <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
-        ${label}
-        <span id="transparencyValue_${index}" style="font-weight: 600; color: ${effectivenessColor};">(${localTransparency[index]}%)</span>
+      <label for="transparency_${index}" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 14px; font-weight: 500; color: #374151;">
+        <span style="flex: 1; min-width: 0;">${label}</span>
+        <span id="transparencyValue_${index}" style="font-weight: 600; color: ${effectivenessColor}; width: 72px; text-align: right; white-space: nowrap;">(${localTransparency[index]}%)</span>
       </label>
-      <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
+      <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${effectivenessDescriptions[index]}
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -354,6 +458,9 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     numberInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value));
   });
 
+  ensurePanel3ResizeListener();
+  schedulePanel3Alignment();
+
   const resetButton = document.getElementById('resetTransparency');
   resetButton.addEventListener('click', () => {
     localTransparency = [...riskEngine.defaultTransparencyEffectiveness];
@@ -365,12 +472,13 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       document.getElementById(`transparencyValue_${index}`).style.color = newColor;
 
       const progressBar = transparencyContainer.children[index].querySelector('div:last-child div');
-      if (progressBar) {
+     if (progressBar) {
         progressBar.style.width = `${effectiveness}%`;
         progressBar.style.backgroundColor = newColor;
       }
     });
     updateTransparency();
+    schedulePanel3Alignment();
   });
 }
 
