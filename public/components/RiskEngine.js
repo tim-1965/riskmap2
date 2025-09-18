@@ -1,10 +1,10 @@
-// RiskEngine.js - Complete risk calculation logic with revised coverage-based transparency
+// RiskEngine.js - Updated with Risk-Adjusted Coverage Distribution
 export class RiskEngine {
   constructor() {
     // Step 1: Default weightings for the 5 input columns
     this.defaultWeights = [20, 20, 5, 10, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
-    // Step 2: HRDD Strategy defaults - now representing supplier base coverage percentages
+    // Step 2: HRDD Strategy defaults - representing supplier base coverage percentages
     this.defaultHRDDStrategy = [5, 15, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, passive approaches common
     this.defaultTransparencyEffectiveness = [90, 45, 25, 15, 12, 5]; // Research-backed base effectiveness rates
 
@@ -148,8 +148,179 @@ export class RiskEngine {
     return this.calculatePortfolioMetrics(selectedCountries, countryVolumes, countryRisks).baselineRisk;
   }
 
-  // NEW: Coverage-based transparency calculation with diminishing returns
-  calculateTransparencyEffectiveness(hrddCoverage, transparencyEffectiveness) {
+  // NEW: Calculate risk-adjusted coverage distribution across countries
+  calculateCountrySpecificCoverage(selectedCountries, countryVolumes, countryRisks, hrddStrategy, focus = 0.6) {
+    if (!Array.isArray(selectedCountries) || selectedCountries.length === 0) {
+      return {};
+    }
+
+    const safeVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
+    const safeRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+    const safeFocus = Math.max(0, Math.min(1, focus || 0));
+    
+    // Calculate portfolio metrics
+    const portfolioMetrics = this.calculatePortfolioMetrics(selectedCountries, countryVolumes, countryRisks);
+    const baselineRisk = portfolioMetrics.baselineRisk;
+    const totalVolume = portfolioMetrics.totalVolume;
+    
+    if (totalVolume <= 0 || baselineRisk <= 0) {
+      // If no volume or no risk, distribute evenly
+      const evenCoverage = {};
+      selectedCountries.forEach(countryCode => {
+        evenCoverage[countryCode] = [...hrddStrategy];
+      });
+      return evenCoverage;
+    }
+
+    const countrySpecificCoverage = {};
+    
+    selectedCountries.forEach(countryCode => {
+      const countryRisk = safeRisks[countryCode] || 0;
+      const countryVolume = safeVolumes[countryCode] || 10;
+      
+      // Calculate risk adjustment factor
+      // At focus=0: all countries get same coverage
+      // At focus=1: coverage proportional to risk level
+      const riskRatio = baselineRisk > 0 ? countryRisk / baselineRisk : 1;
+      const riskAdjustmentFactor = (1 - safeFocus) + safeFocus * riskRatio;
+      
+      // Apply coverage adjustment with resource conservation
+      const adjustedCoverage = hrddStrategy.map(toolCoverage => {
+        const adjustedValue = Math.max(0, Math.min(100, toolCoverage * riskAdjustmentFactor));
+        return adjustedValue;
+      });
+      
+      countrySpecificCoverage[countryCode] = adjustedCoverage;
+    });
+
+    // Resource conservation: ensure total resource usage doesn't exceed available resources
+    hrddStrategy.forEach((originalCoverage, toolIndex) => {
+      let totalResourceUsage = 0;
+      let totalWeightedVolume = 0;
+      
+      // Calculate total resource usage for this tool across all countries
+      selectedCountries.forEach(countryCode => {
+        const countryVolume = safeVolumes[countryCode] || 10;
+        const countryCoverage = countrySpecificCoverage[countryCode][toolIndex];
+        totalResourceUsage += (countryCoverage / 100) * countryVolume;
+        totalWeightedVolume += countryVolume;
+      });
+      
+      // Calculate expected resource usage if distributed evenly
+      const expectedResourceUsage = (originalCoverage / 100) * totalWeightedVolume;
+      
+      // If we're over-allocated, scale down proportionally
+      if (totalResourceUsage > expectedResourceUsage && totalResourceUsage > 0) {
+        const scalingFactor = expectedResourceUsage / totalResourceUsage;
+        selectedCountries.forEach(countryCode => {
+          countrySpecificCoverage[countryCode][toolIndex] *= scalingFactor;
+          countrySpecificCoverage[countryCode][toolIndex] = Math.max(0, Math.min(100, countrySpecificCoverage[countryCode][toolIndex]));
+        });
+      }
+    });
+    
+    return countrySpecificCoverage;
+  }
+
+  // NEW: Calculate country-specific transparency using distributed coverage
+  calculateCountryTransparencyEffectiveness(countrySpecificCoverage, transparencyEffectiveness, countryCode) {
+    const countryCoverage = countrySpecificCoverage[countryCode];
+    if (!countryCoverage || !Array.isArray(countryCoverage)) {
+      return 0;
+    }
+
+    if (!this.validateHRDDStrategy(countryCoverage) || !this.validateTransparency(transparencyEffectiveness)) {
+      return 0;
+    }
+
+    // Tool categories with their base effectiveness and interaction factors
+    const toolCategories = [
+      {
+        name: 'Worker Voice',
+        tools: [0, 1], // Continuous Worker Voice, Annual Surveys
+        baseEffectiveness: [0.90, 0.45], // High effectiveness tools
+        categoryWeight: 1.0
+      },
+      {
+        name: 'Audit',
+        tools: [2, 3], // Unannounced, Announced
+        baseEffectiveness: [0.25, 0.15], // Medium effectiveness tools
+        categoryWeight: 0.85
+      },
+      {
+        name: 'Passive',
+        tools: [4, 5], // Self-reporting, Desk-based
+        baseEffectiveness: [0.12, 0.05], // Lower effectiveness tools
+        categoryWeight: 0.70
+      }
+    ];
+
+    const maxTransparency = 0.90; // 90% maximum achievable transparency
+    let combinedTransparency = 0;
+
+    // Calculate transparency for each category using country-specific coverage
+    toolCategories.forEach(category => {
+      let categoryTransparency = 0;
+      let categoryProduct = 1;
+
+      category.tools.forEach((toolIndex, i) => {
+        const coverage = Math.max(0, Math.min(100, countryCoverage[toolIndex] || 0)) / 100; // Convert to 0-1
+        const baseEff = category.baseEffectiveness[i];
+        const userEff = Math.max(0, Math.min(100, transparencyEffectiveness[toolIndex] || 0)) / 100;
+        
+        // Use average of base and user effectiveness to allow customization but keep realistic bounds
+        const effectiveRate = (baseEff + userEff) / 2;
+        
+        // Apply diminishing returns: 1 - (1 - coverage × effectiveness)
+        categoryProduct *= (1 - coverage * effectiveRate);
+      });
+
+      categoryTransparency = 1 - categoryProduct;
+      
+      // Combine categories with their weights (reduces cross-category overlap)
+      combinedTransparency = 1 - (1 - combinedTransparency) * (1 - categoryTransparency * category.categoryWeight);
+    });
+
+    // Apply maximum transparency cap
+    return Math.min(combinedTransparency, maxTransparency);
+  }
+
+  // Updated: Calculate overall transparency effectiveness using country-specific coverage
+  calculateTransparencyEffectiveness(hrddCoverage, transparencyEffectiveness, selectedCountries = null, countryVolumes = null, countryRisks = null, focus = 0.6) {
+    // If no country-specific data provided, use original method
+    if (!selectedCountries || !countryVolumes || !countryRisks) {
+      return this.calculateOriginalTransparencyEffectiveness(hrddCoverage, transparencyEffectiveness);
+    }
+
+    // Calculate country-specific coverage distribution
+    const countrySpecificCoverage = this.calculateCountrySpecificCoverage(
+      selectedCountries, countryVolumes, countryRisks, hrddCoverage, focus
+    );
+
+    if (Object.keys(countrySpecificCoverage).length === 0) {
+      return 0;
+    }
+
+    // Calculate volume-weighted average transparency across all countries
+    const safeVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
+    let totalWeightedTransparency = 0;
+    let totalVolume = 0;
+
+    selectedCountries.forEach(countryCode => {
+      const volume = safeVolumes[countryCode] || 10;
+      const countryTransparency = this.calculateCountryTransparencyEffectiveness(
+        countrySpecificCoverage, transparencyEffectiveness, countryCode
+      );
+      
+      totalWeightedTransparency += countryTransparency * volume;
+      totalVolume += volume;
+    });
+
+    return totalVolume > 0 ? totalWeightedTransparency / totalVolume : 0;
+  }
+
+  // Original transparency calculation method (kept for backward compatibility)
+  calculateOriginalTransparencyEffectiveness(hrddCoverage, transparencyEffectiveness) {
     if (!this.validateHRDDStrategy(hrddCoverage) || !this.validateTransparency(transparencyEffectiveness)) {
       return 0;
     }
@@ -228,7 +399,7 @@ export class RiskEngine {
     return totalWeight > 0 ? weightedEffectiveness / totalWeight : 0;
   }
 
-  // Step 3: Calculate final managed risk
+  // Updated: Calculate final managed risk using country-specific coverage
   calculateManagedRisk(
     baselineRisk,
     hrddStrategy,
@@ -236,13 +407,20 @@ export class RiskEngine {
     responsivenessStrategy,
     responsivenessEffectiveness,
     focus = this.defaultFocus ?? 0,
-    riskConcentration = 1
+    riskConcentration = 1,
+    selectedCountries = null,
+    countryVolumes = null,
+    countryRisks = null
   ) {
     if (baselineRisk <= 0) {
       return 0;
     }
 
-    const overallTransparencyEffectiveness = this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
+    // Use new country-specific transparency calculation if data available
+    const overallTransparencyEffectiveness = selectedCountries && countryVolumes && countryRisks
+      ? this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness, selectedCountries, countryVolumes, countryRisks, focus)
+      : this.calculateOriginalTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
+
     const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
 
     const combinedEffectiveness = overallTransparencyEffectiveness * overallResponsivenessEffectiveness;
@@ -252,13 +430,16 @@ export class RiskEngine {
       ? Math.max(1, riskConcentration)
       : 1;
 
-    const focusMultiplier = (1 - sanitizedFocus) + sanitizedFocus * sanitizedConcentration;
+    // Note: Focus effect is now embedded in the transparency calculation through coverage distribution
+    // The focus multiplier here provides additional concentration effect
+    const focusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * sanitizedConcentration;
     const managedRisk = baselineRisk * (1 - combinedEffectiveness * focusMultiplier);
 
     // Ensure managed risk doesn't go below 0
     return Math.max(0, managedRisk);
   }
 
+  // Updated: Calculate managed risk details with country-specific coverage
   calculateManagedRiskDetails(
     selectedCountries,
     countryVolumes,
@@ -276,9 +457,10 @@ export class RiskEngine {
         managedRisk: 0,
         baselineRisk: 0,
         riskConcentration: 1,
-        focusMultiplier: (1 - sanitizedFocus) + sanitizedFocus * 1,
+        focusMultiplier: (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * 1,
         combinedEffectiveness: 0,
-        countryManagedRisks: {}
+        countryManagedRisks: {},
+        countrySpecificCoverage: {}
       };
     }
 
@@ -289,31 +471,50 @@ export class RiskEngine {
       ? Math.max(1, metrics.riskConcentration)
       : 1;
 
-    const overallTransparencyEffectiveness = this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
+    // Calculate country-specific coverage distribution
+    const countrySpecificCoverage = this.calculateCountrySpecificCoverage(
+      safeSelected, countryVolumes, countryRisks, hrddStrategy, sanitizedFocus
+    );
+
+    // Calculate transparency using country-specific coverage
+    const overallTransparencyEffectiveness = this.calculateTransparencyEffectiveness(
+      hrddStrategy, transparencyEffectiveness, safeSelected, countryVolumes, countryRisks, sanitizedFocus
+    );
+    
     const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
     const combinedEffectiveness = overallTransparencyEffectiveness * overallResponsivenessEffectiveness;
 
-    const focusMultiplier = (1 - sanitizedFocus) + sanitizedFocus * sanitizedConcentration;
+    const focusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * sanitizedConcentration;
 
     const managedRisk = baselineRisk > 0
       ? Math.max(0, baselineRisk * (1 - combinedEffectiveness * focusMultiplier))
       : 0;
 
+    // Calculate country-specific managed risks using individual transparency levels
     const managedRisksByCountry = {};
     const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
 
     safeSelected.forEach(countryCode => {
       const countryRisk = Number.isFinite(safeCountryRisks[countryCode]) ? safeCountryRisks[countryCode] : 0;
 
-      if (baselineRisk <= 0 || combinedEffectiveness <= 0) {
+      if (countryRisk <= 0 || combinedEffectiveness <= 0) {
         managedRisksByCountry[countryCode] = Math.max(0, countryRisk);
         return;
       }
 
-      const relativeRisk = baselineRisk > 0 ? countryRisk / baselineRisk : 1;
-      const focusWeight = (1 - sanitizedFocus) + sanitizedFocus * relativeRisk;
-      const reductionFactor = combinedEffectiveness * focusWeight;
-      const managedValue = countryRisk * (1 - Math.min(1, Math.max(0, reductionFactor)));
+      // Calculate country-specific transparency
+      const countryTransparency = this.calculateCountryTransparencyEffectiveness(
+        countrySpecificCoverage, transparencyEffectiveness, countryCode
+      );
+      
+      // Country-specific combined effectiveness
+      const countryCombinenedEffectiveness = countryTransparency * overallResponsivenessEffectiveness;
+      
+      // Apply focus adjustment for individual country
+      const riskRatio = baselineRisk > 0 ? countryRisk / baselineRisk : 1;
+      const countryFocusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * riskRatio;
+      
+      const managedValue = countryRisk * (1 - Math.min(1, Math.max(0, countryCombinenedEffectiveness * countryFocusMultiplier)));
       managedRisksByCountry[countryCode] = Math.max(0, managedValue);
     });
 
@@ -323,7 +524,8 @@ export class RiskEngine {
       riskConcentration: sanitizedConcentration,
       focusMultiplier,
       combinedEffectiveness,
-      countryManagedRisks: managedRisksByCountry
+      countryManagedRisks: managedRisksByCountry,
+      countrySpecificCoverage
     };
   }
 
@@ -439,24 +641,34 @@ export class RiskEngine {
     return Math.floor(normalizedScore * maxIndex);
   }
 
-  // Get strategy effectiveness breakdown with new methodology
+  // Updated: Get strategy effectiveness breakdown with country-specific coverage
   getStrategyBreakdown(
     hrddStrategy,
     transparencyEffectiveness,
     responsivenessStrategy,
     responsivenessEffectiveness,
     focus = 0,
-    riskConcentration = 1
+    riskConcentration = 1,
+    selectedCountries = null,
+    countryVolumes = null,
+    countryRisks = null
   ) {
     const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
     const sanitizedConcentration = Number.isFinite(riskConcentration) && riskConcentration > 0
       ? Math.max(1, riskConcentration)
       : 1;
-    const focusMultiplier = (1 - sanitizedFocus) + sanitizedFocus * sanitizedConcentration;
+    const focusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * sanitizedConcentration;
 
-    // Calculate transparency using new coverage-based method
-    const overallTransparency = this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
+    // Calculate transparency using appropriate method
+    const overallTransparency = selectedCountries && countryVolumes && countryRisks
+      ? this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness, selectedCountries, countryVolumes, countryRisks, sanitizedFocus)
+      : this.calculateOriginalTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
     
+    // Get country-specific coverage if available
+    const countrySpecificCoverage = selectedCountries && countryVolumes && countryRisks
+      ? this.calculateCountrySpecificCoverage(selectedCountries, countryVolumes, countryRisks, hrddStrategy, sanitizedFocus)
+      : null;
+
     const toolCategories = [
       {
         name: 'Worker Voice',
@@ -487,12 +699,13 @@ export class RiskEngine {
         level: sanitizedFocus,
         concentration: sanitizedConcentration,
         portfolioMultiplier: focusMultiplier
-      }
+      },
+      countrySpecificCoverage: countrySpecificCoverage
     };
 
-    // Calculate individual strategy contributions using new methodology
+    // Calculate individual strategy contributions
     for (let i = 0; i < hrddStrategy.length; i++) {
-      const coverage = Math.max(0, Math.min(100, hrddStrategy[i] || 0));
+      const baseCoverage = Math.max(0, Math.min(100, hrddStrategy[i] || 0));
       const userEffectiveness = Math.max(0, Math.min(100, transparencyEffectiveness[i] || 0));
       
       // Find which category this tool belongs to
@@ -502,15 +715,32 @@ export class RiskEngine {
       const toolIndexInCategory = category.tools ? category.tools.indexOf(i) : 0;
       const baseEffectiveness = category.baseEffectiveness[toolIndexInCategory] || 0.05;
       const averageEffectiveness = (baseEffectiveness + userEffectiveness / 100) / 2;
+
+      // Calculate coverage range if country-specific data available
+      let coverageRange = null;
+      if (countrySpecificCoverage && selectedCountries) {
+        const coverages = selectedCountries.map(countryCode => 
+          countrySpecificCoverage[countryCode] ? countrySpecificCoverage[countryCode][i] : baseCoverage
+        ).filter(c => Number.isFinite(c));
+        
+        if (coverages.length > 0) {
+          const minCoverage = Math.min(...coverages);
+          const maxCoverage = Math.max(...coverages);
+          coverageRange = minCoverage !== maxCoverage 
+            ? `${minCoverage.toFixed(1)}%-${maxCoverage.toFixed(1)}%`
+            : `${minCoverage.toFixed(1)}%`;
+        }
+      }
       
       breakdown.hrddStrategies.push({
         name: this.hrddStrategyLabels[i],
-        coverage: coverage,
+        coverage: baseCoverage,
+        coverageRange: coverageRange,
         baseEffectiveness: Math.round(baseEffectiveness * 100),
         userEffectiveness: userEffectiveness,
         averageEffectiveness: Math.round(averageEffectiveness * 100),
         category: category.name,
-        contribution: coverage * averageEffectiveness // Simple contribution metric
+        contribution: baseCoverage * averageEffectiveness // Simple contribution metric
       });
     }
 
@@ -535,7 +765,7 @@ export class RiskEngine {
     };
    }
 
-  // Generate risk assessment summary
+  // Updated: Generate risk assessment summary with country-specific data
   generateRiskSummary(
     baselineRisk,
     managedRisk,
@@ -545,7 +775,9 @@ export class RiskEngine {
     responsivenessStrategy,
     responsivenessEffectiveness,
     focus = 0,
-    riskConcentration = 1
+    riskConcentration = 1,
+    countryVolumes = null,
+    countryRisks = null
   ) {
     const riskReduction = this.calculateRiskReduction(baselineRisk, managedRisk);
     const breakdown = this.getStrategyBreakdown(
@@ -554,7 +786,10 @@ export class RiskEngine {
       responsivenessStrategy,
       responsivenessEffectiveness,
       focus,
-      riskConcentration
+      riskConcentration,
+      selectedCountries,
+      countryVolumes,
+      countryRisks
     );
 
     return {
@@ -582,19 +817,19 @@ export class RiskEngine {
     };
   }
 
-  // Export configuration for reporting
+  // Updated: Export configuration for reporting
   exportConfiguration(state) {
     const focusValue = Number.isFinite(state.focus) ? state.focus : 0;
     const riskConcentration = Number.isFinite(state.riskConcentration) && state.riskConcentration > 0
       ? Math.max(1, state.riskConcentration)
       : 1;
-    const focusMultiplier = (1 - focusValue) + focusValue * riskConcentration;
+    const focusMultiplier = (1 - focusValue * 0.5) + focusValue * 0.5 * riskConcentration;
 
     return {
       metadata: {
         exportDate: new Date().toISOString(),
-        version: '3.1',
-        toolName: 'HRDD Risk Assessment Tool - Coverage-Based Transparency'
+        version: '4.0',
+        toolName: 'HRDD Risk Assessment Tool - Risk-Adjusted Coverage Distribution'
       },
       portfolio: {
         selectedCountries: state.selectedCountries,
@@ -613,7 +848,7 @@ export class RiskEngine {
         focus: focusValue,
         riskConcentration,
         focusMultiplier,
-        methodology: 'Coverage-based with diminishing returns and 90% transparency cap'
+        methodology: 'Risk-adjusted coverage distribution with resource conservation and country-specific transparency calculation'
       },
       step3: {
         responsivenessStrategy: state.responsivenessStrategy,
@@ -630,7 +865,9 @@ export class RiskEngine {
         state.responsivenessStrategy,
         state.responsivenessEffectiveness,
         focusValue,
-        riskConcentration
+        riskConcentration,
+        state.countryVolumes,
+        state.countryRisks
       )
     };
   }
