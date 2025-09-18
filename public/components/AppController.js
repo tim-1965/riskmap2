@@ -33,7 +33,8 @@ export class AppController {
       error: null,
       apiHealthy: false,
       lastUpdate: null,
-      isDirty: false
+      isDirty: false,
+      isGeneratingReport: false
     };
 
     this.retryCount = 0;
@@ -502,6 +503,34 @@ export class AppController {
       this.state.currentPanel = panel;
       this.render();
       console.log(`Switched to panel ${panel}`);
+    }
+  }
+
+  async generatePDFReport() {
+    if (typeof document === 'undefined') {
+      console.warn('PDF report generation is only available in a browser environment.');
+      return;
+    }
+
+    if (typeof pdfGenerator?.generateReport !== 'function') {
+      console.error('PDF generator is unavailable.');
+      return;
+    }
+
+    if (this.state.isGeneratingReport) {
+      console.warn('PDF report generation is already in progress.');
+      return;
+    }
+
+    try {
+      this.state.isGeneratingReport = true;
+      console.log('Starting PDF report generation...');
+      await pdfGenerator.generateReport(this);
+    } catch (error) {
+      console.error('Failed to generate PDF report:', error);
+      alert('Unable to generate the PDF report right now. Please try again.');
+    } finally {
+      this.state.isGeneratingReport = false;
     }
   }
 
