@@ -651,27 +651,78 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
   });
 }
 
-export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus = 0, riskConcentration = 1 }) {
+export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus = 0, riskConcentration = 1, countryVolumes, countryRisks }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const summary = riskEngine.generateRiskSummary(baselineRisk, managedRisk, selectedCountries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus, riskConcentration);
-  const focusData = summary.strategy?.focus || { level: 0, portfolioMultiplier: 1, concentration: 1 };
-  const focusPercent = Math.round((focusData.level || 0) * 100);
-  const focusMultiplier = focusData.portfolioMultiplier || 1;
-  const concentrationFactor = summary.portfolio?.riskConcentration ?? 1;
+  const summary = riskEngine.generateRiskSummary(
+    baselineRisk,
+    managedRisk,
+    selectedCountries,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    focus,
+    riskConcentration,
+    countryVolumes,
+    countryRisks
+  ) || {};
 
-  // Calculate risk transformation components
-  const transparencyEffectiveness = summary.strategy.overallTransparency;
-  const responsivenessEffectiveness = summary.strategy.overallResponsiveness;
-  const combinedEffectiveness = transparencyEffectiveness * responsivenessEffectiveness;
-  const riskReduction = summary.improvement.riskReduction;
-  const absoluteReduction = summary.improvement.absoluteReduction;
+  const ensureNumber = (value, fallback = 0) => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : fallback;
+    }
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+    return fallback;
+  };
 
-  // Risk transformation steps for explanation
-  const riskAfterTransparency = baselineRisk * (1 - transparencyEffectiveness);
-  const riskAfterResponse = baselineRisk * (1 - combinedEffectiveness);
-  const finalManagedRisk = managedRisk;
+  const formatNumber = (value, digits = 1) => {
+    const numeric = ensureNumber(value, null);
+    if (numeric === null) {
+      return (0).toFixed(digits);
+    }
+    return numeric.toFixed(digits);
+  };
+
+  const strategySummary = summary.strategy || {};
+  const improvementSummary = summary.improvement || {};
+  const portfolioSummary = summary.portfolio || {};
+  const focusData = strategySummary.focus || { level: 0, portfolioMultiplier: 1, concentration: 1 };
+
+  const focusLevel = ensureNumber(focusData.level);
+  const focusPercent = Math.round(focusLevel * 100);
+  const focusMultiplier = ensureNumber(focusData.portfolioMultiplier, 1);
+  const concentrationFactor = ensureNumber(portfolioSummary.riskConcentration, 1);
+
+  const baselineValue = ensureNumber(baselineRisk);
+  const managedValue = ensureNumber(managedRisk);
+  const transparencyValue = ensureNumber(strategySummary.overallTransparency);
+  const responsivenessValue = ensureNumber(strategySummary.overallResponsiveness);
+  const combinedEffectiveness = transparencyValue * responsivenessValue;
+  const riskReductionValue = ensureNumber(improvementSummary.riskReduction);
+  const absoluteReductionValue = ensureNumber(improvementSummary.absoluteReduction);
+
+  const riskAfterTransparency = baselineValue * (1 - transparencyValue);
+  const riskAfterResponse = baselineValue * (1 - combinedEffectiveness);
+  const finalManagedRisk = managedValue;
+
+  const transparencyStepPercent = baselineValue > 0
+    ? ((baselineValue - riskAfterTransparency) / baselineValue) * 100
+    : 0;
+  const responseStepPercent = baselineValue > 0
+    ? ((riskAfterTransparency - riskAfterResponse) / baselineValue) * 100
+    : 0;
+  const focusStepPercent = baselineValue > 0
+    ? ((riskAfterResponse - finalManagedRisk) / baselineValue) * 100
+    : 0;
+
+  const strategies = Array.isArray(strategySummary.hrddStrategies)
+    ? strategySummary.hrddStrategies
+    : [];
 
   container.innerHTML = `
     <div class="final-results-panel">
@@ -693,12 +744,12 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
         <!-- STEP-BY-STEP RISK TRANSFORMATION -->
         <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
           
-          <!-- Step 1: Starting Point -->
+         <!-- Step 1: Starting Point -->
           <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #fef3c7; border: 1px solid #f59e0b;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #f59e0b; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">1</div>
             <div style="flex: 1;">
               <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">Baseline Portfolio Risk</div>
-              <div style="font-size: 24px; font-weight: bold; color: #92400e;">${baselineRisk.toFixed(1)}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #92400e;">${formatNumber(baselineValue)}</div>
               <div style="font-size: 12px; color: #a16207;">Starting risk level before HRDD strategy application</div>
             </div>
           </div>
@@ -709,13 +760,13 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
             <div style="font-size: 12px;">Apply Transparency Strategy</div>
           </div>
 
-          <!-- Step 2: After Transparency -->
+           <!-- Step 2: After Transparency -->
           <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #dbeafe; border: 1px solid #3b82f6;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">2</div>
             <div style="flex: 1;">
-              <div style="font-weight: 600; color: #1d4ed8; margin-bottom: 4px;">After Issue Detection (${(transparencyEffectiveness * 100).toFixed(1)}% transparency)</div>
-              <div style="font-size: 24px; font-weight: bold; color: #1d4ed8;">${riskAfterTransparency.toFixed(1)}</div>
-              <div style="font-size: 12px; color: #1e40af;">Risk reduced by ${((baselineRisk - riskAfterTransparency) / baselineRisk * 100).toFixed(1)}% through detection capabilities</div>
+              <div style="font-weight: 600; color: #1d4ed8; margin-bottom: 4px;">After Issue Detection (${formatNumber(transparencyValue * 100)}% transparency)</div>
+              <div style="font-size: 24px; font-weight: bold; color: #1d4ed8;">${formatNumber(riskAfterTransparency)}</div>
+              <div style="font-size: 12px; color: #1e40af;">Risk reduced by ${formatNumber(transparencyStepPercent)}% through detection capabilities</div>
             </div>
           </div>
 
@@ -729,9 +780,9 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #f3e8ff; border: 1px solid #8b5cf6;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #8b5cf6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">3</div>
             <div style="flex: 1;">
-              <div style="font-weight: 600; color: #7c3aed; margin-bottom: 4px;">After Response Application (${(responsivenessEffectiveness * 100).toFixed(1)}% response effectiveness)</div>
-              <div style="font-size: 24px; font-weight: bold; color: #7c3aed;">${riskAfterResponse.toFixed(1)}</div>
-              <div style="font-size: 12px; color: #6d28d9;">Additional ${((riskAfterTransparency - riskAfterResponse) / baselineRisk * 100).toFixed(1)}% reduction through effective remediation</div>
+              <div style="font-weight: 600; color: #7c3aed; margin-bottom: 4px;">After Response Application (${formatNumber(responsivenessValue * 100)}% response effectiveness)</div>
+              <div style="font-size: 24px; font-weight: bold; color: #7c3aed;">${formatNumber(riskAfterResponse)}</div>
+              <div style="font-size: 12px; color: #6d28d9;">Additional ${formatNumber(responseStepPercent)}% reduction through effective remediation</div>
             </div>
           </div>
 
@@ -741,14 +792,14 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
             <div style="font-size: 12px;">Apply Focus & Concentration Effects</div>
           </div>
 
-          <!-- Step 4: Final Result -->
+           <!-- Step 4: Final Result -->
           <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #d1fae5; border: 1px solid #22c55e;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">4</div>
             <div style="flex: 1;">
               <div style="font-weight: 600; color: #16a34a; margin-bottom: 4px;">Final Managed Risk (${focusPercent}% focus, ${concentrationFactor.toFixed(2)}× concentration)</div>
-              <div style="font-size: 24px; font-weight: bold; color: #16a34a;">${finalManagedRisk.toFixed(1)}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #16a34a;">${formatNumber(finalManagedRisk)}</div>
               <div style="font-size: 12px; color: #15803d;">
-                Final ${((riskAfterResponse - finalManagedRisk) / baselineRisk * 100).toFixed(1)}% reduction through strategic focus on high-risk countries
+                Final ${formatNumber(focusStepPercent)}% reduction through strategic focus on high-risk countries
               </div>
             </div>
           </div>
@@ -760,17 +811,17 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
             <div>
               <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">TOTAL RISK REDUCTION</div>
-              <div style="font-size: 20px; font-weight: bold; color: #059669;">${riskReduction.toFixed(1)}%</div>
-              <div style="font-size: 11px; color: #6b7280;">${absoluteReduction.toFixed(1)} point reduction</div>
+              <div style="font-size: 20px; font-weight: bold; color: #059669;">${formatNumber(riskReductionValue)}%</div>
+              <div style="font-size: 11px; color: #6b7280;">${formatNumber(absoluteReductionValue)} point reduction</div>
             </div>
             <div>
               <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">COMBINED EFFECTIVENESS</div>
-              <div style="font-size: 20px; font-weight: bold; color: #7c3aed;">${(combinedEffectiveness * 100).toFixed(1)}%</div>
+              <div style="font-size: 20px; font-weight: bold; color: #7c3aed;">${formatNumber(combinedEffectiveness * 100)}%</div>
               <div style="font-size: 11px; color: #6b7280;">Transparency × Response</div>
             </div>
             <div>
               <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">FOCUS MULTIPLIER</div>
-              <div style="font-size: 20px; font-weight: bold; color: #1d4ed8;">${focusMultiplier.toFixed(2)}×</div>
+              <div style="font-size: 20px; font-weight: bold; color: #1d4ed8;">${formatNumber(focusMultiplier, 2)}×</div>
               <div style="font-size: 11px; color: #6b7280;">Resource concentration effect</div>
             </div>
           </div>
@@ -778,10 +829,10 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       </div>
 
       <!-- DETAILED STRATEGY BREAKDOWN -->
-      <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
+       <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
         <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">HRDD Strategy Coverage & Effectiveness</h3>
         <div id="strategyBreakdownList">
-          ${summary.strategy.hrddStrategies.map(strategy => `
+          ${strategies.map(strategy => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb; background-color: ${strategy.coverage > 0 ? '#f0f9ff' : '#f9fafb'};">
               <div style="flex: 1;">
                 <span style="font-weight: 500; color: #1f2937;">[${strategy.category}] ${strategy.name}</span>
