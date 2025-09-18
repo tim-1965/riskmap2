@@ -298,14 +298,17 @@ export class AppController {
         console.log(`Managed risk calculated using coverage-based transparency: ${this.state.managedRisk.toFixed(2)}`);
       } else if (typeof riskEngine.calculateManagedRisk === 'function') {
         this.state.managedRisk = riskEngine.calculateManagedRisk(
-          this.state.baselineRisk,
-          this.state.hrddStrategy,
-          this.state.transparencyEffectiveness,
-          this.state.responsivenessStrategy,
-          this.state.responsivenessEffectiveness,
-          this.state.focus,
-          this.state.riskConcentration
-        );
+        this.state.baselineRisk,
+        this.state.hrddStrategy,
+        this.state.transparencyEffectiveness,
+        this.state.responsivenessStrategy,
+        this.state.responsivenessEffectiveness,
+        this.state.focus,
+        this.state.riskConcentration,
+        this.state.selectedCountries,
+        this.state.countryVolumes,
+        this.state.countryRisks
+    );
         this.state.countryManagedRisks = {};
         console.log(`Managed risk calculated: ${this.state.managedRisk.toFixed(2)}`);
       } else {
@@ -845,7 +848,9 @@ export class AppController {
           responsivenessStrategy: this.state.responsivenessStrategy,
           responsivenessEffectiveness: this.state.responsivenessEffectiveness,
           focus: this.state.focus,
-          riskConcentration: this.state.riskConcentration
+          riskConcentration: this.state.riskConcentration,
+          countryVolumes: this.state.countryVolumes,
+          countryRisks: this.state.countryRisks
         });
       }
 

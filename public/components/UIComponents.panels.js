@@ -661,41 +661,124 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
   const focusMultiplier = focusData.portfolioMultiplier || 1;
   const concentrationFactor = summary.portfolio?.riskConcentration ?? 1;
 
-  container.innerHTML = `
-    <div class="final-results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-      <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Final Risk Assessment Results</h2>
+  // Calculate risk transformation components
+  const transparencyEffectiveness = summary.strategy.overallTransparency;
+  const responsivenessEffectiveness = summary.strategy.overallResponsiveness;
+  const combinedEffectiveness = transparencyEffectiveness * responsivenessEffectiveness;
+  const riskReduction = summary.improvement.riskReduction;
+  const absoluteReduction = summary.improvement.absoluteReduction;
 
-      <div style="margin-bottom: 24px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
-        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">Strategy Effectiveness Analysis</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
-          <div>
-            <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">TRANSPARENCY EFFECTIVENESS</h4>
-            <div style="font-size: 28px; font-weight: bold; color: #3b82f6; margin-bottom: 4px;">
-              ${(summary.strategy.overallTransparency * 100).toFixed(1)}%
+  // Risk transformation steps for explanation
+  const riskAfterTransparency = baselineRisk * (1 - transparencyEffectiveness);
+  const riskAfterResponse = baselineRisk * (1 - combinedEffectiveness);
+  const finalManagedRisk = managedRisk;
+
+  container.innerHTML = `
+    <div class="final-results-panel">
+      <!-- RISK ASSESSMENT SUMMARY -->
+      <div id="finalRiskSummary" style="margin-bottom: 32px;"></div>
+
+      <!-- RISK TRANSFORMATION EXPLANATION -->
+      <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
+        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">How Your HRDD Strategy Reduces Risk</h3>
+        
+        <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 20px;">
+          <p style="font-size: 14px; margin: 0; color: #1e40af; line-height: 1.5;">
+            <strong>Your HRDD strategy transforms baseline risk through four key mechanisms:</strong> 
+            detecting issues through transparency tools, responding effectively when issues are found, 
+            focusing resources on high-risk countries, and leveraging portfolio concentration effects.
+          </p>
+        </div>
+
+        <!-- STEP-BY-STEP RISK TRANSFORMATION -->
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+          
+          <!-- Step 1: Starting Point -->
+          <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #fef3c7; border: 1px solid #f59e0b;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #f59e0b; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">1</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">Baseline Portfolio Risk</div>
+              <div style="font-size: 24px; font-weight: bold; color: #92400e;">${baselineRisk.toFixed(1)}</div>
+              <div style="font-size: 12px; color: #a16207;">Starting risk level before HRDD strategy application</div>
             </div>
-            <div style="font-size: 12px; color: #6b7280;">Coverage-based detection capability</div>
           </div>
-          <div>
-            <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">RESPONSE EFFECTIVENESS</h4>
-            <div style="font-size: 28px; font-weight: bold; color: #8b5cf6; margin-bottom: 4px;">
-              ${(summary.strategy.overallResponsiveness * 100).toFixed(1)}%
-            </div>
-            <div style="font-size: 12px; color: #6b7280;">Primary: ${summary.strategy.primaryResponse.method}</div>
+
+          <!-- Arrow -->
+          <div style="text-align: center; color: #6b7280;">
+            <div style="font-size: 20px;">↓</div>
+            <div style="font-size: 12px;">Apply Transparency Strategy</div>
           </div>
-          <div>
-            <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">FOCUS ON HIGH-RISK COUNTRIES</h4>
-            <div style="font-size: 28px; font-weight: bold; color: #1d4ed8; margin-bottom: 4px;">
-              ${focusPercent}%
+
+          <!-- Step 2: After Transparency -->
+          <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #dbeafe; border: 1px solid #3b82f6;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">2</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #1d4ed8; margin-bottom: 4px;">After Issue Detection (${(transparencyEffectiveness * 100).toFixed(1)}% transparency)</div>
+              <div style="font-size: 24px; font-weight: bold; color: #1d4ed8;">${riskAfterTransparency.toFixed(1)}</div>
+              <div style="font-size: 12px; color: #1e40af;">Risk reduced by ${((baselineRisk - riskAfterTransparency) / baselineRisk * 100).toFixed(1)}% through detection capabilities</div>
             </div>
-            <div style="font-size: 12px; color: #6b7280;">Effort directed to riskiest locations</div>
-            <div style="margin-top: 8px; font-size: 12px; color: #1d4ed8;">
-              Focus multiplier: ${focusMultiplier.toFixed(2)}× • Risk convexity (K): ${concentrationFactor.toFixed(3)}
+          </div>
+
+          <!-- Arrow -->
+          <div style="text-align: center; color: #6b7280;">
+            <div style="font-size: 20px;">↓</div>
+            <div style="font-size: 12px;">Apply Response Strategy</div>
+          </div>
+
+          <!-- Step 3: After Response -->
+          <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #f3e8ff; border: 1px solid #8b5cf6;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #8b5cf6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">3</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #7c3aed; margin-bottom: 4px;">After Response Application (${(responsivenessEffectiveness * 100).toFixed(1)}% response effectiveness)</div>
+              <div style="font-size: 24px; font-weight: bold; color: #7c3aed;">${riskAfterResponse.toFixed(1)}</div>
+              <div style="font-size: 12px; color: #6d28d9;">Additional ${((riskAfterTransparency - riskAfterResponse) / baselineRisk * 100).toFixed(1)}% reduction through effective remediation</div>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div style="text-align: center; color: #6b7280;">
+            <div style="font-size: 20px;">↓</div>
+            <div style="font-size: 12px;">Apply Focus & Concentration Effects</div>
+          </div>
+
+          <!-- Step 4: Final Result -->
+          <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #d1fae5; border: 1px solid #22c55e;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">4</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #16a34a; margin-bottom: 4px;">Final Managed Risk (${focusPercent}% focus, ${concentrationFactor.toFixed(2)}× concentration)</div>
+              <div style="font-size: 24px; font-weight: bold; color: #16a34a;">${finalManagedRisk.toFixed(1)}</div>
+              <div style="font-size: 12px; color: #15803d;">
+                Final ${((riskAfterResponse - finalManagedRisk) / baselineRisk * 100).toFixed(1)}% reduction through strategic focus on high-risk countries
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EFFECTIVENESS BREAKDOWN -->
+        <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
+          <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #374151;">Strategy Impact Summary</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div>
+              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">TOTAL RISK REDUCTION</div>
+              <div style="font-size: 20px; font-weight: bold; color: #059669;">${riskReduction.toFixed(1)}%</div>
+              <div style="font-size: 11px; color: #6b7280;">${absoluteReduction.toFixed(1)} point reduction</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">COMBINED EFFECTIVENESS</div>
+              <div style="font-size: 20px; font-weight: bold; color: #7c3aed;">${(combinedEffectiveness * 100).toFixed(1)}%</div>
+              <div style="font-size: 11px; color: #6b7280;">Transparency × Response</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">FOCUS MULTIPLIER</div>
+              <div style="font-size: 20px; font-weight: bold; color: #1d4ed8;">${focusMultiplier.toFixed(2)}×</div>
+              <div style="font-size: 11px; color: #6b7280;">Resource concentration effect</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div style="margin-bottom: 24px;">
+      <!-- DETAILED STRATEGY BREAKDOWN -->
+      <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
         <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">HRDD Strategy Coverage & Effectiveness</h3>
         <div id="strategyBreakdownList">
           ${summary.strategy.hrddStrategies.map(strategy => `
@@ -704,6 +787,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
                 <span style="font-weight: 500; color: #1f2937;">[${strategy.category}] ${strategy.name}</span>
                 <div style="font-size: 12px; color: #6b7280;">
                   Coverage: ${strategy.coverage}% • Base: ${strategy.baseEffectiveness}% • Your Setting: ${strategy.userEffectiveness}% • Avg: ${strategy.averageEffectiveness}%
+                  ${strategy.coverageRange ? ` • Risk-Adjusted Range: ${strategy.coverageRange}` : ''}
                 </div>
               </div>
               <div style="width: 80px; height: 8px; background-color: #e5e7eb; border-radius: 4px; margin-left: 12px;">
@@ -727,6 +811,13 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       </div>
     </div>
   `;
+
+  // Create the risk comparison panel at the top
+  UIComponents.createRiskComparisonPanel('finalRiskSummary', {
+    baselineRisk,
+    managedRisk,
+    selectedCountries
+  });
 }
 
 export function createCountrySelectionPanel(containerId, { countries, selectedCountries, countryVolumes, onCountrySelect, onVolumeChange }) {
