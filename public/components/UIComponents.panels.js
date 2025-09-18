@@ -170,7 +170,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const strategyDescriptions = [
     'Always-on digital or in-person worker voice capturing daily conditions.',
-    'Structured worker surveys undertaken at least quarterly.',
+    'Structured all worker surveys undertaken at least annually.',
     'Surprise third-party social audits without advance warning.',
     'Planned or supplier-arranged social audits.',
     'Supplier self-reporting and self-assessment questionnaires.',
@@ -369,12 +369,12 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const effectivenessDescriptions = [
-    '0.80 – 0.95 of risks revealed (worker reporting with escalation).',
-    '0.40 – 0.60 of risks revealed (structured worker surveys).',
-    '0.15 – 0.25 of risks revealed (credible surprise audits).',
-    '0.10 – 0.15 of risks revealed (announced audits).',
-    '0.05 – 0.15 of risks revealed (supplier self-reporting).',
-    '0.05 – 0.10 of risks revealed (desk-based assessments).'
+    'Typically 0.80% – 0.95% of risks revealed (workers report escalation).',
+    'Typically 0.30% – 0.40% of risks revealed (structured worker surveys).',
+    'Typically 0.15% – 0.25% of risks revealed (credible surprise audits).',
+    'Typically 0.10% – 0.15% of risks revealed (announced audits).',
+    'Typically 0.05% – 0.15% of risks revealed (supplier self-reporting).',
+    'Typically 0.01% – 0.05% of risks revealed (desk-based assessments).'
   ];
 
   let localTransparency = [...transparency];
@@ -488,13 +488,13 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
 
   const responsivenessLabels = riskEngine.responsivenessLabels;
   const responsivenessDescriptions = [
-    'No structured remediation. Issues are left unaddressed or dismissed.',
-    'Case-by-case fixes when problems surface, without systemic change.',
+    'Real-time dashboards drive transparency and behaviour change.',
+    'Commercial requirements align purchasing power to rights outcomes.',
     'Corrective action plans agreed with suppliers to fix identified problems.',
     'Longer-term capability building with suppliers (training, incentives).',
-    'Commercial requirements align purchasing power to rights outcomes.',
-    'Collective agreements or binding frameworks that shift sector behaviour.'
-  ];
+    'Collective agreements and frameworks that shift sector behaviour.',
+    'Case-by-case fixes when problems surface, without systemic change.',
+    ];
 
   let localResponsiveness = [...responsiveness];
 
@@ -588,12 +588,12 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
 
   const responsivenessLabels = riskEngine.responsivenessLabels;
   const effectivenessDescriptions = [
-    '0.00 – 0.10 reduction in risk (little to no remediation).',
-    '0.20 – 0.30 reduction when issues are handled reactively.',
-    '0.40 – 0.60 reduction delivered via corrective action plans.',
-    '0.50 – 0.70 reduction through supplier capability building.',
-    '0.60 – 0.80 reduction when commercial levers are binding.',
-    '0.70 – 0.90 reduction through industry collaboration.'
+    '0.60 – 0.80 typical effectiveness as real-time data drives behaviour.',
+    '0.70 – 0.90 typical effectiveness as improvements linked to orders.',
+    '0.30 – 0.50 typical effectiveness via periodic review.',
+    '0.20 – 0.30 typical effectiveness via training and education.',
+    '0.10 – 0.20 typical effectiveness via holistic approach.',
+    '0.10 – 0.20 typical effectiveness as strategy is reactive only.'
   ];
 
   let localEffectiveness = [...effectiveness];
