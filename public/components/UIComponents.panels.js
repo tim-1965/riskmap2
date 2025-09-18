@@ -370,14 +370,16 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   let localTransparency = [...transparency];
 
-  const updateTransparency = () => {
+  const updateTransparency = (options = {}) => {
     const total = localTransparency.reduce((sum, value) => sum + value, 0);
     const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
     const totalElement = document.getElementById('totalTransparency');
     if (totalElement) {
       totalElement.textContent = formattedTotal;
     }
-    if (onTransparencyChange) onTransparencyChange([...localTransparency]);
+    if (options.notify !== false && onTransparencyChange) {
+      onTransparencyChange([...localTransparency]);
+    }
   };
 
   container.innerHTML = `
@@ -409,9 +411,6 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const transparencyContainer = document.getElementById('transparencyContainer');
   strategyLabels.forEach((label, index) => {
-    const effectivenessColor = localTransparency[index] >= 70 ? '#22c55e' :
-                               localTransparency[index] >= 40 ? '#f59e0b' : '#ef4444';
-
     const transparencyControl = document.createElement('div');
     transparencyControl.dataset.transparencyIndex = index;
     transparencyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa; display: flex; flex-direction: column; gap: 12px;';
@@ -426,50 +425,36 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
         <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
         <input type="number" min="0" max="100" value="${localTransparency[index]}" id="transparencyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
       </div>
-      <div style="margin-top: 8px; height: 4px; background-color: #e5e7eb; border-radius: 2px;">
-        <div style="height: 100%; width: ${localTransparency[index]}%; background-color: ${effectivenessColor}; border-radius: 2px; transition: all 0.3s;"></div>
-      </div>
     `;
     transparencyContainer.appendChild(transparencyControl);
 
     const rangeInput = document.getElementById(`transparency_${index}`);
     const numberInput = document.getElementById(`transparencyNum_${index}`);
-    const updateTransparencyValue = (value) => {
+    const updateTransparencyValue = (value, options = {}) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
-      const newColor = newValue >= 70 ? '#22c55e' : newValue >= 40 ? '#f59e0b' : '#ef4444';
 
       localTransparency[index] = newValue;
       rangeInput.value = newValue;
       numberInput.value = newValue;
 
-      const progressBar = transparencyControl.querySelector('div:last-child div');
-      if (progressBar) {
-        progressBar.style.width = `${newValue}%`;
-        progressBar.style.backgroundColor = newColor;
-      }
-
-      updateTransparency();
+      updateTransparency(options);
     };
 
-    rangeInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value));
-    numberInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value));
+    rangeInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value, { notify: false }));
+    rangeInput.addEventListener('change', (e) => updateTransparencyValue(e.target.value));
+    numberInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value, { notify: false }));
+    numberInput.addEventListener('change', (e) => updateTransparencyValue(e.target.value));
   });
 
   ensurePanel3ResizeListener();
   schedulePanel3Alignment();
 
-  const resetButton = document.getElementById('resetTransparency');
+const resetButton = document.getElementById('resetTransparency');
   resetButton.addEventListener('click', () => {
     localTransparency = [...riskEngine.defaultTransparencyEffectiveness];
     localTransparency.forEach((effectiveness, index) => {
-      const newColor = effectiveness >= 70 ? '#22c55e' : effectiveness >= 40 ? '#f59e0b' : '#ef4444';
       document.getElementById(`transparency_${index}`).value = effectiveness;
       document.getElementById(`transparencyNum_${index}`).value = effectiveness;
-      const progressBar = transparencyContainer.children[index].querySelector('div:last-child div');
-      if (progressBar) {
-        progressBar.style.width = `${effectiveness}%`;
-        progressBar.style.backgroundColor = newColor;
-      }
     });
     updateTransparency();
     schedulePanel3Alignment();
@@ -511,11 +496,11 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
         </button>
       </div>
 
-      <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
+       <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>␊
 
-      <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
-        Total Strategy Weight: <span id="totalResponsiveness" style="font-weight: 600; font-size: 16px;">${localResponsiveness.reduce((sum, w) => sum + w, 0)}</span>%
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy allocation)</span>
+      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center;">
+        Assumptions total: <span id="totalResponsiveness" style="font-weight: 600; font-size: 16px;">${Math.round(localResponsiveness.reduce((sum, w) => sum + w, 0) * 100) / 100}</span>
+        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
       </div>
 
       <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 20px;">
