@@ -1,9 +1,167 @@
-// UIComponents.js - Complete UI components for 3-step HRDD tool
+// UIComponents.js - Updated for 5-panel HRDD tool structure
 import { riskEngine } from './RiskEngine.js';
 
 export class UIComponents {
   
-  // Enhanced D3 World Map Component (handles both baseline and managed risk)
+  // Panel 1: Global Risk Map (non-interactive, shows all countries with current risk levels)
+  static async createGlobalRiskMap(containerId, { countries, countryRisks, title, height = 500, width = 960 }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="global-risk-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${title}</h3>
+        <div id="map-loading" style="padding: 40px; color: #6b7280;">
+          <div>Loading global risk map...</div>
+          <div style="font-size: 14px; margin-top: 8px;">Hover over countries to see their risk levels.</div>
+        </div>
+        <div id="map-wrapper" style="width: 100%; display: flex; justify-content: center; margin-bottom: 16px;">
+          <!-- D3 Map will be inserted here -->
+        </div>
+        <div class="risk-legend" id="mapLegend" style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+          <!-- Legend will be inserted here -->
+        </div>
+      </div>
+    `;
+
+    const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+
+    try {
+      await this._loadD3();
+      const worldData = await this._loadWorldData();
+
+      if (worldData?.type === 'Topology') {
+        try {
+          await this._loadTopoJSON();
+        } catch (topojsonError) {
+          console.warn('TopoJSON library unavailable - using internal converter instead.', topojsonError);
+        }
+      }
+
+      this._renderGlobalD3Map(worldData, {
+        container: 'map-wrapper',
+        countries,
+        countryRisks: safeCountryRisks,
+        width,
+        height: Math.max(height, 400)
+      });
+
+      this._createMapLegend('mapLegend');
+      
+      const loadingElement = document.getElementById('map-loading');
+      if (loadingElement) loadingElement.remove();
+
+    } catch (error) {
+      console.error('Error creating global risk map:', error);
+      this._createFallbackMap(containerId, {
+        countries,
+        countryRisks: safeCountryRisks,
+        title,
+        interactive: false
+      });
+    }
+  }
+
+  // Panel 5: Comparison Maps (shows only selected countries)
+  static async createComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType = 'baseline', managedRisk = null, height = 400, width = 960 }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const displayTitle = mapType === 'managed' ? 
+      `${title} - Overall Risk: ${managedRisk ? managedRisk.toFixed(1) : 'N/A'}` : 
+      title;
+
+    container.innerHTML = `
+      <div class="comparison-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${displayTitle}</h3>
+        <div id="comp-map-loading-${mapType}" style="padding: 30px; color: #6b7280;">
+          <div>Loading comparison map...</div>
+          <div style="font-size: 14px; margin-top: 8px;">Showing selected countries only for comparison.</div>
+        </div>
+        <div id="comp-map-wrapper-${mapType}" style="width: 100%; display: flex; justify-content: center; margin-bottom: 16px;">
+          <!-- D3 Map will be inserted here -->
+        </div>
+        <div class="risk-legend" id="compMapLegend-${mapType}" style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+          <!-- Legend will be inserted here -->
+        </div>
+      </div>
+    `;
+
+    const safeSelectedCountries = Array.isArray(selectedCountries) ? selectedCountries : [];
+    const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+
+    // Filter to show only selected countries
+    const selectedCountriesData = countries.filter(country => 
+      safeSelectedCountries.includes(country.isoCode)
+    );
+
+    if (selectedCountriesData.length === 0) {
+      const loadingElement = document.getElementById(`comp-map-loading-${mapType}`);
+      if (loadingElement) {
+        loadingElement.innerHTML = `
+          <div style="padding: 20px; color: #6b7280; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🏭</div>
+            <p>No countries selected for comparison</p>
+            <p style="font-size: 14px; margin-top: 8px;">Select countries in Panel 2 to see the comparison maps.</p>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    try {
+      await this._loadD3();
+      const worldData = await this._loadWorldData();
+
+      if (worldData?.type === 'Topology') {
+        try {
+          await this._loadTopoJSON();
+        } catch (topojsonError) {
+          console.warn('TopoJSON library unavailable - using internal converter instead.', topojsonError);
+        }
+      }
+
+      // For managed risk map, use the single managed risk value for all selected countries
+      const displayRisks = mapType === 'managed' && managedRisk !== null ? 
+        this._createManagedRiskDisplay(safeSelectedCountries, managedRisk) : 
+        safeCountryRisks;
+
+      this._renderComparisonD3Map(worldData, {
+        container: `comp-map-wrapper-${mapType}`,
+        countries: selectedCountriesData, // Only selected countries
+        countryRisks: displayRisks,
+        selectedCountries: safeSelectedCountries,
+        width,
+        height: Math.max(height, 300),
+        mapType
+      });
+
+      this._createMapLegend(`compMapLegend-${mapType}`);
+      
+      const loadingElement = document.getElementById(`comp-map-loading-${mapType}`);
+      if (loadingElement) loadingElement.remove();
+
+    } catch (error) {
+      console.error('Error creating comparison map:', error);
+      this._createFallbackComparisonMap(containerId, {
+        countries: selectedCountriesData,
+        countryRisks: safeCountryRisks,
+        selectedCountries: safeSelectedCountries,
+        title: displayTitle,
+        mapType
+      });
+    }
+  }
+
+  static _createManagedRiskDisplay(selectedCountries, managedRisk) {
+    const managedRiskDisplay = {};
+    selectedCountries.forEach(countryCode => {
+      managedRiskDisplay[countryCode] = managedRisk;
+    });
+    return managedRiskDisplay;
+  }
+
+  // Enhanced World Map Component (keeps existing functionality for Panel 2)
   static async createWorldMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, mapType = 'baseline', managedRisk = null, height = 500, width = 960 }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -17,7 +175,7 @@ export class UIComponents {
         <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${displayTitle}</h3>
         <div id="map-loading" style="padding: 40px; color: #6b7280;">
           <div>Loading world map...</div>
-          <div style="font-size: 14px; margin-top: 8px;">Please wait while we render the interactive map.</div>
+          <div style="font-size: 14px; margin-top: 8px;">Click on countries to select them for your portfolio.</div>
         </div>
         <div id="map-wrapper" style="width: 100%; display: flex; justify-content: center; margin-bottom: 16px;">
           <!-- D3 Map will be inserted here -->
@@ -43,7 +201,6 @@ export class UIComponents {
         }
       }
 
-      // For managed risk map, use the single managed risk value for all selected countries
       const displayRisks = mapType === 'managed' && managedRisk !== null ? 
         this._createManagedRiskDisplay(safeSelectedCountries, managedRisk) : 
         safeCountryRisks;
@@ -76,15 +233,116 @@ export class UIComponents {
     }
   }
 
-  static _createManagedRiskDisplay(selectedCountries, managedRisk) {
-    const managedRiskDisplay = {};
-    selectedCountries.forEach(countryCode => {
-      managedRiskDisplay[countryCode] = managedRisk;
-    });
-    return managedRiskDisplay;
+  // Risk Comparison Panel (used in multiple panels)
+  static createRiskComparisonPanel(containerId, { baselineRisk, managedRisk, selectedCountries }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const hasSelections = selectedCountries.length > 0;
+    
+    if (!hasSelections) {
+      container.innerHTML = `
+        <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center;">
+          <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 16px; color: #1f2937;">Risk Assessment Summary</h2>
+          <div style="color: #6b7280; padding: 20px;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🏭</div>
+            <p>Select countries in Panel 2 to see your risk assessment summary</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const summary = riskEngine.generateRiskSummary(
+      baselineRisk,
+      managedRisk,
+      selectedCountries,
+      [], [], [], [], 0, 1 // Using empty arrays for strategies since this is used across panels
+    );
+
+    const baselineScore = Number.isFinite(summary.baseline?.score) ? summary.baseline.score : 0;
+    const baselineColor = summary.baseline?.color || riskEngine.getRiskColor(baselineScore);
+    const baselineBand = summary.baseline?.band || riskEngine.getRiskBand(baselineScore);
+    const managedScore = Number.isFinite(summary.managed?.score) ? summary.managed.score : 0;
+    const managedColor = summary.managed?.color || riskEngine.getRiskColor(managedScore);
+    const managedBand = summary.managed?.band || riskEngine.getRiskBand(managedScore);
+    const riskReduction = Number.isFinite(summary.improvement?.riskReduction)
+      ? summary.improvement.riskReduction
+      : 0;
+    const absoluteReduction = Number.isFinite(summary.improvement?.absoluteReduction)
+      ? summary.improvement.absoluteReduction
+      : 0;
+    const changePrefix = riskReduction > 0 ? '-' : riskReduction < 0 ? '+' : '';
+    const changeColor = riskReduction > 0 ? '#22c55e' : riskReduction < 0 ? '#ef4444' : '#6b7280';
+    const changeLabel = riskReduction > 0 ? 'Improvement' : riskReduction < 0 ? 'Increase' : 'No Change';
+    const changeDetail = Math.abs(absoluteReduction) > 0
+      ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
+      : 'Risk level unchanged';
+
+    container.innerHTML = `
+      <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
+        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
+          Risk Assessment Summary
+        </h2>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: stretch; margin-bottom: 20px;">
+          <!-- Baseline Risk -->
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${baselineColor}; background-color: ${baselineColor}15; text-align: center;">
+            <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
+            <div style="font-size: 48px; font-weight: bold; color: ${baselineColor}; margin-bottom: 8px;">
+              ${baselineScore.toFixed(1)}
+            </div>
+            <div style="font-size: 16px; font-weight: 600; color: ${baselineColor};">
+              ${baselineBand}
+            </div>
+          </div>
+
+          <!-- Risk Change -->
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${changeColor}; background-color: ${changeColor}15; text-align: center;">
+            <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">RISK CHANGE</div>
+            <div style="font-size: 48px; font-weight: bold; color: ${changeColor}; margin-bottom: 8px;">
+              ${changePrefix}${Math.abs(riskReduction).toFixed(1)}%
+            </div>
+            <div style="font-size: 16px; font-weight: 600; color: ${changeColor};">
+              ${changeLabel}
+            </div>
+            <div style="font-size: 12px; color: #4b5563; margin-top: 6px;">
+              ${changeDetail}
+            </div>
+          </div>
+
+          <!-- Managed Risk -->
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${managedColor}; background-color: ${managedColor}15; text-align: center;">
+            <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
+            <div style="font-size: 48px; font-weight: bold; color: ${managedColor}; margin-bottom: 8px;">
+              ${managedScore.toFixed(1)}
+            </div>
+            <div style="font-size: 16px; font-weight: 600; color: ${managedColor};">
+              ${managedBand}
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
+          <span style="font-size: 14px; color: #0369a1;">
+            Portfolio: ${selectedCountries.length} countries • 
+            ${riskReduction > 0 ? 'Strategy shows improvement' : 'Consider refining your approach'}
+          </span>
+        </div>
+      </div>
+
+      <style>
+        @media (max-width: 768px) {
+          div[style*="grid-template-columns: repeat(3, minmax(0, 1fr))"] {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+        }
+      </style>
+    `;
   }
 
-  // Step 2: HRDD Strategy Panel
+  // Panel 3: HRDD Strategy Panel (unchanged)
   static createHRDDStrategyPanel(containerId, { strategy, focus, onStrategyChange, onFocusChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -132,7 +390,7 @@ export class UIComponents {
         
         <div id="strategyContainer" style="margin-bottom: 20px;"></div>
         
-         <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
+        <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
           Total Strategy Weight: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${localStrategy.reduce((sum, w) => sum + w, 0)}</span>%
           <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy mix allocation)</span>
         </div>
@@ -153,7 +411,7 @@ export class UIComponents {
           </p>
           <div style="font-size: 14px; color: #1f2937; font-weight: 600;">
             Focus Level: <span id="focusValue">${localFocus.toFixed(2)}</span>
-            <span style="font-size: 13px; font-weight: 500; color: #1d4ed8;">(<span id="focusPercent">${Math.round(localFocus * 100)}</span>% effort · <span id="focusDescriptor">${describeFocus(localFocus)}</span>)</span>
+            <span style="font-size: 13px; font-weight: 500; color: #1d4ed8;">(<span id="focusPercent">${Math.round(localFocus * 100)}</span>% effort • <span id="focusDescriptor">${describeFocus(localFocus)}</span>)</span>
           </div>
           <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
             <input type="range" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusSlider" style="flex: 1; height: 8px; border-radius: 4px; background-color: #bfdbfe;">
@@ -203,7 +461,7 @@ export class UIComponents {
 
       rangeInput.addEventListener('input', (e) => updateStrategyWeight(e.target.value));
       numberInput.addEventListener('input', (e) => updateStrategyWeight(e.target.value));
-     });
+    });
 
     const focusSlider = document.getElementById('focusSlider');
     const focusNumber = document.getElementById('focusNumber');
@@ -249,11 +507,10 @@ export class UIComponents {
       updateFocus(defaultFocus);
     });
 
-    // Ensure focus displays are synced without triggering state updates on initial render
     updateFocus(localFocus, { emit: false });
   }
 
-  // Step 2: Transparency Effectiveness Panel
+  // Panel 3: Transparency Effectiveness Panel (unchanged)
   static createTransparencyPanel(containerId, { transparency, onTransparencyChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -285,12 +542,12 @@ export class UIComponents {
         
         <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
-         <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
+        <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
           <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Transparency:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
             <li>Higher percentages = a greater share of hidden labour risks uncovered.</li>
             <li>Values represent mid-point assumptions for each monitoring tool.</li>
-            <li>Your strategy mix (Step 2A) weights these assumptions into an overall transparency score.</li>
+            <li>Your strategy mix (Panel 3A) weights these assumptions into an overall transparency score.</li>
           </ul>
         </div>
       </div>
@@ -368,7 +625,7 @@ export class UIComponents {
     });
   }
 
-  // Step 3: Responsiveness Strategy Panel (Left Column)
+  // Panel 4: Responsiveness Strategy Panel (unchanged)
   static createResponsivenessPanel(containerId, { responsiveness, onResponsivenessChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -411,12 +668,12 @@ export class UIComponents {
           <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy allocation)</span>
         </div>
 
-         <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 20px;">
+        <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 20px;">
           <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategy Portfolio:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
             <li>Higher percentages = deeper investment in that remediation lever.</li>
             <li>Combine quick fixes with systemic levers for durable change.</li>
-            <li>Effectiveness assumptions for each lever are set out in Step 3B.</li>
+            <li>Effectiveness assumptions for each lever are set out in Panel 4B.</li>
           </ul>
         </div>
       </div>
@@ -469,7 +726,7 @@ export class UIComponents {
     });
   }
 
-  // Step 3: Responsiveness Effectiveness Panel (Right Column)
+  // Panel 4: Responsiveness Effectiveness Panel (unchanged)
   static createResponsivenessEffectivenessPanel(containerId, { effectiveness, onEffectivenessChange }) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -506,7 +763,7 @@ export class UIComponents {
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
             <li>Higher percentages = deeper reductions in residual risk when issues are addressed.</li>
             <li>Ranges reflect evidence-informed assumptions for each remediation lever.</li>
-            <li>Your Step 3A portfolio weights these assumptions into an overall response effectiveness score.</li>
+            <li>Your Panel 4A portfolio weights these assumptions into an overall response effectiveness score.</li>
           </ul>
         </div>
       </div>
@@ -596,8 +853,8 @@ export class UIComponents {
     });
   }
 
-  // Step 3: Final Results Panel
-   static createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus = 0, riskConcentration = 1 }) {
+  // Panel 5: Final Results Panel (unchanged but without Risk Assessment Summary)
+  static createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus = 0, riskConcentration = 1 }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -613,49 +870,7 @@ export class UIComponents {
       <div class="final-results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
         <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Final Risk Assessment Results</h2>
 
-        <!-- Risk Comparison Cards -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 32px;">
-          
-          <!-- Baseline Risk Card -->
-          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${summary.baseline.color}; background-color: ${summary.baseline.color}15;">
-            <div style="text-align: center;">
-              <div style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
-              <div style="font-size: 48px; font-weight: bold; color: ${summary.baseline.color}; margin-bottom: 8px;">
-                ${summary.baseline.score.toFixed(1)}
-              </div>
-              <div style="font-size: 18px; font-weight: 600; color: ${summary.baseline.color};">
-                ${summary.baseline.band}
-              </div>
-            </div>
-          </div>
-
-          <!-- Risk Reduction Card -->
-          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${isImprovement ? '#22c55e' : '#6b7280'}; background-color: ${isImprovement ? '#22c55e' : '#6b7280'}15;">
-            <div style="text-align: center;">
-              <div style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">RISK REDUCTION</div>
-              <div style="font-size: 48px; font-weight: bold; color: ${isImprovement ? '#22c55e' : '#6b7280'}; margin-bottom: 8px;">
-                ${isImprovement ? '-' : ''}${Math.abs(riskReduction).toFixed(1)}%
-              </div>
-              <div style="font-size: 18px; font-weight: 600; color: ${isImprovement ? '#22c55e' : '#6b7280'};">
-                ${isImprovement ? 'Improvement' : 'No Change'}
-              </div>
-            </div>
-          </div>
-
-          <!-- Managed Risk Card -->
-          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${summary.managed.color}; background-color: ${summary.managed.color}15;">
-            <div style="text-align: center;">
-              <div style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
-              <div style="font-size: 48px; font-weight: bold; color: ${summary.managed.color}; margin-bottom: 8px;">
-                ${summary.managed.score.toFixed(1)}
-              </div>
-              <div style="font-size: 18px; font-weight: 600; color: ${summary.managed.color};">
-                ${summary.managed.band}
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <!-- Strategy Effectiveness Analysis -->
         <div style="margin-bottom: 24px; padding: 20px; background-color: #f8fafc; border-radius: 8px;">
           <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">Strategy Effectiveness Analysis</h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
@@ -680,7 +895,7 @@ export class UIComponents {
               </div>
               <div style="font-size: 12px; color: #6b7280;">Effort directed to riskiest locations</div>
               <div style="margin-top: 8px; font-size: 12px; color: #1d4ed8;">
-                Focus multiplier: ${focusMultiplier.toFixed(2)}× · Risk convexity (K): ${concentrationFactor.toFixed(3)}
+                Focus multiplier: ${focusMultiplier.toFixed(2)}× • Risk convexity (K): ${concentrationFactor.toFixed(3)}
               </div>
             </div>
           </div>
@@ -691,7 +906,7 @@ export class UIComponents {
           <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">HRDD Strategy Breakdown</h3>
           <div id="strategyBreakdownList">
             ${summary.strategy.hrddStrategies.map(strategy => `
-              <div style="display: flex; justify-content: between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb; background-color: ${strategy.weight > 0 ? '#f0f9ff' : '#f9fafb'};">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb; background-color: ${strategy.weight > 0 ? '#f0f9ff' : '#f9fafb'};">
                 <div style="flex: 1;">
                   <span style="font-weight: 500; color: #1f2937;">${strategy.name}</span>
                   <div style="font-size: 12px; color: #6b7280;">
@@ -714,7 +929,7 @@ export class UIComponents {
           <button onclick="window.hrddApp.saveState()" style="padding: 12px 24px; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
             Save Configuration
           </button>
-          <button onclick="window.hrddApp.setCurrentStep(1)" style="padding: 12px 24px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+          <button onclick="window.hrddApp.setCurrentPanel(1)" style="padding: 12px 24px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
             Modify Settings
           </button>
         </div>
@@ -722,79 +937,696 @@ export class UIComponents {
     `;
   }
 
-  // Risk Comparison Panel (Always Visible)
-  static createRiskComparisonPanel(container, { baselineRisk, managedRisk, selectedCountries }) {
+  // Keep existing Panel 2 components (unchanged)
+  static createCountrySelectionPanel(containerId, { countries, selectedCountries, countryVolumes, onCountrySelect, onVolumeChange }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="country-selection-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Country Selection</h2>
+        
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+            Add Country to Portfolio:
+          </label>
+          <select id="countrySelect" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background-color: white;">
+            <option value="">Select a country...</option>
+          </select>
+        </div>
+
+        <div id="selectedCountries"></div>
+
+        <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 24px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Quick Guide:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Click countries on the map above to select them</li>
+            <li>Or use the dropdown to add countries</li>
+            <li>Set volume for each country (higher = more influence on risk)</li>
+            <li>Click 'Remove' to deselect countries</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    const countrySelect = document.getElementById('countrySelect');
+    const sortedCountries = countries
+      .filter(country => !selectedCountries.includes(country.isoCode))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    
+    sortedCountries.forEach(country => {
+      const option = document.createElement('option');
+      option.value = country.isoCode;
+      option.textContent = country.name;
+      countrySelect.appendChild(option);
+    });
+
+    countrySelect.addEventListener('change', (e) => {
+      if (e.target.value && onCountrySelect) {
+        onCountrySelect(e.target.value);
+      }
+      e.target.value = '';
+    });
+
+    this.updateSelectedCountriesDisplay(selectedCountries, countries, countryVolumes, onCountrySelect, onVolumeChange);
+  }
+
+  static createResultsPanel(containerId, { selectedCountries, countries, countryRisks, baselineRisk }) {
+    const container = document.getElementById(containerId);
     if (!container) return;
 
     const hasSelections = selectedCountries.length > 0;
-    const riskReduction = hasSelections ? riskEngine.calculateRiskReduction(baselineRisk, managedRisk) : 0;
-    const isImprovement = managedRisk < baselineRisk;
+    const riskColor = hasSelections ? riskEngine.getRiskColor(baselineRisk) : '#6b7280';
+    const riskBand = hasSelections ? `${riskEngine.getRiskBand(baselineRisk)} Risk` : 'No Countries Selected';
+    const selectionDetails = hasSelections
+      ? `Based on ${selectedCountries.length} selected ${selectedCountries.length === 1 ? 'country' : 'countries'}`
+      : 'Select countries to calculate a baseline risk.';
+    const baselineValue = hasSelections ? baselineRisk.toFixed(1) : '—';
+    const baselineBackground = hasSelections ? `${riskColor}15` : '#f3f4f6';
 
     container.innerHTML = `
-      <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
-        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
-          Risk Assessment Summary
-        </h2>
-        
-        ${hasSelections ? `
-          <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 24px; align-items: center;">
-            <!-- Baseline Risk -->
-            <div style="text-align: center; padding: 20px; border-radius: 8px; background-color: ${riskEngine.getRiskColor(baselineRisk)}15; border: 2px solid ${riskEngine.getRiskColor(baselineRisk)};">
-              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
-              <div style="font-size: 36px; font-weight: bold; color: ${riskEngine.getRiskColor(baselineRisk)}; margin-bottom: 4px;">
-                ${baselineRisk.toFixed(1)}
-              </div>
-              <div style="font-size: 14px; font-weight: 500; color: ${riskEngine.getRiskColor(baselineRisk)};">
-                ${riskEngine.getRiskBand(baselineRisk)}
-              </div>
-            </div>
+      <div class="results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Portfolio Risk Assessment</h2>
 
-            <!-- Arrow and Change -->
-            <div style="text-align: center;">
-              <div style="font-size: 24px; margin-bottom: 8px;">${isImprovement ? '↓' : '→'}</div>
-              <div style="font-size: 18px; font-weight: bold; color: ${isImprovement ? '#22c55e' : '#6b7280'};">
-                ${isImprovement ? '-' : ''}${Math.abs(riskReduction).toFixed(1)}%
-              </div>
-              <div style="font-size: 12px; color: #6b7280;">
-                ${isImprovement ? 'Reduction' : 'No Change'}
-              </div>
+        <div id="baselineDisplay" style="padding: 32px; border-radius: 12px; border: 3px solid ${riskColor}; background-color: ${baselineBackground}; margin-bottom: 24px;">
+          <div style="text-align: center;">
+            <div style="font-size: 56px; font-weight: bold; color: ${riskColor}; margin-bottom: 12px;">
+              ${baselineValue}
             </div>
-
-            <!-- Managed Risk -->
-            <div style="text-align: center; padding: 20px; border-radius: 8px; background-color: ${riskEngine.getRiskColor(managedRisk)}15; border: 2px solid ${riskEngine.getRiskColor(managedRisk)};">
-              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
-              <div style="font-size: 36px; font-weight: bold; color: ${riskEngine.getRiskColor(managedRisk)}; margin-bottom: 4px;">
-                ${managedRisk.toFixed(1)}
-              </div>
-              <div style="font-size: 14px; font-weight: 500; color: ${riskEngine.getRiskColor(managedRisk)};">
-                ${riskEngine.getRiskBand(managedRisk)}
-              </div>
+            <div style="font-size: 24px; font-weight: 600; color: ${riskColor}; margin-bottom: 12px;">
+              ${riskBand}
+            </div>
+            <div style="font-size: 16px; color: #6b7280;">
+              ${selectionDetails}
             </div>
           </div>
+        </div>
 
-          <div style="text-align: center; margin-top: 16px; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
-            <span style="font-size: 14px; color: #0369a1;">
-              Portfolio: ${selectedCountries.length} countries • 
-              ${isImprovement ? 'Risk management strategy is effective' : 'Consider adjusting your HRDD approach'}
-            </span>
-          </div>
-        ` : `
-          <div style="text-align: center; padding: 40px; color: #6b7280;">
-            <div style="font-size: 48px; margin-bottom: 16px;">🏭</div>
-            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">No Countries Selected</h3>
-            <p style="font-size: 14px; margin-bottom: 20px;">
-              Select countries in Step 1 to see your risk assessment summary
-            </p>
-            <button onclick="window.hrddApp.setCurrentStep(1)" style="padding: 12px 24px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-              Go to Step 1
-            </button>
-          </div>
-        `}
+        <div id="countryRiskBreakdown" style="margin-bottom: 24px;">
+          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #374151;">Individual Country Risks:</h3>
+          <div id="riskBreakdownList"></div>
+        </div>
+
+        <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 16px; border-radius: 8px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Next Steps:</h4>
+          <p style="font-size: 14px; margin: 0; line-height: 1.5;">
+            This baseline risk will be used in Panels 3-4 to configure HRDD strategies and 
+            in Panel 5 to calculate managed risk levels after implementing controls.
+          </p>
+        </div>
       </div>
     `;
+
+    this.updateRiskBreakdown(selectedCountries, countries, countryRisks);
   }
 
-  // Existing methods (keeping all original functionality)
+  static createWeightingsPanel(containerId, { weights, onWeightsChange }) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const weightLabels = [
+      'ITUC Rights Rating',
+      'Corruption Index (TI)', 
+      'ILO Migrant Worker Prevalence',
+      'WJP Index 4.8',
+      'Walk Free Slavery Index'
+    ];
+
+    let localWeights = [...weights];
+
+    const updateWeights = () => {
+      const total = localWeights.reduce((sum, w) => sum + w, 0);
+      const totalElement = document.getElementById('totalWeights');
+      if (totalElement) {
+        totalElement.textContent = total;
+        totalElement.style.color = total > 100 ? '#dc2626' : '#374151';
+      }
+      if (onWeightsChange) onWeightsChange([...localWeights]);
+    };
+
+    container.innerHTML = `
+      <div class="weightings-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Risk Factor Weightings</h2>
+          <button id="resetWeights" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            Reset to Default
+          </button>
+        </div>
+        
+        <div id="weightsContainer" style="margin-bottom: 20px;"></div>
+        
+        <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
+          Total Weight: <span id="totalWeights" style="font-weight: 600; font-size: 16px;">${localWeights.reduce((sum, w) => sum + w, 0)}</span>
+          <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(weights can exceed 100% - higher weights = more influence)</span>
+        </div>
+
+        <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px; margin-top: 20px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Weightings:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Higher weights give more importance to that risk factor</li>
+            <li>Adjust based on your organization's priorities and sector</li>
+            <li>Zero weight ignores that factor completely</li>
+            <li>Total can exceed 100% for emphasis on multiple factors</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    const weightsContainer = document.getElementById('weightsContainer');
+    weightLabels.forEach((label, index) => {
+      const weightControl = document.createElement('div');
+      weightControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
+      weightControl.innerHTML = `
+        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+          ${label} <span id="weightValue_${index}" style="font-weight: 600; color: #1f2937;">(${localWeights[index]}%)</span>
+        </label>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input type="range" min="0" max="50" value="${localWeights[index]}" id="weight_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+          <input type="number" min="0" max="50" value="${localWeights[index]}" id="weightNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        </div>
+      `;
+      weightsContainer.appendChild(weightControl);
+
+      const rangeInput = document.getElementById(`weight_${index}`);
+      const numberInput = document.getElementById(`weightNum_${index}`);
+      const valueDisplay = document.getElementById(`weightValue_${index}`);
+
+      const updateWeight = (value) => {
+        const newValue = Math.max(0, Math.min(50, parseFloat(value) || 0));
+        localWeights[index] = newValue;
+        rangeInput.value = newValue;
+        numberInput.value = newValue;
+        valueDisplay.textContent = `(${newValue}%)`;
+        updateWeights();
+      };
+
+      rangeInput.addEventListener('input', (e) => updateWeight(e.target.value));
+      numberInput.addEventListener('input', (e) => updateWeight(e.target.value));
+    });
+
+    const resetButton = document.getElementById('resetWeights');
+    resetButton.addEventListener('click', () => {
+      localWeights = [...riskEngine.defaultWeights];
+      localWeights.forEach((weight, index) => {
+        document.getElementById(`weight_${index}`).value = weight;
+        document.getElementById(`weightNum_${index}`).value = weight;
+        document.getElementById(`weightValue_${index}`).textContent = `(${weight}%)`;
+      });
+      updateWeights();
+    });
+  }
+
+  // Helper methods for updating displays
+  static updateSelectedCountriesDisplay(selectedCountries, countries, countryVolumes, onCountrySelect, onVolumeChange) {
+    const container = document.getElementById('selectedCountries');
+    if (!container) return;
+
+    const safeCountryVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
+
+    if (selectedCountries.length === 0) {
+      container.innerHTML = '<p style="color: #6b7280; font-style: italic; padding: 12px; text-align: center; background-color: #f9fafb; border-radius: 4px;">No countries selected. Use the dropdown above or click on the map.</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <h4 style="font-size: 16px; font-weight: 500; margin-bottom: 12px; color: #374151;">
+        Selected Countries & Volumes (${selectedCountries.length}):
+      </h4>
+      <div id="countryList" style="max-height: 240px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
+      </div>
+    `;
+
+    const countryList = document.getElementById('countryList');
+    selectedCountries.forEach((countryCode, index) => {
+      const country = countries.find(c => c.isoCode === countryCode);
+      const volume = typeof safeCountryVolumes[countryCode] === 'number' ? safeCountryVolumes[countryCode] : 10;
+
+      const countryItem = document.createElement('div');
+      countryItem.style.cssText = `
+        display: flex; align-items: center; justify-content: space-between; padding: 16px;
+        ${index > 0 ? 'border-top: 1px solid #e5e7eb;' : ''}
+        background-color: ${index % 2 === 0 ? '#ffffff' : '#f9fafb'};
+      `;
+      
+      countryItem.innerHTML = `
+        <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e;"></div>
+          <span style="font-weight: 500; color: #1f2937;">${country?.name || countryCode}</span>
+          <span style="font-size: 12px; color: #6b7280; background-color: #f3f4f6; padding: 2px 6px; border-radius: 3px;">${countryCode}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 14px; color: #6b7280; font-weight: 500;">Volume:</label>
+            <input type="number" min="0" value="${volume}" id="volume_${countryCode}" 
+                   style="width: 80px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+          </div>
+          <button id="remove_${countryCode}" 
+                  style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;">
+            Remove
+          </button>
+        </div>
+      `;
+
+      countryList.appendChild(countryItem);
+
+      const volumeInput = document.getElementById(`volume_${countryCode}`);
+      const removeButton = document.getElementById(`remove_${countryCode}`);
+
+      volumeInput.addEventListener('input', (e) => {
+        const value = Math.max(0, parseFloat(e.target.value) || 0);
+        e.target.value = value;
+        if (onVolumeChange) onVolumeChange(countryCode, value);
+      });
+
+      removeButton.addEventListener('click', () => {
+        if (onCountrySelect) onCountrySelect(countryCode);
+      });
+    });
+  }
+
+  static updateRiskBreakdown(selectedCountries, countries, countryRisks) {
+    const container = document.getElementById('riskBreakdownList');
+    if (!container) return;
+
+    if (selectedCountries.length === 0) {
+      container.innerHTML = '<p style="color: #6b7280; font-style: italic; text-align: center; padding: 16px;">No countries selected</p>';
+      return;
+    }
+
+    const breakdown = selectedCountries.map(countryCode => {
+      const country = countries.find(c => c.isoCode === countryCode);
+      const risk = countryRisks[countryCode] || 0;
+      const riskBand = riskEngine.getRiskBand(risk);
+      const riskColor = riskEngine.getRiskColor(risk);
+      
+      return { country, risk, riskBand, riskColor, countryCode };
+    }).sort((a, b) => b.risk - a.risk);
+
+    container.innerHTML = breakdown.map(({ country, risk, riskBand, riskColor, countryCode }) => `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb;">
+        <div style="flex: 1;">
+          <span style="font-weight: 500;">${country?.name || countryCode}</span>
+          <span style="font-size: 12px; color: #6b7280; margin-left: 8px;">(${countryCode})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 600; color: ${riskColor};">${risk.toFixed(1)}</span>
+          <span style="font-size: 12px; padding: 2px 8px; border-radius: 12px; background-color: ${riskColor}20; color: ${riskColor};">
+            ${riskBand}
+          </span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ===== D3 MAP RENDERING METHODS =====
+
+  // Global Risk Map Renderer (Panel 1 - non-interactive)
+  static _renderGlobalD3Map(worldData, { container, countries, countryRisks, width, height }) {
+    const wrapper = document.getElementById(container);
+    if (!wrapper) return;
+    wrapper.innerHTML = '';
+
+    try {
+      const features = this._extractWorldFeatures(worldData);
+      if (!features.length) throw new Error('No geographic features available');
+
+      const featureCollection = { type: 'FeatureCollection', features };
+      const svg = d3.select(wrapper)
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet')
+        .style('width', '100%')
+        .style('height', 'auto')
+        .style('border', '1px solid #e5e7eb')
+        .style('border-radius', '8px')
+        .style('background', '#f8fafc');
+
+      const projection = d3.geoNaturalEarth1()
+        .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
+      const path = d3.geoPath(projection);
+      const mapGroup = svg.append('g').attr('class', 'map-layer');
+
+      // Ocean background
+      mapGroup.append('path')
+        .datum({ type: 'Sphere' })
+        .attr('d', path)
+        .attr('fill', '#e0f2fe')
+        .attr('stroke', '#bae6fd')
+        .attr('stroke-width', 0.6)
+        .attr('pointer-events', 'none');
+
+      const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
+      const nameLookup = this._buildCountryNameLookup(metadataMap);
+
+      features.forEach(feature => {
+        feature.__isoCode = this._getFeatureIsoCode(feature, metadataMap, nameLookup);
+      });
+
+      const countryGroup = mapGroup.append('g').attr('class', 'countries');
+
+      countryGroup.selectAll('path.country')
+        .data(features)
+        .enter()
+        .append('path')
+        .attr('class', 'country')
+        .attr('data-iso-code', d => d.__isoCode || '')
+        .attr('d', path)
+        .style('cursor', 'default')
+        .style('fill', d => {
+          const countryId = d.__isoCode;
+          const risk = countryRisks[countryId];
+          return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
+        })
+        .style('stroke', '#ffffff')
+        .style('stroke-width', 0.6)
+        .style('opacity', d => {
+          const countryId = d.__isoCode;
+          return countryRisks[countryId] !== undefined ? 0.95 : 0.7;
+        })
+        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup, 'global'))
+        .on('mouseout', () => this._hideMapTooltip());
+
+      // Enhanced zoom controls
+      const zoom = d3.zoom()
+        .scaleExtent([0.5, 10])
+        .on('zoom', (event) => {
+          mapGroup.attr('transform', event.transform);
+        });
+      
+      svg.call(zoom);
+
+      this._addZoomControls(svg, zoom);
+
+    } catch (error) {
+      console.warn('D3 global map rendering failed, using fallback:', error);
+      this._createSimpleMapGrid(container, { countries, countryRisks, interactive: false });
+    }
+  }
+
+  // Comparison Map Renderer (Panel 5 - selected countries only, non-interactive)
+  static _renderComparisonD3Map(worldData, { container, countries, countryRisks, selectedCountries, width, height, mapType }) {
+    const wrapper = document.getElementById(container);
+    if (!wrapper) return;
+    wrapper.innerHTML = '';
+
+    try {
+      const features = this._extractWorldFeatures(worldData);
+      if (!features.length) throw new Error('No geographic features available');
+
+      // Filter features to only show selected countries
+      const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
+      const nameLookup = this._buildCountryNameLookup(metadataMap);
+
+      features.forEach(feature => {
+        feature.__isoCode = this._getFeatureIsoCode(feature, metadataMap, nameLookup);
+      });
+
+      const selectedFeatures = features.filter(feature => 
+        feature.__isoCode && selectedCountries.includes(feature.__isoCode)
+      );
+
+      if (selectedFeatures.length === 0) {
+        wrapper.innerHTML = `
+          <div style="padding: 40px; text-align: center; color: #6b7280;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🌍</div>
+            <p>No selected countries to display</p>
+          </div>
+        `;
+        return;
+      }
+
+      const featureCollection = { type: 'FeatureCollection', features: selectedFeatures };
+      const svg = d3.select(wrapper)
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet')
+        .style('width', '100%')
+        .style('height', 'auto')
+        .style('border', '1px solid #e5e7eb')
+        .style('border-radius', '8px')
+        .style('background', '#f8fafc');
+
+      const projection = d3.geoNaturalEarth1()
+        .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
+      const path = d3.geoPath(projection);
+      const mapGroup = svg.append('g').attr('class', 'map-layer');
+
+      // Ocean background
+      mapGroup.append('path')
+        .datum({ type: 'Sphere' })
+        .attr('d', path)
+        .attr('fill', '#e0f2fe')
+        .attr('stroke', '#bae6fd')
+        .attr('stroke-width', 0.6)
+        .attr('pointer-events', 'none');
+
+      const countryGroup = mapGroup.append('g').attr('class', 'countries');
+
+      countryGroup.selectAll('path.country')
+        .data(selectedFeatures)
+        .enter()
+        .append('path')
+        .attr('class', 'country')
+        .attr('data-iso-code', d => d.__isoCode || '')
+        .attr('d', path)
+        .style('cursor', 'default')
+        .style('fill', d => {
+          const countryId = d.__isoCode;
+          const risk = countryRisks[countryId];
+          return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
+        })
+        .style('stroke', '#111827')
+        .style('stroke-width', 1.5)
+        .style('opacity', 0.95)
+        .on('mouseover', (event, d) => this._showComparisonMapTooltip(event, d, countryRisks, metadataMap, nameLookup, mapType))
+        .on('mouseout', () => this._hideMapTooltip());
+
+      // Enhanced zoom controls
+      const zoom = d3.zoom()
+        .scaleExtent([0.5, 10])
+        .on('zoom', (event) => {
+          mapGroup.attr('transform', event.transform);
+        });
+      
+      svg.call(zoom);
+
+      this._addZoomControls(svg, zoom);
+
+    } catch (error) {
+      console.warn('D3 comparison map rendering failed, using fallback:', error);
+      this._createFallbackComparisonMap(container, { countries, countryRisks, selectedCountries, mapType });
+    }
+  }
+
+  // Interactive Map Renderer (Panel 2 - with country selection)
+  static _renderD3Map(worldData, { container, countries, countryRisks, selectedCountries, onCountrySelect, width, height, mapType }) {
+    const wrapper = document.getElementById(container);
+    if (!wrapper) return;
+    wrapper.innerHTML = '';
+
+    try {
+      const features = this._extractWorldFeatures(worldData);
+      if (!features.length) throw new Error('No geographic features available');
+
+      const featureCollection = { type: 'FeatureCollection', features };
+      const svg = d3.select(wrapper)
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet')
+        .style('width', '100%')
+        .style('height', 'auto')
+        .style('border', '1px solid #e5e7eb')
+        .style('border-radius', '8px')
+        .style('background', '#f8fafc');
+
+      const projection = d3.geoNaturalEarth1()
+        .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
+      const path = d3.geoPath(projection);
+      const mapGroup = svg.append('g').attr('class', 'map-layer');
+
+      // Ocean background
+      mapGroup.append('path')
+        .datum({ type: 'Sphere' })
+        .attr('d', path)
+        .attr('fill', '#e0f2fe')
+        .attr('stroke', '#bae6fd')
+        .attr('stroke-width', 0.6)
+        .attr('pointer-events', 'none');
+
+      const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
+      const nameLookup = this._buildCountryNameLookup(metadataMap);
+
+      features.forEach(feature => {
+        feature.__isoCode = this._getFeatureIsoCode(feature, metadataMap, nameLookup);
+      });
+
+      const countryGroup = mapGroup.append('g').attr('class', 'countries');
+
+      countryGroup.selectAll('path.country')
+        .data(features)
+        .enter()
+        .append('path')
+        .attr('class', 'country')
+        .attr('data-iso-code', d => d.__isoCode || '')
+        .attr('d', path)
+        .style('cursor', d => d.__isoCode ? 'pointer' : 'default')
+        .style('fill', d => {
+          const countryId = d.__isoCode;
+          const risk = countryRisks[countryId];
+          return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
+        })
+        .style('stroke', d => selectedCountries.includes(d.__isoCode) ? '#111827' : '#ffffff')
+        .style('stroke-width', d => selectedCountries.includes(d.__isoCode) ? 1.5 : 0.6)
+        .style('opacity', d => {
+          const countryId = d.__isoCode;
+          return countryRisks[countryId] !== undefined ? 0.95 : 0.7;
+        })
+        .on('click', (event, d) => {
+          const countryId = d.__isoCode;
+          if (!countryId) return;
+
+          const isSelected = selectedCountries.includes(countryId);
+          d3.select(event.currentTarget)
+            .style('stroke', isSelected ? '#ffffff' : '#111827')
+            .style('stroke-width', isSelected ? 0.6 : 1.5);
+
+          if (onCountrySelect) onCountrySelect(countryId);
+        })
+        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup, mapType))
+        .on('mouseout', () => this._hideMapTooltip());
+
+      // Enhanced zoom controls
+      const zoom = d3.zoom()
+        .scaleExtent([0.5, 10])
+        .on('zoom', (event) => {
+          mapGroup.attr('transform', event.transform);
+        });
+      
+      svg.call(zoom);
+
+      this._addZoomControls(svg, zoom);
+
+    } catch (error) {
+      console.warn('D3 map rendering failed, using fallback:', error);
+      this._createSimpleMapGrid(container, { countries, countryRisks, selectedCountries, onCountrySelect });
+    }
+  }
+
+  // ===== SHARED D3 HELPER METHODS =====
+
+  static _addZoomControls(svg, zoom) {
+    const zoomControls = svg.append('g')
+      .attr('class', 'zoom-controls')
+      .attr('transform', 'translate(20, 20)');
+
+    // Zoom out button
+    zoomControls.append('rect')
+      .attr('x', 0).attr('y', 35).attr('width', 30).attr('height', 30)
+      .attr('fill', 'white').attr('stroke', '#374151').attr('stroke-width', 1).attr('rx', 4)
+      .style('cursor', 'pointer')
+      .on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 0.67));
+
+    zoomControls.append('text')
+      .attr('x', 15).attr('y', 55).attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+      .style('font-size', '20px').style('font-weight', 'bold').style('fill', '#374151')
+      .style('pointer-events', 'none').text('−');
+
+    // Reset zoom button
+    zoomControls.append('rect')
+      .attr('x', 0).attr('y', 70).attr('width', 30).attr('height', 30)
+      .attr('fill', 'white').attr('stroke', '#374151').attr('stroke-width', 1).attr('rx', 4)
+      .style('cursor', 'pointer')
+      .on('click', () => svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity));
+
+    zoomControls.append('text')
+      .attr('x', 15).attr('y', 90).attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+      .style('font-size', '10px').style('font-weight', 'bold').style('fill', '#374151')
+      .style('pointer-events', 'none').text('⌂');
+  }
+
+  // ===== TOOLTIP METHODS =====
+
+  static _showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline') {
+    const countryId = countryData.__isoCode;
+    const countryName = countryMetadata.get(countryId)?.name || countryData.properties?.NAME || countryId || 'Unknown';
+    const risk = countryId ? countryRisks[countryId] : undefined;
+
+    d3.selectAll('.map-tooltip').remove();
+
+    const tooltip = d3.select('body')
+      .append('div')
+      .attr('class', 'map-tooltip')
+      .style('position', 'absolute')
+      .style('background', 'rgba(0, 0, 0, 0.8)')
+      .style('color', 'white')
+      .style('padding', '8px')
+      .style('border-radius', '4px')
+      .style('font-size', '12px')
+      .style('pointer-events', 'none')
+      .style('opacity', 0);
+
+    tooltip.transition().duration(200).style('opacity', 1);
+
+    const pageX = event.pageX || 0;
+    const pageY = event.pageY || 0;
+
+    const riskLabel = mapType === 'managed' ? 'Managed Risk' : 
+                     mapType === 'global' ? 'Global Risk' : 'Baseline Risk';
+
+    tooltip.html(`
+      <strong>${countryName}</strong><br/>
+      ${risk !== undefined ?
+        `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}` :
+        'No data available'
+      }
+    `)
+    .style('left', (pageX + 10) + 'px')
+    .style('top', (pageY - 10) + 'px');
+  }
+
+  static _showComparisonMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline') {
+    const countryId = countryData.__isoCode;
+    const countryName = countryMetadata.get(countryId)?.name || countryData.properties?.NAME || countryId || 'Unknown';
+    const risk = countryId ? countryRisks[countryId] : undefined;
+
+    d3.selectAll('.map-tooltip').remove();
+
+    const tooltip = d3.select('body')
+      .append('div')
+      .attr('class', 'map-tooltip')
+      .style('position', 'absolute')
+      .style('background', 'rgba(0, 0, 0, 0.8)')
+      .style('color', 'white')
+      .style('padding', '8px')
+      .style('border-radius', '4px')
+      .style('font-size', '12px')
+      .style('pointer-events', 'none')
+      .style('opacity', 0);
+
+    tooltip.transition().duration(200).style('opacity', 1);
+
+    const pageX = event.pageX || 0;
+    const pageY = event.pageY || 0;
+
+    const riskLabel = mapType === 'managed' ? 'Managed Risk' : 'Baseline Risk';
+
+    tooltip.html(`
+      <strong>${countryName}</strong><br/>
+      ${risk !== undefined ?
+        `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}<br/><em>Selected Country</em>` :
+        'No data available'
+      }
+    `)
+    .style('left', (pageX + 10) + 'px')
+    .style('top', (pageY - 10) + 'px');
+  }
+
+  static _hideMapTooltip() {
+    d3.selectAll('.map-tooltip').remove();
+  }
+
+  // ===== D3 LOADING AND DATA METHODS (unchanged from original) =====
+
   static async _loadD3() {
     if (typeof d3 !== 'undefined') return;
     if (this._d3LoadingPromise) return this._d3LoadingPromise;
@@ -923,145 +1755,14 @@ export class UIComponents {
     return { type: 'FeatureCollection', features };
   }
 
-  static _renderD3Map(worldData, { container, countries, countryRisks, selectedCountries, onCountrySelect, width, height, mapType = 'baseline' }) {
-    const wrapper = document.getElementById(container);
-    if (!wrapper) return;
-    wrapper.innerHTML = '';
+  // ===== FEATURE EXTRACTION AND TOPOLOGY METHODS (unchanged from original) =====
 
-    try {
-      const features = this._extractWorldFeatures(worldData);
-      if (!features.length) throw new Error('No geographic features available');
-
-      const featureCollection = { type: 'FeatureCollection', features };
-      const svg = d3.select(wrapper)
-        .append('svg')
-        .attr('viewBox', `0 0 ${width} ${height}`)
-        .attr('preserveAspectRatio', 'xMidYMid meet')
-        .style('width', '100%')
-        .style('height', 'auto')
-        .style('border', '1px solid #e5e7eb')
-        .style('border-radius', '8px')
-        .style('background', '#f8fafc');
-
-      const projection = d3.geoNaturalEarth1()
-        .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
-      const path = d3.geoPath(projection);
-      const mapGroup = svg.append('g').attr('class', 'map-layer');
-
-      // Ocean background
-      mapGroup.append('path')
-        .datum({ type: 'Sphere' })
-        .attr('d', path)
-        .attr('fill', '#e0f2fe')
-        .attr('stroke', '#bae6fd')
-        .attr('stroke-width', 0.6)
-        .attr('pointer-events', 'none');
-
-      const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
-      const nameLookup = this._buildCountryNameLookup(metadataMap);
-
-      features.forEach(feature => {
-        feature.__isoCode = this._getFeatureIsoCode(feature, metadataMap, nameLookup);
-      });
-
-      const countryGroup = mapGroup.append('g').attr('class', 'countries');
-
-      countryGroup.selectAll('path.country')
-        .data(features)
-        .enter()
-        .append('path')
-        .attr('class', 'country')
-        .attr('data-iso-code', d => d.__isoCode || '')
-        .attr('d', path)
-        .style('cursor', d => d.__isoCode ? 'pointer' : 'default')
-        .style('fill', d => {
-          const countryId = d.__isoCode;
-          const risk = countryRisks[countryId];
-          return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
-        })
-        .style('stroke', d => selectedCountries.includes(d.__isoCode) ? '#111827' : '#ffffff')
-        .style('stroke-width', d => selectedCountries.includes(d.__isoCode) ? 1.5 : 0.6)
-        .style('opacity', d => {
-          const countryId = d.__isoCode;
-          return countryRisks[countryId] !== undefined ? 0.95 : 0.7;
-        })
-        .on('click', (event, d) => {
-          const countryId = d.__isoCode;
-          if (!countryId) return;
-
-          const isSelected = selectedCountries.includes(countryId);
-          d3.select(event.currentTarget)
-            .style('stroke', isSelected ? '#ffffff' : '#111827')
-            .style('stroke-width', isSelected ? 0.6 : 1.5);
-
-          if (onCountrySelect) onCountrySelect(countryId);
-        })
-        .on('mouseover', (event, d) => this._showMapTooltip(event, d, countryRisks, metadataMap, nameLookup, mapType))
-        .on('mouseout', () => this._hideMapTooltip());
-
-      // Enhanced zoom controls
-      const zoom = d3.zoom()
-        .scaleExtent([0.5, 10])
-        .on('zoom', (event) => {
-          mapGroup.attr('transform', event.transform);
-        });
-      
-      svg.call(zoom);
-
-      // Add zoom control buttons
-      const zoomControls = svg.append('g')
-        .attr('class', 'zoom-controls')
-        .attr('transform', 'translate(20, 20)');
-
-      // Zoom in button
-      zoomControls.append('rect')
-        .attr('x', 0).attr('y', 0).attr('width', 30).attr('height', 30)
-        .attr('fill', 'white').attr('stroke', '#374151').attr('stroke-width', 1).attr('rx', 4)
-        .style('cursor', 'pointer')
-        .on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1.5));
-
-      zoomControls.append('text')
-        .attr('x', 15).attr('y', 20).attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-        .style('font-size', '18px').style('font-weight', 'bold').style('fill', '#374151')
-        .style('pointer-events', 'none').text('+');
-
-      // Zoom out button
-      zoomControls.append('rect')
-        .attr('x', 0).attr('y', 35).attr('width', 30).attr('height', 30)
-        .attr('fill', 'white').attr('stroke', '#374151').attr('stroke-width', 1).attr('rx', 4)
-        .style('cursor', 'pointer')
-        .on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 0.67));
-
-      zoomControls.append('text')
-        .attr('x', 15).attr('y', 55).attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-        .style('font-size', '20px').style('font-weight', 'bold').style('fill', '#374151')
-        .style('pointer-events', 'none').text('−');
-
-      // Reset zoom button
-      zoomControls.append('rect')
-        .attr('x', 0).attr('y', 70).attr('width', 30).attr('height', 30)
-        .attr('fill', 'white').attr('stroke', '#374151').attr('stroke-width', 1).attr('rx', 4)
-        .style('cursor', 'pointer')
-        .on('click', () => svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity));
-
-      zoomControls.append('text')
-        .attr('x', 15).attr('y', 90).attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-        .style('font-size', '10px').style('font-weight', 'bold').style('fill', '#374151')
-        .style('pointer-events', 'none').text('⌂');
-
-    } catch (error) {
-      console.warn('D3 map rendering failed, using fallback:', error);
-      this._createSimpleMapGrid(container, { countries, countryRisks, selectedCountries, onCountrySelect });
-    }
-  }
-
-  // Continue with all the existing helper methods...
   static _extractWorldFeatures(worldData) {
     if (!worldData) return [];
     if (worldData.type === 'FeatureCollection' && Array.isArray(worldData.features)) {
       return worldData.features;
     }
-     if (worldData.type === 'Topology' && worldData.objects?.countries) {
+    if (worldData.type === 'Topology' && worldData.objects?.countries) {
       const features = this._topologyToFeatures(worldData, 'countries');
       return Array.isArray(features) ? features : [];
     }
@@ -1243,6 +1944,8 @@ export class UIComponents {
     return { type: 'FeatureCollection', features };
   }
 
+  // ===== COUNTRY IDENTIFICATION METHODS (unchanged from original) =====
+
   static _getCountryId(countryData) {
     if (!countryData) return null;
 
@@ -1324,46 +2027,7 @@ export class UIComponents {
     return lookup;
   }
 
-  static _showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline') {
-    const countryId = countryData.__isoCode;
-    const countryName = countryMetadata.get(countryId)?.name || countryData.properties?.NAME || countryId || 'Unknown';
-    const risk = countryId ? countryRisks[countryId] : undefined;
-
-    d3.selectAll('.map-tooltip').remove();
-
-    const tooltip = d3.select('body')
-      .append('div')
-      .attr('class', 'map-tooltip')
-      .style('position', 'absolute')
-      .style('background', 'rgba(0, 0, 0, 0.8)')
-      .style('color', 'white')
-      .style('padding', '8px')
-      .style('border-radius', '4px')
-      .style('font-size', '12px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0);
-
-    tooltip.transition().duration(200).style('opacity', 1);
-
-    const pageX = event.pageX || 0;
-    const pageY = event.pageY || 0;
-
-    const riskLabel = mapType === 'managed' ? 'Managed Risk' : 'Baseline Risk';
-
-    tooltip.html(`
-      <strong>${countryName}</strong><br/>
-      ${risk !== undefined ?
-        `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}` :
-        'No data available'
-      }
-    `)
-    .style('left', (pageX + 10) + 'px')
-    .style('top', (pageY - 10) + 'px');
-  }
-
-  static _hideMapTooltip() {
-    d3.selectAll('.map-tooltip').remove();
-  }
+  // ===== MAP LEGEND AND FALLBACK METHODS =====
 
   static _createMapLegend(containerId) {
     const container = document.getElementById(containerId);
@@ -1391,26 +2055,38 @@ export class UIComponents {
     container.appendChild(legendContainer);
   }
 
-  static _createFallbackMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title }) {
-    this._createSimpleMapGrid(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title });
+  static _createFallbackMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, interactive = true }) {
+    this._createSimpleMapGrid(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, interactive });
   }
 
-  static _createSimpleMapGrid(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title }) {
+  static _createFallbackComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType }) {
+    this._createSimpleMapGrid(containerId, { countries, countryRisks, selectedCountries, title, interactive: false, mapType });
+  }
+
+  static _createSimpleMapGrid(containerId, { countries, countryRisks, selectedCountries = [], onCountrySelect, title, interactive = true, mapType = 'baseline' }) {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    const displayCountries = interactive ? 
+      countries.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20) :
+      countries.filter(country => selectedCountries.includes(country.isoCode));
 
     container.innerHTML = `
       <div class="simple-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
         ${title ? `<h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${title}</h3>` : ''}
-        <div class="map-grid" id="simpleMapGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 20px 0;">
+        <div class="map-grid" id="simpleMapGrid-${mapType}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 20px 0;">
         </div>
+        ${displayCountries.length === 0 ? `
+          <div style="padding: 40px; color: #6b7280; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🌍</div>
+            <p>No countries to display</p>
+          </div>
+        ` : ''}
       </div>
     `;
 
-    const mapGrid = document.getElementById('simpleMapGrid');
-    if (!mapGrid) return;
-
-    const displayCountries = countries.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20);
+    const mapGrid = document.getElementById(`simpleMapGrid-${mapType}`);
+    if (!mapGrid || displayCountries.length === 0) return;
 
     displayCountries.forEach(country => {
       const risk = countryRisks[country.isoCode] || 0;
@@ -1419,350 +2095,32 @@ export class UIComponents {
       const countryTile = document.createElement('div');
       countryTile.style.cssText = `
         padding: 12px 8px; border-radius: 4px; border: 2px solid ${isSelected ? '#000' : '#e5e7eb'};
-        cursor: pointer; font-size: 11px; font-weight: 500; color: white; text-align: center;
+        cursor: ${interactive ? 'pointer' : 'default'}; font-size: 11px; font-weight: 500; color: white; text-align: center;
         background-color: ${riskEngine.getRiskColor(risk)}; opacity: ${risk > 0 ? 0.9 : 0.4};
         min-height: 60px; display: flex; flex-direction: column; justify-content: center;
       `;
       
       countryTile.innerHTML = `<div>${country.name.length > 12 ? country.isoCode : country.name}</div>`;
-      countryTile.addEventListener('click', () => {
-        if (onCountrySelect) onCountrySelect(country.isoCode);
-      });
+      
+      if (interactive && onCountrySelect) {
+        countryTile.addEventListener('click', () => {
+          onCountrySelect(country.isoCode);
+        });
+      }
       
       mapGrid.appendChild(countryTile);
     });
   }
+} in button
+    zoomControls.append('rect')
+      .attr('x', 0).attr('y', 0).attr('width', 30).attr('height', 30)
+      .attr('fill', 'white').attr('stroke', '#374151').attr('stroke-width', 1).attr('rx', 4)
+      .style('cursor', 'pointer')
+      .on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1.5));
 
-  // Keep all existing Step 1 methods for backward compatibility
-  static createCountrySelectionPanel(containerId, { countries, selectedCountries, countryVolumes, onCountrySelect, onVolumeChange }) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+    zoomControls.append('text')
+      .attr('x', 15).attr('y', 20).attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+      .style('font-size', '18px').style('font-weight', 'bold').style('fill', '#374151')
+      .style('pointer-events', 'none').text('+');
 
-    container.innerHTML = `
-      <div class="country-selection-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Country Selection</h2>
-        
-        <div style="margin-bottom: 24px;">
-          <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
-            Add Country to Portfolio:
-          </label>
-          <select id="countrySelect" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background-color: white;">
-            <option value="">Select a country...</option>
-          </select>
-        </div>
-
-        <div id="selectedCountries"></div>
-
-        <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 24px;">
-          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Quick Guide:</h4>
-          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-            <li>Click countries on the map above to select them</li>
-            <li>Or use the dropdown to add countries</li>
-            <li>Set volume for each country (higher = more influence on risk)</li>
-            <li>Click 'Remove' to deselect countries</li>
-          </ul>
-        </div>
-      </div>
-    `;
-
-    const countrySelect = document.getElementById('countrySelect');
-    const sortedCountries = countries
-      .filter(country => !selectedCountries.includes(country.isoCode))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    
-    sortedCountries.forEach(country => {
-      const option = document.createElement('option');
-      option.value = country.isoCode;
-      option.textContent = country.name;
-      countrySelect.appendChild(option);
-    });
-
-    countrySelect.addEventListener('change', (e) => {
-      if (e.target.value && onCountrySelect) {
-        onCountrySelect(e.target.value);
-      }
-      e.target.value = '';
-    });
-
-    this.updateSelectedCountriesDisplay(selectedCountries, countries, countryVolumes, onCountrySelect, onVolumeChange);
-  }
-
-  static createResultsPanel(containerId, { selectedCountries, countries, countryRisks, baselineRisk }) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    const hasSelections = selectedCountries.length > 0;
-    const riskColor = hasSelections ? riskEngine.getRiskColor(baselineRisk) : '#6b7280';
-    const riskBand = hasSelections ? `${riskEngine.getRiskBand(baselineRisk)} Risk` : 'No Countries Selected';
-    const selectionDetails = hasSelections
-      ? `Based on ${selectedCountries.length} selected ${selectedCountries.length === 1 ? 'country' : 'countries'}`
-      : 'Select countries to calculate a baseline risk.';
-    const baselineValue = hasSelections ? baselineRisk.toFixed(1) : '—';
-    const baselineBackground = hasSelections ? `${riskColor}15` : '#f3f4f6';
-
-    container.innerHTML = `
-      <div class="results-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 24px; color: #1f2937;">Portfolio Risk Assessment</h2>
-
-        <div id="baselineDisplay" style="padding: 32px; border-radius: 12px; border: 3px solid ${riskColor}; background-color: ${baselineBackground}; margin-bottom: 24px;">
-          <div style="text-align: center;">
-            <div style="font-size: 56px; font-weight: bold; color: ${riskColor}; margin-bottom: 12px;">
-              ${baselineValue}
-            </div>
-            <div style="font-size: 24px; font-weight: 600; color: ${riskColor}; margin-bottom: 12px;">
-              ${riskBand}
-            </div>
-            <div style="font-size: 16px; color: #6b7280;">
-              ${selectionDetails}
-            </div>
-          </div>
-        </div>
-
-        <div id="countryRiskBreakdown" style="margin-bottom: 24px;">
-          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #374151;">Individual Country Risks:</h3>
-          <div id="riskBreakdownList"></div>
-        </div>
-
-        <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 16px; border-radius: 8px;">
-          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Next Steps:</h4>
-          <p style="font-size: 14px; margin: 0; line-height: 1.5;">
-            This baseline risk will be used in Step 2 to configure HRDD strategies and 
-            in Step 3 to calculate managed risk levels after implementing controls.
-          </p>
-        </div>
-      </div>
-    `;
-
-    this.updateRiskBreakdown(selectedCountries, countries, countryRisks);
-  }
-
-  static updateRiskBreakdown(selectedCountries, countries, countryRisks) {
-    const container = document.getElementById('riskBreakdownList');
-    if (!container) return;
-
-    if (selectedCountries.length === 0) {
-      container.innerHTML = '<p style="color: #6b7280; font-style: italic; text-align: center; padding: 16px;">No countries selected</p>';
-      return;
-    }
-
-    const breakdown = selectedCountries.map(countryCode => {
-      const country = countries.find(c => c.isoCode === countryCode);
-      const risk = countryRisks[countryCode] || 0;
-      const riskBand = riskEngine.getRiskBand(risk);
-      const riskColor = riskEngine.getRiskColor(risk);
-      
-      return { country, risk, riskBand, riskColor, countryCode };
-    }).sort((a, b) => b.risk - a.risk);
-
-    container.innerHTML = breakdown.map(({ country, risk, riskBand, riskColor, countryCode }) => `
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb;">
-        <div style="flex: 1;">
-          <span style="font-weight: 500;">${country?.name || countryCode}</span>
-          <span style="font-size: 12px; color: #6b7280; margin-left: 8px;">(${countryCode})</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-weight: 600; color: ${riskColor};">${risk.toFixed(1)}</span>
-          <span style="font-size: 12px; padding: 2px 8px; border-radius: 12px; background-color: ${riskColor}20; color: ${riskColor};">
-            ${riskBand}
-          </span>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  static createWeightingsPanel(containerId, { weights, onWeightsChange }) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    const weightLabels = [
-      'ITUC Rights Rating',
-      'Corruption Index (TI)', 
-      'ILO Migrant Worker Prevalence',
-      'WJP Index 4.8',
-      'Walk Free Slavery Index'
-    ];
-
-    let localWeights = [...weights];
-
-    const updateWeights = () => {
-      const total = localWeights.reduce((sum, w) => sum + w, 0);
-      const totalElement = document.getElementById('totalWeights');
-      if (totalElement) {
-        totalElement.textContent = total;
-        totalElement.style.color = total > 100 ? '#dc2626' : '#374151';
-      }
-      if (onWeightsChange) onWeightsChange([...localWeights]);
-    };
-
-    container.innerHTML = `
-      <div class="weightings-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-          <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Risk Factor Weightings</h2>
-          <button id="resetWeights" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-            Reset to Default
-          </button>
-        </div>
-        
-        <div id="weightsContainer" style="margin-bottom: 20px;"></div>
-        
-        <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
-          Total Weight: <span id="totalWeights" style="font-weight: 600; font-size: 16px;">${localWeights.reduce((sum, w) => sum + w, 0)}</span>
-          <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(weights can exceed 100% - higher weights = more influence)</span>
-        </div>
-
-        <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px; margin-top: 20px;">
-          <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Weightings:</h4>
-          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-            <li>Higher weights give more importance to that risk factor</li>
-            <li>Adjust based on your organization's priorities and sector</li>
-            <li>Zero weight ignores that factor completely</li>
-            <li>Total can exceed 100% for emphasis on multiple factors</li>
-          </ul>
-        </div>
-      </div>
-    `;
-
-    const weightsContainer = document.getElementById('weightsContainer');
-    weightLabels.forEach((label, index) => {
-      const weightControl = document.createElement('div');
-      weightControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
-      weightControl.innerHTML = `
-        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
-          ${label} <span id="weightValue_${index}" style="font-weight: 600; color: #1f2937;">(${localWeights[index]}%)</span>
-        </label>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <input type="range" min="0" max="50" value="${localWeights[index]}" id="weight_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
-          <input type="number" min="0" max="50" value="${localWeights[index]}" id="weightNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
-        </div>
-      `;
-      weightsContainer.appendChild(weightControl);
-
-      const rangeInput = document.getElementById(`weight_${index}`);
-      const numberInput = document.getElementById(`weightNum_${index}`);
-      const valueDisplay = document.getElementById(`weightValue_${index}`);
-
-      const updateWeight = (value) => {
-        const newValue = Math.max(0, Math.min(50, parseFloat(value) || 0));
-        localWeights[index] = newValue;
-        rangeInput.value = newValue;
-        numberInput.value = newValue;
-        valueDisplay.textContent = `(${newValue}%)`;
-        updateWeights();
-      };
-
-      rangeInput.addEventListener('input', (e) => updateWeight(e.target.value));
-      numberInput.addEventListener('input', (e) => updateWeight(e.target.value));
-    });
-
-    const resetButton = document.getElementById('resetWeights');
-    resetButton.addEventListener('click', () => {
-      localWeights = [...riskEngine.defaultWeights];
-      localWeights.forEach((weight, index) => {
-        document.getElementById(`weight_${index}`).value = weight;
-        document.getElementById(`weightNum_${index}`).value = weight;
-        document.getElementById(`weightValue_${index}`).textContent = `(${weight}%)`;
-      });
-      updateWeights();
-    });
-  }
-
-  // Helper methods for updating displays
-  static updateSelectedCountriesDisplay(selectedCountries, countries, countryVolumes, onCountrySelect, onVolumeChange) {
-    const container = document.getElementById('selectedCountries');
-    if (!container) return;
-
-    const safeCountryVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
-
-    if (selectedCountries.length === 0) {
-      container.innerHTML = '<p style="color: #6b7280; font-style: italic; padding: 12px; text-align: center; background-color: #f9fafb; border-radius: 4px;">No countries selected. Use the dropdown above or click on the map.</p>';
-      return;
-    }
-
-    container.innerHTML = `
-      <h4 style="font-size: 16px; font-weight: 500; margin-bottom: 12px; color: #374151;">
-        Selected Countries & Volumes (${selectedCountries.length}):
-      </h4>
-      <div id="countryList" style="max-height: 240px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
-      </div>
-    `;
-
-     const countryList = document.getElementById('countryList');
-    selectedCountries.forEach((countryCode, index) => {
-      const country = countries.find(c => c.isoCode === countryCode);
-      const volume = typeof safeCountryVolumes[countryCode] === 'number' ? safeCountryVolumes[countryCode] : 10;
-
-      const countryItem = document.createElement('div');
-      countryItem.style.cssText = `
-        display: flex; align-items: center; justify-content: space-between; padding: 16px;
-        ${index > 0 ? 'border-top: 1px solid #e5e7eb;' : ''}
-        background-color: ${index % 2 === 0 ? '#ffffff' : '#f9fafb'};
-      `;
-      
-      countryItem.innerHTML = `
-        <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
-          <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e;"></div>
-          <span style="font-weight: 500; color: #1f2937;">${country?.name || countryCode}</span>
-          <span style="font-size: 12px; color: #6b7280; background-color: #f3f4f6; padding: 2px 6px; border-radius: 3px;">${countryCode}</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <label style="font-size: 14px; color: #6b7280; font-weight: 500;">Volume:</label>
-            <input type="number" min="0" value="${volume}" id="volume_${countryCode}" 
-                   style="width: 80px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
-          </div>
-          <button id="remove_${countryCode}" 
-                  style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;">
-            Remove
-          </button>
-        </div>
-      `;
-
-      countryList.appendChild(countryItem);
-
-      const volumeInput = document.getElementById(`volume_${countryCode}`);
-      const removeButton = document.getElementById(`remove_${countryCode}`);
-
-      volumeInput.addEventListener('input', (e) => {
-        const value = Math.max(0, parseFloat(e.target.value) || 0);
-        e.target.value = value;
-        if (onVolumeChange) onVolumeChange(countryCode, value);
-      });
-
-      removeButton.addEventListener('click', () => {
-        if (onCountrySelect) onCountrySelect(countryCode);
-      });
-    });
-  }
-
-  static updateResultsPanel(selectedCountries, countries, countryRisks, baselineRisk) {
-    const baselineDisplay = document.getElementById('baselineDisplay');
-    if (baselineDisplay) {
-      const hasSelections = selectedCountries.length > 0;
-      const riskColor = hasSelections ? riskEngine.getRiskColor(baselineRisk) : '#6b7280';
-      const riskBand = hasSelections ? `${riskEngine.getRiskBand(baselineRisk)} Risk` : 'No Countries Selected';
-      const selectionDetails = hasSelections
-        ? `Based on ${selectedCountries.length} selected ${selectedCountries.length === 1 ? 'country' : 'countries'}`
-        : 'Select countries to calculate a baseline risk.';
-      const baselineValue = hasSelections ? baselineRisk.toFixed(1) : '—';
-      const baselineBackground = hasSelections ? `${riskColor}15` : '#f3f4f6';
-
-      baselineDisplay.style.backgroundColor = baselineBackground;
-      baselineDisplay.style.borderColor = riskColor;
-      baselineDisplay.innerHTML = `
-        <div style="text-align: center;">
-          <div style="font-size: 56px; font-weight: bold; color: ${riskColor}; margin-bottom: 12px;">
-            ${baselineValue}
-          </div>
-          <div style="font-size: 24px; font-weight: 600; color: ${riskColor}; margin-bottom: 12px;">
-            ${riskBand}
-          </div>
-          <div style="font-size: 16px; color: #6b7280;">
-            ${selectionDetails}
-          </div>
-        </div>
-      `;
-    }
-
-    this.updateRiskBreakdown(selectedCountries, countries, countryRisks);
-  }
-}
+    // Zoom

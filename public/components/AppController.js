@@ -1,4 +1,4 @@
-// AppController.js - Conservative incremental update maintaining Step 1 functionality
+// AppController.js - Updated for 5-panel structure
 import { dataService } from './DataService.js';
 import { riskEngine } from './RiskEngine.js';
 import { UIComponents } from './UIComponents.js';
@@ -14,7 +14,7 @@ export class AppController {
       baselineRisk: 0,
       riskConcentration: 1,
 
-      // New Step 2 & 3 properties (with safe defaults)
+      // Step 2 & 3 properties
       hrddStrategy: riskEngine.defaultHRDDStrategy || [30, 20, 15, 15, 10, 10],
       transparencyEffectiveness: this.normalizeTransparencyEffectiveness(
         riskEngine.defaultTransparencyEffectiveness || [85, 45, 25, 15, 10, 8]
@@ -25,7 +25,7 @@ export class AppController {
       ),
       focus: typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6,
       managedRisk: 0,
-      currentStep: 1,
+      currentPanel: 1, // Changed from currentStep to currentPanel
       
       loading: true,
       error: null,
@@ -44,17 +44,15 @@ export class AppController {
     this.onWeightsChange = this.onWeightsChange.bind(this);
     this.onCountrySelect = this.onCountrySelect.bind(this);
     this.onVolumeChange = this.onVolumeChange.bind(this);
-    
-    // New method bindings (safe)
     this.onHRDDStrategyChange = this.onHRDDStrategyChange.bind(this);
     this.onTransparencyChange = this.onTransparencyChange.bind(this);
     this.onResponsivenessChange = this.onResponsivenessChange.bind(this);
     this.onResponsivenessEffectivenessChange = this.onResponsivenessEffectivenessChange.bind(this);
     this.onFocusChange = this.onFocusChange.bind(this);
-    this.setCurrentStep = this.setCurrentStep.bind(this);
+    this.setCurrentPanel = this.setCurrentPanel.bind(this); // Changed from setCurrentStep
   }
 
- normalizeEffectivenessArray(values, expectedLength, defaults, validator) {
+  normalizeEffectivenessArray(values, expectedLength, defaults, validator) {
     const fallbackSource = Array.isArray(defaults) ? defaults : [];
     const fallback = Array.from({ length: expectedLength }, (_, index) => {
       const fallbackValue = fallbackSource[index];
@@ -141,10 +139,10 @@ export class AppController {
       await this.loadCountries();
       this.calculateAllRisks();
       this.calculateBaselineRisk();
-      this.calculateManagedRisk(); // New but safe
+      this.calculateManagedRisk();
       this.state.lastUpdate = new Date().toISOString();
       this.render();
-      console.log('HRDD Risk Assessment Tool (3-Step) initialized successfully');
+      console.log('HRDD Risk Assessment Tool (5-Panel) initialized successfully');
       this.startAutoSave();
     } catch (error) {
       this.handleError(error);
@@ -186,7 +184,7 @@ export class AppController {
             Labour Rights Due Diligence Risk Assessment
           </h1>
           <p style="font-size: 16px; color: #6b7280;">
-            Complete 3-Step Risk Management Tool - Loading...
+            Complete 5-Panel Risk Management Tool - Loading...
           </p>
         </div>
         <div style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center;">
@@ -254,7 +252,7 @@ export class AppController {
     return requiredFields.some(field => typeof country[field] === 'number' && country[field] >= 0);
   }
 
-   calculateBaselineRisk() {
+  calculateBaselineRisk() {
     try {
       const portfolioMetrics = riskEngine.calculatePortfolioMetrics(
         this.state.selectedCountries,
@@ -269,9 +267,8 @@ export class AppController {
       this.state.baselineRisk = 0;
       this.state.riskConcentration = 1;
     }
-   }
+  }
 
-  // New method - safe fallback if riskEngine doesn't have the method yet
   calculateManagedRisk() {
     try {
       if (typeof riskEngine.calculateManagedRisk === 'function') {
@@ -286,7 +283,6 @@ export class AppController {
         );
         console.log(`Managed risk calculated: ${this.state.managedRisk.toFixed(2)}`);
       } else {
-        // Fallback: managed risk equals baseline risk if no implementation
         this.state.managedRisk = this.state.baselineRisk;
         console.log('Using baseline risk as managed risk (fallback)');
       }
@@ -296,7 +292,7 @@ export class AppController {
     }
   }
 
-  // Existing event handlers (unchanged)
+  // Event handlers
   onWeightsChange = (newWeights) => {
     if (!riskEngine.validateWeights(newWeights)) {
       console.warn('Invalid weights provided:', newWeights);
@@ -374,7 +370,6 @@ export class AppController {
     }, 500);
   }
 
-  // New event handlers (safe with fallbacks)
   onHRDDStrategyChange = (newStrategy) => {
     if (!newStrategy || !Array.isArray(newStrategy)) {
       console.warn('Invalid HRDD strategy provided:', newStrategy);
@@ -457,7 +452,7 @@ export class AppController {
       return;
     }
 
-   const normalizedEffectiveness = this.normalizeResponsivenessEffectiveness(newResponsivenessEffectiveness);
+    const normalizedEffectiveness = this.normalizeResponsivenessEffectiveness(newResponsivenessEffectiveness);
     this.state.responsivenessEffectiveness = normalizedEffectiveness;
     this.state.isDirty = true;
 
@@ -470,11 +465,11 @@ export class AppController {
     }, 300);
   }
 
-  setCurrentStep = (step) => {
-    if (step >= 1 && step <= 3) {
-      this.state.currentStep = step;
-      this.render(); // Re-render to show the new step
-      console.log(`Switched to step ${step}`);
+  setCurrentPanel = (panel) => {
+    if (panel >= 1 && panel <= 5) {
+      this.state.currentPanel = panel;
+      this.render();
+      console.log(`Switched to panel ${panel}`);
     }
   }
 
@@ -500,7 +495,7 @@ export class AppController {
   }
 
   render() {
-    console.log(`Rendering HRDD tool - Step ${this.state.currentStep}`);
+    console.log(`Rendering HRDD tool - Panel ${this.state.currentPanel}`);
     
     const container = this.containerElement || document.getElementById(this.containerId);
     if (!container) return;
@@ -534,47 +529,43 @@ export class AppController {
       return;
     }
 
-    // Main application layout with step navigation
+    const panelTitles = {
+      1: 'Global Risks',
+      2: 'Baseline Risk',
+      3: 'HRDD Strategy',
+      4: 'Response Strategy',
+      5: 'Managed Risk'
+    };
+
+    // Main application layout with panel navigation
     container.innerHTML = `
       <div style="min-height: 100vh; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;">
         <div style="max-width: 1600px; margin: 0 auto; padding: 20px;">
 
-          <!-- Header with Step Navigation -->
+          <!-- Header with Panel Navigation -->
           <header style="text-align: center; margin-bottom: 32px; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <h1 style="font-size: 36px; font-weight: bold; color: #1f2937; margin-bottom: 12px; line-height: 1.2;">
               Labour Rights Due Diligence Risk Assessment
             </h1>
             <p style="font-size: 18px; color: #6b7280; margin-bottom: 24px;">
-              Complete 3-Step Risk Management and Effectiveness Analysis
+              Complete 5-Panel Risk Management and Effectiveness Analysis
             </p>
             
-            <!-- Step Navigation -->
-            <div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 16px;">
-              <button onclick="window.hrddApp.setCurrentStep(1)" 
-                      style="padding: 12px 24px; border: 2px solid ${this.state.currentStep === 1 ? '#3b82f6' : '#d1d5db'}; 
-                             background: ${this.state.currentStep === 1 ? '#3b82f6' : 'white'}; 
-                             color: ${this.state.currentStep === 1 ? 'white' : '#6b7280'}; 
-                             border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
-                Step 1: Baseline Risk
-              </button>
-              <button onclick="window.hrddApp.setCurrentStep(2)" 
-                      style="padding: 12px 24px; border: 2px solid ${this.state.currentStep === 2 ? '#3b82f6' : '#d1d5db'}; 
-                             background: ${this.state.currentStep === 2 ? '#3b82f6' : 'white'}; 
-                             color: ${this.state.currentStep === 2 ? 'white' : '#6b7280'}; 
-                             border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
-                Step 2: HRDD Strategy
-              </button>
-              <button onclick="window.hrddApp.setCurrentStep(3)" 
-                      style="padding: 12px 24px; border: 2px solid ${this.state.currentStep === 3 ? '#3b82f6' : '#d1d5db'}; 
-                             background: ${this.state.currentStep === 3 ? '#3b82f6' : 'white'}; 
-                             color: ${this.state.currentStep === 3 ? 'white' : '#6b7280'}; 
-                             border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
-                Step 3: Managed Risk
-              </button>
+            <!-- Panel Navigation -->
+            <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+              ${[1,2,3,4,5].map(panel => `
+                <button onclick="window.hrddApp.setCurrentPanel(${panel})" 
+                        style="padding: 10px 16px; border: 2px solid ${this.state.currentPanel === panel ? '#3b82f6' : '#d1d5db'}; 
+                               background: ${this.state.currentPanel === panel ? '#3b82f6' : 'white'}; 
+                               color: ${this.state.currentPanel === panel ? 'white' : '#6b7280'}; 
+                               border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; font-size: 14px;">
+                  ${panel}. ${panelTitles[panel]}
+                </button>
+              `).join('')}
             </div>
 
             <!-- Status Bar -->
-            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: #6b7280;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; font-size: 14px; color: #6b7280; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 4px;">
                 <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
                 <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
@@ -590,14 +581,9 @@ export class AppController {
             </div>
           </header>
 
-          <!-- Step Content -->
-          <div id="stepContent">
-            ${this.renderCurrentStep()}
-          </div>
-
-          <!-- Risk Comparison (Always Visible) -->
-          <div id="riskComparison" style="margin-top: 32px;">
-            ${this.renderRiskComparison()}
+          <!-- Panel Content -->
+          <div id="panelContent">
+            ${this.renderCurrentPanel()}
           </div>
 
         </div>
@@ -608,9 +594,21 @@ export class AppController {
     setTimeout(() => this.renderComponents(), 100);
   }
 
-  renderCurrentStep() {
-    switch (this.state.currentStep) {
-      case 1:
+  renderCurrentPanel() {
+    switch (this.state.currentPanel) {
+      case 1: // Global Risks
+        return `
+          <!-- GLOBAL RISK MAP -->
+          <div id="globalMapContainer" style="margin-bottom: 32px;"></div>
+
+          <!-- GLOBAL WEIGHTINGS PANEL -->
+          <div id="globalWeightingsPanel" style="margin-bottom: 32px;"></div>
+
+          <!-- RISK ASSESSMENT SUMMARY -->
+          <div id="globalRiskSummary"></div>
+        `;
+
+      case 2: // Baseline Risk
         return `
           <!-- BASELINE RISK MAP -->
           <div id="baselineMapContainer" style="margin-bottom: 32px;"></div>
@@ -621,8 +619,8 @@ export class AppController {
             <div id="resultsPanel"></div>
           </div>
 
-          <!-- WEIGHTINGS PANEL -->
-          <div id="weightingsPanel"></div>
+          <!-- RISK ASSESSMENT SUMMARY -->
+          <div id="baselineRiskSummary"></div>
 
           <style>
             @media (max-width: 768px) {
@@ -633,161 +631,92 @@ export class AppController {
           </style>
         `;
 
-      case 2:
+      case 3: // HRDD Strategy
         return `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="step2Grid">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="panel3Grid">
             <div id="hrddStrategyPanel"></div>
             <div id="transparencyPanel"></div>
           </div>
 
           <style>
             @media (max-width: 768px) {
-              #step2Grid {
+              #panel3Grid {
                 grid-template-columns: 1fr !important;
               }
             }
           </style>
         `;
 
-      case 3:
+      case 4: // Response Strategy
         return `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="step3Grid">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="panel4Grid">
             <div id="responsivenessPanel"></div>
             <div id="responsivenessEffectivenessPanel"></div>
           </div>
 
-          <!-- MANAGED RISK MAP -->
-          <div id="managedMapContainer" style="margin-bottom: 32px;"></div>
-
-          <!-- FINAL RESULTS -->
-          <div id="finalResultsPanel"></div>
+          <!-- RISK ASSESSMENT SUMMARY -->
+          <div id="responseRiskSummary"></div>
 
           <style>
             @media (max-width: 768px) {
-              #step3Grid {
+              #panel4Grid {
                 grid-template-columns: 1fr !important;
               }
             }
           </style>
         `;
 
+      case 5: // Managed Risk
+        return `
+          <!-- BASELINE VS MANAGED COMPARISON MAPS -->
+          <div style="margin-bottom: 32px;">
+            <div id="baselineComparisonMapContainer" style="margin-bottom: 24px;"></div>
+            <div id="managedComparisonMapContainer" style="margin-bottom: 24px;"></div>
+          </div>
+
+          <!-- FINAL RESULTS -->
+          <div id="finalResultsPanel"></div>
+        `;
+
       default:
-        return this.renderCurrentStep.call({...this, state: {...this.state, currentStep: 1}});
+        return this.renderCurrentPanel.call({...this, state: {...this.state, currentPanel: 1}});
     }
-  }
-
-  renderRiskComparison() {
-    const hasSelections = this.state.selectedCountries.length > 0;
-
-    if (!hasSelections) {
-      return `
-        <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center;">
-          <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 16px; color: #1f2937;">Risk Assessment Summary</h2>
-          <div style="color: #6b7280; padding: 20px;">
-            <div style="font-size: 48px; margin-bottom: 16px;">🏭</div>
-            <p>Select countries in Step 1 to see your risk assessment summary</p>
-          </div>
-        </div>
-      `;
-    }
-
-    const summary = riskEngine.generateRiskSummary(
-      this.state.baselineRisk,
-      this.state.managedRisk,
-      this.state.selectedCountries,
-      this.state.hrddStrategy,
-      this.state.transparencyEffectiveness,
-      this.state.responsivenessStrategy,
-      this.state.responsivenessEffectiveness,
-      this.state.focus,
-      this.state.riskConcentration
-    );
-
-    const baselineScore = Number.isFinite(summary.baseline?.score) ? summary.baseline.score : 0;
-    const baselineColor = summary.baseline?.color || riskEngine.getRiskColor(baselineScore);
-    const baselineBand = summary.baseline?.band || riskEngine.getRiskBand(baselineScore);
-    const managedScore = Number.isFinite(summary.managed?.score) ? summary.managed.score : 0;
-    const managedColor = summary.managed?.color || riskEngine.getRiskColor(managedScore);
-    const managedBand = summary.managed?.band || riskEngine.getRiskBand(managedScore);
-    const riskReduction = Number.isFinite(summary.improvement?.riskReduction)
-      ? summary.improvement.riskReduction
-      : 0;
-    const absoluteReduction = Number.isFinite(summary.improvement?.absoluteReduction)
-      ? summary.improvement.absoluteReduction
-      : 0;
-    const changePrefix = riskReduction > 0 ? '-' : riskReduction < 0 ? '+' : '';
-    const changeColor = riskReduction > 0 ? '#22c55e' : riskReduction < 0 ? '#ef4444' : '#6b7280';
-    const changeLabel = riskReduction > 0 ? 'Improvement' : riskReduction < 0 ? 'Increase' : 'No Change';
-    const changeDetail = Math.abs(absoluteReduction) > 0
-      ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
-      : 'Risk level unchanged';
-
-    return `
-      <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
-        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
-          Risk Assessment Summary
-        </h2>
-
-        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: stretch; margin-bottom: 20px;">
-          <!-- Baseline Risk -->
-          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${baselineColor}; background-color: ${baselineColor}15; text-align: center;">
-            <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
-            <div style="font-size: 48px; font-weight: bold; color: ${baselineColor}; margin-bottom: 8px;">
-              ${baselineScore.toFixed(1)}
-            </div>
-            <div style="font-size: 16px; font-weight: 600; color: ${baselineColor};">
-              ${baselineBand}
-            </div>
-          </div>
-
-          <!-- Risk Change -->
-          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${changeColor}; background-color: ${changeColor}15; text-align: center;">
-            <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">RISK CHANGE</div>
-            <div style="font-size: 48px; font-weight: bold; color: ${changeColor}; margin-bottom: 8px;">
-              ${changePrefix}${Math.abs(riskReduction).toFixed(1)}%
-            </div>
-            <div style="font-size: 16px; font-weight: 600; color: ${changeColor};">
-              ${changeLabel}
-            </div>
-            <div style="font-size: 12px; color: #4b5563; margin-top: 6px;">
-              ${changeDetail}
-            </div>
-          </div>
-
-          <!-- Managed Risk -->
-          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${managedColor}; background-color: ${managedColor}15; text-align: center;">
-            <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
-            <div style="font-size: 48px; font-weight: bold; color: ${managedColor}; margin-bottom: 8px;">
-              ${managedScore.toFixed(1)}
-            </div>
-            <div style="font-size: 16px; font-weight: 600; color: ${managedColor};">
-              ${managedBand}
-            </div>
-          </div>
-        </div>
-
-        <div style="text-align: center; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
-          <span style="font-size: 14px; color: #0369a1;">
-            Portfolio: ${summary.portfolio?.countriesSelected ?? this.state.selectedCountries.length} countries •
-            Step ${this.state.currentStep} of 3 active
-          </span>
-        </div>
-      </div>
-    `;
   }
 
   renderComponents() {
     try {
-      if (this.state.currentStep === 1) {
-        console.log("Rendering Step 1 components");
+      const panel = this.state.currentPanel;
+      console.log(`Rendering Panel ${panel} components`);
 
-        // Render Step 1 components (existing functionality)
+      if (panel === 1) {
+        // Panel 1: Global Risks
+        UIComponents.createGlobalRiskMap('globalMapContainer', {
+          countries: this.state.countries,
+          countryRisks: this.state.countryRisks,
+          title: 'Global Labour Rights Risk Levels',
+          height: 500,
+          width: 1200
+        });
+
+        UIComponents.createWeightingsPanel('globalWeightingsPanel', {
+          weights: this.state.weights,
+          onWeightsChange: this.onWeightsChange
+        });
+
+        UIComponents.createRiskComparisonPanel('globalRiskSummary', {
+          baselineRisk: this.state.baselineRisk,
+          managedRisk: this.state.managedRisk,
+          selectedCountries: this.state.selectedCountries
+        });
+
+      } else if (panel === 2) {
+        // Panel 2: Baseline Risk
         UIComponents.createWorldMap('baselineMapContainer', {
           countries: this.state.countries,
           countryRisks: this.state.countryRisks,
           selectedCountries: this.state.selectedCountries,
           onCountrySelect: this.onCountrySelect,
-          title: 'Step 1: Baseline Risk Assessment',
+          title: 'Select Countries for Portfolio Risk Assessment',
           height: 500,
           width: 1200
         });
@@ -807,14 +736,15 @@ export class AppController {
           baselineRisk: this.state.baselineRisk
         });
 
-        UIComponents.createWeightingsPanel('weightingsPanel', {
-          weights: this.state.weights,
-          onWeightsChange: this.onWeightsChange
+        UIComponents.createRiskComparisonPanel('baselineRiskSummary', {
+          baselineRisk: this.state.baselineRisk,
+          managedRisk: this.state.managedRisk,
+          selectedCountries: this.state.selectedCountries
         });
-      } else if (this.state.currentStep === 2) {
-        console.log("Rendering Step 2 components");
 
-         UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
+      } else if (panel === 3) {
+        // Panel 3: HRDD Strategy
+        UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
           strategy: this.state.hrddStrategy,
           focus: this.state.focus,
           onStrategyChange: this.onHRDDStrategyChange,
@@ -825,10 +755,9 @@ export class AppController {
           transparency: this.state.transparencyEffectiveness,
           onTransparencyChange: this.onTransparencyChange
         });
-      } else if (this.state.currentStep === 3) {
-        console.log("Rendering Step 3 components");
 
-        // Render Step 3 components (responsiveness strategy and effectiveness)
+      } else if (panel === 4) {
+        // Panel 4: Response Strategy
         UIComponents.createResponsivenessPanel('responsivenessPanel', {
           responsiveness: this.state.responsivenessStrategy,
           onResponsivenessChange: this.onResponsivenessChange
@@ -839,20 +768,35 @@ export class AppController {
           onEffectivenessChange: this.onResponsivenessEffectivenessChange
         });
 
-        // Render managed risk map
-        UIComponents.createWorldMap('managedMapContainer', {
+        UIComponents.createRiskComparisonPanel('responseRiskSummary', {
+          baselineRisk: this.state.baselineRisk,
+          managedRisk: this.state.managedRisk,
+          selectedCountries: this.state.selectedCountries
+        });
+
+      } else if (panel === 5) {
+        // Panel 5: Managed Risk
+        UIComponents.createComparisonMap('baselineComparisonMapContainer', {
           countries: this.state.countries,
           countryRisks: this.state.countryRisks,
           selectedCountries: this.state.selectedCountries,
-          onCountrySelect: this.onCountrySelect,
-          title: 'Step 3: Managed Risk Assessment',
-          mapType: 'managed',
-          managedRisk: this.state.managedRisk,
-          height: 500,
+          title: 'Baseline Risk - Selected Countries Only',
+          mapType: 'baseline',
+          height: 400,
           width: 1200
         });
 
-        // Render final results
+        UIComponents.createComparisonMap('managedComparisonMapContainer', {
+          countries: this.state.countries,
+          countryRisks: this.state.countryRisks,
+          selectedCountries: this.state.selectedCountries,
+          title: 'Managed Risk - Selected Countries Only',
+          mapType: 'managed',
+          managedRisk: this.state.managedRisk,
+          height: 400,
+          width: 1200
+        });
+
         UIComponents.createFinalResultsPanel('finalResultsPanel', {
           baselineRisk: this.state.baselineRisk,
           managedRisk: this.state.managedRisk,
@@ -867,7 +811,7 @@ export class AppController {
         });
       }
 
-      console.log(`Step ${this.state.currentStep} components rendered successfully`);
+      console.log(`Panel ${panel} components rendered successfully`);
       
     } catch (error) {
       console.error('Error rendering components:', error);
@@ -876,7 +820,6 @@ export class AppController {
 
   updateUI() {
     try {
-      // Re-render the current step
       this.renderComponents();
 
       // Update any dropdowns
@@ -907,27 +850,12 @@ export class AppController {
         );
       }
 
-      // Update results panel if exists
-      if (typeof UIComponents.updateResultsPanel === 'function') {
-        UIComponents.updateResultsPanel(
-          this.state.selectedCountries,
-          this.state.countries,
-          this.state.countryRisks,
-          this.state.baselineRisk
-        );
-      }
-
-      const riskComparisonContainer = document.getElementById('riskComparison');
-      if (riskComparisonContainer) {
-        riskComparisonContainer.innerHTML = this.renderRiskComparison();
-      }
-
     } catch (error) {
       console.error('Error updating UI:', error);
     }
   }
 
-  // Existing utility methods (unchanged)
+  // Utility methods (unchanged from original)
   startAutoSave() {
     if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
     this.autoSaveInterval = setInterval(() => {
@@ -949,7 +877,7 @@ export class AppController {
         responsivenessStrategy: this.state.responsivenessStrategy,
         responsivenessEffectiveness: this.state.responsivenessEffectiveness,
         focus: this.state.focus,
-        currentStep: this.state.currentStep,
+        currentPanel: this.state.currentPanel,
         lastSaved: new Date().toISOString()
       };
       if (typeof localStorage !== 'undefined') {
@@ -981,7 +909,7 @@ export class AppController {
               ? this.normalizeResponsivenessEffectiveness(parsedState.responsivenessEffectiveness)
               : this.state.responsivenessEffectiveness,
             focus: typeof parsedState.focus === 'number' ? parsedState.focus : this.state.focus,
-            currentStep: parsedState.currentStep || this.state.currentStep
+            currentPanel: parsedState.currentPanel || this.state.currentPanel
           };
           console.log('Loaded saved state from:', parsedState.lastSaved);
           return true;
@@ -1054,7 +982,7 @@ export class AppController {
         riskConcentration: this.state.riskConcentration,
         focusMultiplier: (1 - this.state.focus) + this.state.focus * Math.max(1, this.state.riskConcentration),
         exportDate: new Date().toISOString(),
-        version: '3.0'
+        version: '5.0'
       };
       
       const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
