@@ -934,7 +934,6 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
 
   const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
 
-   let highlightRisks = {};
 
   try {
     await loadD3();
@@ -995,6 +994,8 @@ export async function createComparisonMap(containerId, { countries, countryRisks
 
   const safeSelectedCountries = Array.isArray(selectedCountries) ? selectedCountries : [];
   const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+
+  let highlightRisks = {};
 
   const selectedCountriesData = countries.filter(country =>
     safeSelectedCountries.includes(country.isoCode)
