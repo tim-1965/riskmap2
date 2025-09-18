@@ -5,12 +5,12 @@ export class RiskEngine {
     this.defaultWeights = [20, 20, 5, 10, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
     // Step 2: HRDD Strategy defaults
-   this.defaultHRDDStrategy = [30, 20, 15, 15, 10, 10]; // Mix of monitoring tools from highest to lowest transparency
-    this.defaultTransparencyEffectiveness = [85, 45, 25, 15, 10, 8]; // Mid-point transparency assumptions in percentages
+   this.defaultHRDDStrategy = [20, 10, 15, 35, 100, 20]; // Mix of monitoring tools from highest to lowest transparency
+    this.defaultTransparencyEffectiveness = [85, 40, 20, 10, 10, 2]; // Mid-point transparency assumptions in percentages
 
     // Step 3: Responsiveness Strategy defaults
-    this.defaultResponsivenessStrategy = [10, 15, 20, 25, 20, 10]; // Portfolio of response levers from weakest to strongest
-    this.defaultResponsivenessEffectiveness = [5, 25, 50, 60, 70, 80]; // Mid-point response effectiveness assumptions in percentages
+    this.defaultResponsivenessStrategy = [10, 5, 20, 20, 10, 5]; // Portfolio of response levers from weakest to strongest
+    this.defaultResponsivenessEffectiveness = [70, 85, 35, 25, 15, 5]; // Mid-point response effectiveness assumptions in percentages
 
     // Focus defaults for directing transparency/response capacity to higher-risk countries
     this.defaultFocus = 0.6;
