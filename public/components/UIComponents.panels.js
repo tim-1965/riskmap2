@@ -185,15 +185,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   let localStrategy = [...strategy];
   const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
 
-  const updateStrategy = () => {
-    const totalCoverage = localStrategy.reduce((sum, w) => sum + w, 0);
-    const formattedTotal = Number.isFinite(totalCoverage) ? Math.round(totalCoverage * 100) / 100 : 0;
-    const totalElement = document.getElementById('totalStrategy');
-    if (totalElement) {
-      totalElement.textContent = formattedTotal;
-      // Color coding for total coverage
-      totalElement.style.color = totalCoverage > 150 ? '#dc2626' : totalCoverage > 100 ? '#f59e0b' : '#374151';
-    }
+   const updateStrategy = () => {
     if (onStrategyChange) onStrategyChange([...localStrategy]);
   };
 
@@ -207,11 +199,6 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
       </div>
 
       <div id="strategyContainer" style="margin-bottom: 20px;"></div>
-
-      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center;">
-        Total supplier base coverage: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${Math.round(localStrategy.reduce((sum, w) => sum + w, 0) * 100) / 100}</span>%
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Overlapping coverage is automatically accounted for. Total can exceed 100%.</span>
-      </div>
 
       <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Coverage-Based Strategy:</h4>
