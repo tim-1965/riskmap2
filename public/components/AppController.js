@@ -775,7 +775,6 @@ export class AppController {
         });
 
       } else if (panel === 3) {
-       } else if (panel === 3) {
         // Panel 3: HRDD Strategy
         UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
           strategy: this.state.hrddStrategy,
