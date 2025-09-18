@@ -850,13 +850,18 @@ function renderD3Map(worldData, { container, countries, countryRisks, selectedCo
     const path = d3.geoPath(projection);
     const mapGroup = svg.append('g').attr('class', 'map-layer');
 
-    mapGroup.append('path')
+     mapGroup.append('path')
       .datum({ type: 'Sphere' })
       .attr('d', path)
       .attr('fill', '#e0f2fe')
       .attr('stroke', '#bae6fd')
       .attr('stroke-width', 0.6)
       .attr('pointer-events', 'none');
+
+    const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+    const safeSelectedCountries = Array.isArray(selectedCountries) ? selectedCountries : [];
+    const selectedSet = new Set(safeSelectedCountries);
+    const hasSelections = selectedSet.size > 0;
 
     const metadataMap = new Map(countries.map(country => [country.isoCode, country]));
     const nameLookup = buildCountryNameLookup(metadataMap);
@@ -867,7 +872,7 @@ function renderD3Map(worldData, { container, countries, countryRisks, selectedCo
 
     const countryGroup = mapGroup.append('g').attr('class', 'countries');
 
-    countryGroup.selectAll('path.country')
+     countryGroup.selectAll('path.country')
       .data(features)
       .enter()
       .append('path')
@@ -877,27 +882,44 @@ function renderD3Map(worldData, { container, countries, countryRisks, selectedCo
       .style('cursor', 'pointer')
       .style('fill', d => {
         const countryId = d.__isoCode;
-        const risk = countryRisks[countryId];
+        const risk = safeCountryRisks[countryId];
         return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
       })
-      .style('stroke', d => selectedCountries.includes(d.__isoCode) ? '#111827' : '#ffffff')
-      .style('stroke-width', d => selectedCountries.includes(d.__isoCode) ? 1.5 : 0.6)
-      .style('opacity', d => {
+      .style('fill-opacity', d => {
         const countryId = d.__isoCode;
-        return countryRisks[countryId] !== undefined ? 0.95 : 0.7;
+        const risk = safeCountryRisks[countryId];
+        if (risk === undefined) {
+          return hasSelections ? 0.25 : 0.6;
+        }
+        if (!hasSelections) {
+          return 0.95;
+        }
+        return selectedSet.has(countryId) ? 0.95 : 0.22;
       })
+      .style('stroke', d => {
+        const countryId = d.__isoCode;
+        if (!countryId) return '#ffffff';
+        if (selectedSet.has(countryId)) return '#111827';
+        return hasSelections ? '#cbd5f5' : '#ffffff';
+      })
+      .style('stroke-width', d => {
+        const countryId = d.__isoCode;
+        if (selectedSet.has(countryId)) return 1.6;
+        return hasSelections ? 0.8 : 0.6;
+      })
+      .style('stroke-opacity', d => {
+        if (!hasSelections) return 1;
+        return selectedSet.has(d.__isoCode) ? 1 : 0.5;
+      })
+      .style('filter', d => (hasSelections && selectedSet.has(d.__isoCode)
+        ? 'drop-shadow(0 0 6px rgba(15, 23, 42, 0.35))'
+        : 'none'))
       .on('click', (event, d) => {
         const countryId = d.__isoCode;
         if (!countryId) return;
-
-        const isSelected = selectedCountries.includes(countryId);
-        d3.select(event.currentTarget)
-          .style('stroke', isSelected ? '#ffffff' : '#111827')
-          .style('stroke-width', isSelected ? 0.6 : 1.5);
-
         if (onCountrySelect) onCountrySelect(countryId);
       })
-      .on('mouseover', (event, d) => showMapTooltip(event, d, countryRisks, metadataMap, nameLookup, mapType))
+      .on('mouseover', (event, d) => showMapTooltip(event, d, safeCountryRisks, metadataMap, nameLookup, mapType))
       .on('mouseout', () => hideMapTooltip());
 
     const zoom = d3.zoom()
@@ -910,7 +932,12 @@ function renderD3Map(worldData, { container, countries, countryRisks, selectedCo
     addZoomControls(svg, zoom);
   } catch (error) {
     console.warn('D3 map rendering failed, using fallback:', error);
-    createSimpleMapGrid(container, { countries, countryRisks, selectedCountries, onCountrySelect });
+    createSimpleMapGrid(container, {
+      countries,
+      countryRisks: safeCountryRisks,
+      selectedCountries: safeSelectedCountries,
+      onCountrySelect
+    });
   }
 }
 

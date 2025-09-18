@@ -814,17 +814,6 @@ export class AppController {
           width: 1200
         });
 
-        UIComponents.createComparisonMap('managedComparisonMapContainer', {
-          countries: this.state.countries,
-          countryRisks: this.state.countryRisks,
-          selectedCountries: this.state.selectedCountries,
-          title: 'Managed Risk - Selected Countries Only',
-          mapType: 'managed',
-          managedRisk: this.state.managedRisk,
-          height: 400,
-          width: 1200
-        });
-
          UIComponents.createComparisonMap('managedComparisonMapContainer', {
           countries: this.state.countries,
           countryRisks: this.state.countryRisks,
@@ -835,6 +824,19 @@ export class AppController {
           selectedCountryRisks: this.state.countryManagedRisks,
           height: 400,
           width: 1200
+        });
+
+        UIComponents.createFinalResultsPanel('finalResultsPanel', {
+          baselineRisk: this.state.baselineRisk,
+          managedRisk: this.state.managedRisk,
+          selectedCountries: this.state.selectedCountries,
+          countries: this.state.countries,
+          hrddStrategy: this.state.hrddStrategy,
+          transparencyEffectiveness: this.state.transparencyEffectiveness,
+          responsivenessStrategy: this.state.responsivenessStrategy,
+          responsivenessEffectiveness: this.state.responsivenessEffectiveness,
+          focus: this.state.focus,
+          riskConcentration: this.state.riskConcentration
         });
       }
 
