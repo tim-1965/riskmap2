@@ -16,13 +16,13 @@ export class AppController {
       riskConcentration: 1,
 
       // Step 2 & 3 properties
-      hrddStrategy: riskEngine.defaultHRDDStrategy || [30, 20, 15, 15, 10, 10],
+      hrddStrategy: riskEngine.defaultHRDDStrategy || [20, 10, 15, 35, 100, 10],
       transparencyEffectiveness: this.normalizeTransparencyEffectiveness(
-        riskEngine.defaultTransparencyEffectiveness || [85, 45, 25, 15, 10, 8]
+        riskEngine.defaultTransparencyEffectiveness || [80, 40, 20, 10, 5, 0]
       ),
-      responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [10, 15, 20, 25, 20, 10],
+      responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [20, 5, 25, 25, 10, 10],
       responsivenessEffectiveness: this.normalizeResponsivenessEffectiveness(
-        riskEngine.defaultResponsivenessEffectiveness || [5, 25, 50, 60, 70, 80]
+        riskEngine.defaultResponsivenessEffectiveness || [80, 40, 20, 10, 5, 0]
       ),
       focus: typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6,
       managedRisk: 0,
