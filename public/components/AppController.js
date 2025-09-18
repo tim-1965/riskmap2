@@ -54,7 +54,7 @@ export class AppController {
     this.setCurrentStep = this.setCurrentStep.bind(this);
   }
 
-  normalizeEffectivenessArray(values, expectedLength, defaults, validator) {
+ normalizeEffectivenessArray(values, expectedLength, defaults, validator) {
     const fallbackSource = Array.isArray(defaults) ? defaults : [];
     const fallback = Array.from({ length: expectedLength }, (_, index) => {
       const fallbackValue = fallbackSource[index];
@@ -67,37 +67,30 @@ export class AppController {
       return [...fallback];
     }
 
-    const numericValues = values
-      .map(value => {
-        if (typeof value === 'number') return value;
-        if (typeof value === 'string') {
-          const parsed = parseFloat(value);
-          return Number.isFinite(parsed) ? parsed : null;
-        }
-        return null;
-      })
-      .filter(value => Number.isFinite(value));
-
-    if (numericValues.length === 0) {
-      return [...fallback];
-    }
-
-    const trimmedValues = numericValues.slice(0, expectedLength);
-    const shouldRescale = trimmedValues.length > 0 &&
-      trimmedValues.every(value => value >= 0 && value <= 1);
-
-    const scaledValues = shouldRescale
-      ? trimmedValues.map(value => value * 100)
-      : trimmedValues;
+    const numericValues = values.map(value => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    });
 
     const normalized = [];
     for (let i = 0; i < expectedLength; i++) {
-      const value = scaledValues[i];
-      if (Number.isFinite(value)) {
-        normalized.push(Math.max(0, Math.min(100, value)));
-      } else {
+      const candidate = numericValues[i];
+
+      if (candidate === null || candidate === undefined) {
         normalized.push(fallback[i]);
+        continue;
       }
+
+      const decimal = riskEngine.normalizeEffectivenessValue(candidate);
+      const rawPercentage = Math.max(0, Math.min(100, decimal * 100));
+      const percentage = Math.round(rawPercentage * 100) / 100;
+      normalized.push(percentage);
     }
 
     if (typeof validator === 'function' && !validator(normalized)) {

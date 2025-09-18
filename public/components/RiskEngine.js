@@ -42,6 +42,30 @@ export class RiskEngine {
       'High': { min: 60, max: 79.99, color: '#ef4444' }, // Red
       'Very High': { min: 80, max: 100, color: '#991b1b' } // Dark Red
     };
+   }
+
+  normalizeEffectivenessValue(value) {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+
+    const numericValue = typeof value === 'string'
+      ? parseFloat(value)
+      : value;
+
+    if (!Number.isFinite(numericValue)) {
+      return 0;
+    }
+
+    if (numericValue <= 0) {
+      return 0;
+    }
+
+    if (numericValue >= 1) {
+      return Math.min(1, numericValue / 100);
+    }
+
+    return Math.max(0, numericValue);
   }
 
   // Step 1: Calculate weighted risk score for a country
