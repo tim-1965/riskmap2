@@ -145,7 +145,7 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
 
       <div style="text-align: center; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
         <span style="font-size: 14px; color: #0369a1;">
-          Portfolio: ${selectedCountries.length} countries •
+          Portfolio: ${selectedCountries.length} countries • 
           ${riskReduction > 0 ? 'Strategy shows improvement' : 'Consider refining your approach'}
         </span>
       </div>
@@ -168,23 +168,31 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const strategyDescriptions = [
-    'Always-on digital or in-person worker voice capturing daily conditions.',
-    'Structured all worker surveys undertaken at least annually.',
-    'Surprise third-party social audits without advance warning.',
-    'Planned or supplier-arranged social audits.',
-    'Supplier self-reporting and self-assessment questionnaires.',
-    'Desk-based risk assessment only with no direct engagement.'
+    'Percentage of suppliers with always-on worker voice systems capturing daily conditions.',
+    'Percentage of suppliers surveyed with structured worker surveys annually.',
+    'Percentage of suppliers receiving unannounced third-party social audits.',
+    'Percentage of suppliers receiving planned or supplier-arranged social audits.',
+    'Percentage of suppliers completing self-reporting and self-assessment questionnaires.',
+    'Percentage of suppliers assessed through desk-based risk assessment only.'
+  ];
+
+  const categoryInfo = [
+    { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
+    { name: 'Audit', color: '#f59e0b', tools: [2, 3] },
+    { name: 'Passive', color: '#6b7280', tools: [4, 5] }
   ];
 
   let localStrategy = [...strategy];
   const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
 
   const updateStrategy = () => {
-    const total = localStrategy.reduce((sum, w) => sum + w, 0);
-    const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
+    const totalCoverage = localStrategy.reduce((sum, w) => sum + w, 0);
+    const formattedTotal = Number.isFinite(totalCoverage) ? Math.round(totalCoverage * 100) / 100 : 0;
     const totalElement = document.getElementById('totalStrategy');
     if (totalElement) {
       totalElement.textContent = formattedTotal;
+      // Color coding for total coverage
+      totalElement.style.color = totalCoverage > 150 ? '#dc2626' : totalCoverage > 100 ? '#f59e0b' : '#374151';
     }
     if (onStrategyChange) onStrategyChange([...localStrategy]);
   };
@@ -192,7 +200,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   container.innerHTML = `
     <div class="hrdd-strategy-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD Strategy Mix</h2>
+        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD Strategy Coverage</h2>
         <button id="resetStrategy" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
           Reset to Default
         </button>
@@ -201,16 +209,17 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
       <div id="strategyContainer" style="margin-bottom: 20px;"></div>
 
       <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center;">
-        Assumptions total: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${Math.round(localStrategy.reduce((sum, w) => sum + w, 0) * 100) / 100}</span>
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
+        Total supplier base coverage: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${Math.round(localStrategy.reduce((sum, w) => sum + w, 0) * 100) / 100}</span>%
+        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Overlapping coverage is automatically accounted for. Total can exceed 100%.</span>
       </div>
 
       <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Strategy Guide:</h4>
+        <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Coverage-Based Strategy:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li>Higher percentages = more resources allocated to that monitoring tool.</li>
-          <li>Combine approaches to mirror your actual HRDD portfolio.</li>
-          <li>Each tool carries an evidence-based transparency assumption (Step 2B).</li>
+          <li>Each percentage represents supplier base coverage for that monitoring tool.</li>
+          <li>Higher coverage increases total transparency with diminishing returns.</li>
+          <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Passive</span>.</li>
+          <li>Maximum achievable transparency: 90% (some issues always remain hidden).</li>
         </ul>
       </div>
     </div>
@@ -218,12 +227,16 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
   const strategyContainer = document.getElementById('strategyContainer');
   strategyLabels.forEach((label, index) => {
+    // Find which category this tool belongs to
+    const category = categoryInfo.find(cat => cat.tools.includes(index));
+    const categoryColor = category ? category.color : '#6b7280';
+
     const strategyControl = document.createElement('div');
     strategyControl.dataset.strategyIndex = index;
-    strategyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa; display: flex; flex-direction: column; gap: 12px;';
+    strategyControl.style.cssText = `margin-bottom: 20px; padding: 16px; border: 2px solid ${categoryColor}20; border-radius: 8px; background-color: ${categoryColor}05; display: flex; flex-direction: column; gap: 12px;`;
     strategyControl.innerHTML = `
       <label style="display: block; font-size: 14px; font-weight: 500; color: #374151;">
-        ${label}
+        <span style="color: ${categoryColor}; font-weight: 600;">[${category?.name || 'Other'}]</span> ${label}
       </label>
       <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${strategyDescriptions[index]}
@@ -231,6 +244,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
       <div style="display: flex; align-items: center; gap: 12px;">
         <input type="range" min="0" max="100" value="${localStrategy[index]}" id="strategy_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
         <input type="number" min="0" max="100" value="${localStrategy[index]}" id="strategyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        <span style="font-size: 12px; color: #6b7280; font-weight: 500;">%</span>
       </div>
     `;
     strategyContainer.appendChild(strategyControl);
@@ -358,23 +372,23 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const effectivenessDescriptions = [
-    'Typically 0.80% – 0.95% of risks revealed (workers report escalation).',
-    'Typically 0.30% – 0.40% of risks revealed (structured worker surveys).',
-    'Typically 0.15% – 0.25% of risks revealed (credible surprise audits).',
-    'Typically 0.10% – 0.15% of risks revealed (announced audits).',
-    'Typically 0.05% – 0.15% of risks revealed (supplier self-reporting).',
-    'Typically 0.01% – 0.05% of risks revealed (desk-based assessments).'
+    'Base effectiveness: 90%. Real-time worker reporting reveals most hidden issues.',
+    'Base effectiveness: 45%. Structured surveys capture systemic patterns.',
+    'Base effectiveness: 25%. Surprise audits catch unprepared violations.',
+    'Base effectiveness: 15%. Announced audits allow preparation/concealment.',
+    'Base effectiveness: 12%. Self-reporting has inherent transparency limitations.',
+    'Base effectiveness: 5%. Desk-based assessment reveals only visible risks.'
+  ];
+
+  const categoryInfo = [
+    { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
+    { name: 'Audit', color: '#f59e0b', tools: [2, 3] },
+    { name: 'Passive', color: '#6b7280', tools: [4, 5] }
   ];
 
   let localTransparency = [...transparency];
 
   const updateTransparency = (options = {}) => {
-    const total = localTransparency.reduce((sum, value) => sum + value, 0);
-    const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
-    const totalElement = document.getElementById('totalTransparency');
-    if (totalElement) {
-      totalElement.textContent = formattedTotal;
-    }
     if (options.notify !== false && onTransparencyChange) {
       onTransparencyChange([...localTransparency]);
     }
@@ -383,25 +397,21 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
   container.innerHTML = `
     <div class="transparency-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Transparency Effectiveness</h2>
+        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Tool Effectiveness Assumptions</h2>
         <button id="resetTransparency" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-          Reset to Default
+          Reset to Research Defaults
         </button>
       </div>
 
        <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
-      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center; margin-bottom: 20px;">
-        Assumptions total: <span id="totalTransparency" style="font-weight: 600; font-size: 16px;">${Math.round(localTransparency.reduce((sum, value) => sum + value, 0) * 100) / 100}</span>
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
-      </div>
-
       <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Transparency:</h4>
+        <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Tool Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li>Higher percentages = a greater share of hidden labour risks uncovered.</li>
-          <li>Values represent mid-point assumptions for each monitoring tool.</li>
-          <li>Your strategy mix (Panel 3A) weights these assumptions into an overall transparency score.</li>
+          <li><strong>Base Effectiveness:</strong> Research-backed rates of issue detection per tool.</li>
+          <li><strong>Diminishing Returns:</strong> Additional coverage yields decreasing marginal benefits.</li>
+          <li><strong>Category Overlap:</strong> Tools within categories have overlapping coverage.</li>
+          <li><strong>Maximum Transparency:</strong> 90% cap reflects reality that some issues remain hidden.</li>
         </ul>
       </div>
     </div>
@@ -409,12 +419,16 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const transparencyContainer = document.getElementById('transparencyContainer');
   strategyLabels.forEach((label, index) => {
+    // Find which category this tool belongs to
+    const category = categoryInfo.find(cat => cat.tools.includes(index));
+    const categoryColor = category ? category.color : '#6b7280';
+
     const transparencyControl = document.createElement('div');
     transparencyControl.dataset.transparencyIndex = index;
-    transparencyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa; display: flex; flex-direction: column; gap: 12px;';
+    transparencyControl.style.cssText = `margin-bottom: 20px; padding: 16px; border: 2px solid ${categoryColor}20; border-radius: 8px; background-color: ${categoryColor}05; display: flex; flex-direction: column; gap: 12px;`;
     transparencyControl.innerHTML = `
       <label for="transparency_${index}" style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
-        <span style="display: inline-block; min-width: 0;">${label}</span>
+        <span style="color: ${categoryColor}; font-weight: 600;">[${category?.name || 'Other'}]</span> ${label}
       </label>
       <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${effectivenessDescriptions[index]}
@@ -422,6 +436,7 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       <div style="display: flex; align-items: center; gap: 12px;">
         <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
         <input type="number" min="0" max="100" value="${localTransparency[index]}" id="transparencyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        <span style="font-size: 12px; color: #6b7280; font-weight: 500;">%</span>
       </div>
     `;
     transparencyContainer.appendChild(transparencyControl);
@@ -447,7 +462,7 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
   ensurePanel3ResizeListener();
   schedulePanel3Alignment();
 
-const resetButton = document.getElementById('resetTransparency');
+  const resetButton = document.getElementById('resetTransparency');
   resetButton.addEventListener('click', () => {
     localTransparency = [...riskEngine.defaultTransparencyEffectiveness];
     localTransparency.forEach((effectiveness, index) => {
@@ -671,7 +686,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
             <div style="font-size: 28px; font-weight: bold; color: #3b82f6; margin-bottom: 4px;">
               ${(summary.strategy.overallTransparency * 100).toFixed(1)}%
             </div>
-            <div style="font-size: 12px; color: #6b7280;">Overall detection capability</div>
+            <div style="font-size: 12px; color: #6b7280;">Coverage-based detection capability</div>
           </div>
           <div>
             <h4 style="font-size: 14px; font-weight: 500; color: #6b7280; margin-bottom: 12px;">RESPONSE EFFECTIVENESS</h4>
@@ -694,18 +709,18 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       </div>
 
       <div style="margin-bottom: 24px;">
-        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">HRDD Strategy Breakdown</h3>
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">HRDD Strategy Coverage & Effectiveness</h3>
         <div id="strategyBreakdownList">
           ${summary.strategy.hrddStrategies.map(strategy => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb; background-color: ${strategy.weight > 0 ? '#f0f9ff' : '#f9fafb'};">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb; background-color: ${strategy.coverage > 0 ? '#f0f9ff' : '#f9fafb'};">
               <div style="flex: 1;">
-                <span style="font-weight: 500; color: #1f2937;">${strategy.name}</span>
+                <span style="font-weight: 500; color: #1f2937;">[${strategy.category}] ${strategy.name}</span>
                 <div style="font-size: 12px; color: #6b7280;">
-                  Weight: ${strategy.weight}% • Transparency: ${strategy.transparency}% • Contribution: ${strategy.contribution.toFixed(1)}%
+                  Coverage: ${strategy.coverage}% • Base: ${strategy.baseEffectiveness}% • Your Setting: ${strategy.userEffectiveness}% • Avg: ${strategy.averageEffectiveness}%
                 </div>
               </div>
-              <div style="width: 60px; height: 8px; background-color: #e5e7eb; border-radius: 4px; margin-left: 12px;">
-                <div style="height: 100%; width: ${strategy.percentage}%; background-color: #3b82f6; border-radius: 4px;"></div>
+              <div style="width: 80px; height: 8px; background-color: #e5e7eb; border-radius: 4px; margin-left: 12px;">
+                <div style="height: 100%; width: ${Math.min(100, strategy.coverage)}%; background-color: #3b82f6; border-radius: 4px;"></div>
               </div>
             </div>
           `).join('')}
@@ -920,7 +935,7 @@ export function updateSelectedCountriesDisplay(selectedCountries, countries, cou
   if (!Array.isArray(selectedCountries) || selectedCountries.length === 0) {
     container.innerHTML = `
       <div style="padding: 24px; border: 2px dashed #cbd5f5; border-radius: 12px; background-color: #eff6ff; text-align: center; color: #1d4ed8;">
-        <div style="font-size: 40px; margin-bottom: 12px;">🌐</div>
+        <div style="font-size: 40px; margin-bottom: 12px;">🌍</div>
         <p style="font-size: 14px; margin-bottom: 4px;">No countries selected yet.</p>
         <p style="font-size: 13px; color: #1e3a8a;">Click on the map or use the dropdown above to add countries to your HRDD portfolio.</p>
       </div>

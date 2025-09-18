@@ -16,13 +16,13 @@ export class AppController {
       riskConcentration: 1,
 
       // Step 2 & 3 properties
-      hrddStrategy: riskEngine.defaultHRDDStrategy || [20, 10, 15, 35, 100, 10],
+      hrddStrategy: riskEngine.defaultHRDDStrategy || [5, 15, 25, 60, 80, 90], // Coverage percentages
       transparencyEffectiveness: this.normalizeTransparencyEffectiveness(
-        riskEngine.defaultTransparencyEffectiveness || [80, 40, 20, 10, 5, 0]
+        riskEngine.defaultTransparencyEffectiveness || [90, 45, 25, 15, 12, 5] // Detection rates
       ),
       responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [20, 5, 25, 25, 10, 10],
       responsivenessEffectiveness: this.normalizeResponsivenessEffectiveness(
-        riskEngine.defaultResponsivenessEffectiveness || [80, 40, 20, 10, 5, 0]
+        riskEngine.defaultResponsivenessEffectiveness || [70, 85, 35, 25, 15, 5]
       ),
       focus: typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6,
       managedRisk: 0,
@@ -295,7 +295,7 @@ export class AppController {
           this.state.riskConcentration = Math.max(1, details.riskConcentration);
         }
 
-        console.log(`Managed risk calculated: ${this.state.managedRisk.toFixed(2)}`);
+        console.log(`Managed risk calculated using coverage-based transparency: ${this.state.managedRisk.toFixed(2)}`);
       } else if (typeof riskEngine.calculateManagedRisk === 'function') {
         this.state.managedRisk = riskEngine.calculateManagedRisk(
           this.state.baselineRisk,
@@ -576,7 +576,7 @@ export class AppController {
               Labour Rights Due Diligence Risk Assessment
             </h1>
             <p style="font-size: 18px; color: #6b7280; margin-bottom: 24px;">
-              Complete 5-Panel Risk Management and Effectiveness Analysis
+            Complete 5-Panel Coverage-Based Risk Management and Effectiveness Analysis  
             </p>
             
             <!-- Panel Navigation -->

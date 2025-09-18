@@ -99,6 +99,27 @@ export class DataService {
     return Promise.all(promises);
   }
 
+// Calculate coverage-based risk with HRDD strategy
+  async calculateCoverageBasedRisk(countryCodes, weights, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus) {
+    try {
+      return await this._fetchWithCache(`${this.baseURL}/calculate-coverage-risk`, {
+        method: 'POST',
+        body: JSON.stringify({
+          countryCodes,
+          weights,
+          hrddStrategy, // Coverage percentages
+          transparencyEffectiveness, // Detection rates
+          responsivenessStrategy,
+          responsivenessEffectiveness,
+          focus
+        })
+      });
+    } catch (error) {
+      console.error('Error calculating coverage-based risk:', error);
+      throw new Error(`Failed to calculate coverage-based risk: ${error.message}`);
+    }
+  }
+
   // Health check for API
   async healthCheck() {
     try {

@@ -482,7 +482,7 @@ function showMapTooltip(event, countryData, countryRisks, countryMetadata = new 
   const pageX = event.pageX || 0;
   const pageY = event.pageY || 0;
 
-  const riskLabel = mapType === 'managed' ? 'Managed Risk' :
+  const riskLabel = mapType === 'managed' ? 'Managed Risk (Coverage-Based)' :
                     mapType === 'global' ? 'Global Risk' : 'Baseline Risk';
 
   tooltip.html(`
@@ -526,7 +526,7 @@ function showComparisonMapTooltip(event, countryData, countryRisks, countryMetad
 
   const pageX = event.pageX || 0;
   const pageY = event.pageY || 0;
-  const riskLabel = mapType === 'managed' ? 'Managed Risk' : 'Baseline Risk';
+  const riskLabel = mapType === 'managed' ? 'Managed Risk (Coverage-Based)' : 'Baseline Risk';
   const highlightNote = highlight ? '<br/><em>Selected Country</em>' : '';
 
   tooltip.html(`
@@ -960,8 +960,8 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
     <div class="global-risk-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
       <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${title}</h3>
       <div id="map-loading" style="padding: 40px; color: #6b7280;">
-        <div>Loading global risk map...</div>
-        <div style="font-size: 14px; margin-top: 8px;">Hover over countries to see their risk levels.</div>
+        <div>Loading global coverage-based risk map...</div>
+        <div style="font-size: 14px; margin-top: 8px;">Hover over countries to see their baseline risk levels before HRDD strategy application.</div>
       </div>
       <div id="map-wrapper" style="width: 100%; display: flex; justify-content: center; margin-bottom: 16px;">
       </div>
@@ -1132,15 +1132,15 @@ export async function createWorldMap(containerId, { countries, countryRisks, sel
   if (!container) return;
 
   const displayTitle = mapType === 'managed' ?
-    `${title} - Managed Risk: ${managedRisk ? managedRisk.toFixed(1) : 'N/A'}` :
-    title;
-
+  `${title} - Managed Risk (Coverage-Based): ${managedRisk ? managedRisk.toFixed(1) : 'N/A'}` :
+  title;
+  
   container.innerHTML = `
     <div class="world-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
       <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${displayTitle}</h3>
       <div id="map-loading" style="padding: 40px; color: #6b7280;">
-        <div>Loading world map...</div>
-        <div style="font-size: 14px; margin-top: 8px;">Click on countries to select them for your portfolio.</div>
+        <div>Loading interactive coverage-based risk map...</div>
+        <div style="font-size: 14px; margin-top: 8px;">Click on countries to select them for your portfolio risk assessment.</div>
       </div>
       <div id="map-wrapper" style="width: 100%; display: flex; justify-content: center; margin-bottom: 16px;">
       </div>

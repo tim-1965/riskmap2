@@ -1,12 +1,12 @@
-// RiskEngine.js - Complete risk calculation logic for all 3 steps
+// RiskEngine.js - Complete risk calculation logic with revised coverage-based transparency
 export class RiskEngine {
   constructor() {
     // Step 1: Default weightings for the 5 input columns
     this.defaultWeights = [20, 20, 5, 10, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
-    // Step 2: HRDD Strategy defaults
-   this.defaultHRDDStrategy = [20, 10, 15, 35, 100, 20]; // Mix of monitoring tools from highest to lowest transparency
-    this.defaultTransparencyEffectiveness = [85, 40, 20, 10, 10, 2]; // Mid-point transparency assumptions in percentages
+    // Step 2: HRDD Strategy defaults - now representing supplier base coverage percentages
+    this.defaultHRDDStrategy = [5, 15, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, passive approaches common
+    this.defaultTransparencyEffectiveness = [90, 45, 25, 15, 12, 5]; // Research-backed base effectiveness rates
 
     // Step 3: Responsiveness Strategy defaults
     this.defaultResponsivenessStrategy = [10, 5, 20, 20, 10, 5]; // Portfolio of response levers from weakest to strongest
@@ -148,25 +148,62 @@ export class RiskEngine {
     return this.calculatePortfolioMetrics(selectedCountries, countryVolumes, countryRisks).baselineRisk;
   }
 
-  calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness) {
-    if (!this.validateHRDDStrategy(hrddStrategy) || !this.validateTransparency(transparencyEffectiveness)) {
+  // NEW: Coverage-based transparency calculation with diminishing returns
+  calculateTransparencyEffectiveness(hrddCoverage, transparencyEffectiveness) {
+    if (!this.validateHRDDStrategy(hrddCoverage) || !this.validateTransparency(transparencyEffectiveness)) {
       return 0;
     }
 
-    let weightedEffectiveness = 0;
-    let totalWeight = 0;
+    // Tool categories with their base effectiveness and interaction factors
+    const toolCategories = [
+      {
+        name: 'Worker Voice',
+        tools: [0, 1], // Continuous Worker Voice, Annual Surveys
+        baseEffectiveness: [0.90, 0.45], // High effectiveness tools
+        categoryWeight: 1.0
+      },
+      {
+        name: 'Audit',
+        tools: [2, 3], // Unannounced, Announced
+        baseEffectiveness: [0.25, 0.15], // Medium effectiveness tools
+        categoryWeight: 0.85
+      },
+      {
+        name: 'Passive',
+        tools: [4, 5], // Self-reporting, Desk-based
+        baseEffectiveness: [0.12, 0.05], // Lower effectiveness tools
+        categoryWeight: 0.70
+      }
+    ];
 
-    const length = Math.min(hrddStrategy.length, transparencyEffectiveness.length);
+    const maxTransparency = 0.90; // 90% maximum achievable transparency
+    let combinedTransparency = 0;
 
-    for (let i = 0; i < length; i++) {
-      const strategyWeight = Math.max(0, hrddStrategy[i]);
-      const effectiveness = (transparencyEffectiveness[i] || 0) / 100; // Convert percentage to decimal
+    // Calculate transparency for each category
+    toolCategories.forEach(category => {
+      let categoryTransparency = 0;
+      let categoryProduct = 1;
 
-      weightedEffectiveness += strategyWeight * effectiveness;
-      totalWeight += strategyWeight;
-    }
+      category.tools.forEach((toolIndex, i) => {
+        const coverage = Math.max(0, Math.min(100, hrddCoverage[toolIndex] || 0)) / 100; // Convert to 0-1
+        const baseEff = category.baseEffectiveness[i];
+        const userEff = Math.max(0, Math.min(100, transparencyEffectiveness[toolIndex] || 0)) / 100;
+        
+        // Use average of base and user effectiveness to allow customization but keep realistic bounds
+        const effectiveRate = (baseEff + userEff) / 2;
+        
+        // Apply diminishing returns: 1 - (1 - coverage × effectiveness)
+        categoryProduct *= (1 - coverage * effectiveRate);
+      });
 
-    return totalWeight > 0 ? weightedEffectiveness / totalWeight : 0;
+      categoryTransparency = 1 - categoryProduct;
+      
+      // Combine categories with their weights (reduces cross-category overlap)
+      combinedTransparency = 1 - (1 - combinedTransparency) * (1 - categoryTransparency * category.categoryWeight);
+    });
+
+    // Apply maximum transparency cap
+    return Math.min(combinedTransparency, maxTransparency);
   }
 
   // Step 3: Calculate overall responsiveness effectiveness
@@ -402,8 +439,8 @@ export class RiskEngine {
     return Math.floor(normalizedScore * maxIndex);
   }
 
-  // Get strategy effectiveness breakdown
-   getStrategyBreakdown(
+  // Get strategy effectiveness breakdown with new methodology
+  getStrategyBreakdown(
     hrddStrategy,
     transparencyEffectiveness,
     responsivenessStrategy,
@@ -417,9 +454,33 @@ export class RiskEngine {
       : 1;
     const focusMultiplier = (1 - sanitizedFocus) + sanitizedFocus * sanitizedConcentration;
 
+    // Calculate transparency using new coverage-based method
+    const overallTransparency = this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
+    
+    const toolCategories = [
+      {
+        name: 'Worker Voice',
+        tools: [0, 1],
+        baseEffectiveness: [0.90, 0.45],
+        categoryWeight: 1.0
+      },
+      {
+        name: 'Audit',
+        tools: [2, 3],
+        baseEffectiveness: [0.25, 0.15],
+        categoryWeight: 0.85
+      },
+      {
+        name: 'Passive',
+        tools: [4, 5],
+        baseEffectiveness: [0.12, 0.05],
+        categoryWeight: 0.70
+      }
+    ];
+
     const breakdown = {
       hrddStrategies: [],
-      overallTransparency: this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness),
+      overallTransparency: overallTransparency,
       overallResponsiveness: this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness),
       primaryResponse: this.getPrimaryResponseMethod(responsivenessStrategy, responsivenessEffectiveness),
       focus: {
@@ -429,19 +490,28 @@ export class RiskEngine {
       }
     };
 
-    // Calculate individual strategy contributions
-    let totalWeight = hrddStrategy.reduce((sum, weight) => sum + weight, 0);
-    
+    // Calculate individual strategy contributions using new methodology
     for (let i = 0; i < hrddStrategy.length; i++) {
-      if (hrddStrategy[i] > 0) {
-        breakdown.hrddStrategies.push({
-          name: this.hrddStrategyLabels[i],
-          weight: hrddStrategy[i],
-          percentage: totalWeight > 0 ? (hrddStrategy[i] / totalWeight) * 100 : 0,
-          transparency: transparencyEffectiveness[i],
-          contribution: (hrddStrategy[i] / totalWeight) * (transparencyEffectiveness[i] / 100) * 100
-        });
-      }
+      const coverage = Math.max(0, Math.min(100, hrddStrategy[i] || 0));
+      const userEffectiveness = Math.max(0, Math.min(100, transparencyEffectiveness[i] || 0));
+      
+      // Find which category this tool belongs to
+      let category = toolCategories.find(cat => cat.tools.includes(i));
+      if (!category) category = { name: 'Other', baseEffectiveness: [0.05], categoryWeight: 0.5 };
+      
+      const toolIndexInCategory = category.tools ? category.tools.indexOf(i) : 0;
+      const baseEffectiveness = category.baseEffectiveness[toolIndexInCategory] || 0.05;
+      const averageEffectiveness = (baseEffectiveness + userEffectiveness / 100) / 2;
+      
+      breakdown.hrddStrategies.push({
+        name: this.hrddStrategyLabels[i],
+        coverage: coverage,
+        baseEffectiveness: Math.round(baseEffectiveness * 100),
+        userEffectiveness: userEffectiveness,
+        averageEffectiveness: Math.round(averageEffectiveness * 100),
+        category: category.name,
+        contribution: coverage * averageEffectiveness // Simple contribution metric
+      });
     }
 
     return breakdown;
@@ -523,8 +593,8 @@ export class RiskEngine {
     return {
       metadata: {
         exportDate: new Date().toISOString(),
-        version: '3.0',
-        toolName: 'HRDD Risk Assessment Tool'
+        version: '3.1',
+        toolName: 'HRDD Risk Assessment Tool - Coverage-Based Transparency'
       },
       portfolio: {
         selectedCountries: state.selectedCountries,
@@ -542,7 +612,8 @@ export class RiskEngine {
         strategyLabels: this.hrddStrategyLabels,
         focus: focusValue,
         riskConcentration,
-        focusMultiplier
+        focusMultiplier,
+        methodology: 'Coverage-based with diminishing returns and 90% transparency cap'
       },
       step3: {
         responsivenessStrategy: state.responsivenessStrategy,
