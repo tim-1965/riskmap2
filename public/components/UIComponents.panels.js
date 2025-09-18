@@ -182,10 +182,10 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
   const updateStrategy = () => {
     const total = localStrategy.reduce((sum, w) => sum + w, 0);
+    const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
     const totalElement = document.getElementById('totalStrategy');
     if (totalElement) {
-      totalElement.textContent = total;
-      totalElement.style.color = '#374151';
+      totalElement.textContent = formattedTotal;
     }
     if (onStrategyChange) onStrategyChange([...localStrategy]);
   };
@@ -201,14 +201,9 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
       <div id="strategyContainer" style="margin-bottom: 20px;"></div>
 
-      <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
-        Total Strategy Weight: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${localStrategy.reduce((sum, w) => sum + w, 0)}</span>%
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy mix allocation)</span>
-      </div>
-
-      <div style="font-size: 14px; color: #6b7280; padding: 12px; background-color: #f9fafb; border-radius: 6px; text-align: center;">
-        Total Strategy Weight: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${localStrategy.reduce((sum, w) => sum + w, 0)}</span>%
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">(can exceed 100% - represents strategy mix allocation)</span>
+      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center;">
+        Assumptions total: <span id="totalStrategy" style="font-weight: 600; font-size: 16px;">${Math.round(localStrategy.reduce((sum, w) => sum + w, 0) * 100) / 100}</span>
+        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
       </div>
 
       <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
@@ -229,8 +224,8 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
     strategyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa; display: flex; flex-direction: column; gap: 12px;';
     strategyControl.innerHTML = `
       <label style="display: block; font-size: 14px; font-weight: 500; color: #374151;">
-        ${label} <span id="strategyValue_${index}" style="font-weight: 600; color: #1f2937;">(${localStrategy[index]}%)</span>
-      </label>
+        ${label}
+      </label>␊
       <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${strategyDescriptions[index]}
       </div>
@@ -243,20 +238,17 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
     const rangeInput = document.getElementById(`strategy_${index}`);
     const numberInput = document.getElementById(`strategyNum_${index}`);
-    const valueDisplay = document.getElementById(`strategyValue_${index}`);
-
     const updateStrategyValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       localStrategy[index] = newValue;
       rangeInput.value = newValue;
       numberInput.value = newValue;
-      valueDisplay.textContent = `(${newValue}%)`;
       updateStrategy();
     };
 
     rangeInput.addEventListener('input', (e) => updateStrategyValue(e.target.value));
     numberInput.addEventListener('input', (e) => updateStrategyValue(e.target.value));
-   });
+  });
 
   const resetButton = document.getElementById('resetStrategy');
   resetButton.addEventListener('click', () => {
@@ -264,7 +256,6 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
     localStrategy.forEach((weight, index) => {
       document.getElementById(`strategy_${index}`).value = weight;
       document.getElementById(`strategyNum_${index}`).value = weight;
-      document.getElementById(`strategyValue_${index}`).textContent = `(${weight}%)`;
     });
     updateStrategy();
     schedulePanel3Alignment();
@@ -380,6 +371,12 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
   let localTransparency = [...transparency];
 
   const updateTransparency = () => {
+    const total = localTransparency.reduce((sum, value) => sum + value, 0);
+    const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
+    const totalElement = document.getElementById('totalTransparency');
+    if (totalElement) {
+      totalElement.textContent = formattedTotal;
+    }
     if (onTransparencyChange) onTransparencyChange([...localTransparency]);
   };
 
@@ -392,7 +389,12 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
         </button>
       </div>
 
-      <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
+       <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
+
+      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center; margin-bottom: 20px;">
+        Assumptions total: <span id="totalTransparency" style="font-weight: 600; font-size: 16px;">${Math.round(localTransparency.reduce((sum, value) => sum + value, 0) * 100) / 100}</span>
+        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
+      </div>
 
       <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Transparency:</h4>
@@ -405,7 +407,7 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     </div>
   `;
 
-   const transparencyContainer = document.getElementById('transparencyContainer');
+  const transparencyContainer = document.getElementById('transparencyContainer');
   strategyLabels.forEach((label, index) => {
     const effectivenessColor = localTransparency[index] >= 70 ? '#22c55e' :
                                localTransparency[index] >= 40 ? '#f59e0b' : '#ef4444';
@@ -414,9 +416,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     transparencyControl.dataset.transparencyIndex = index;
     transparencyControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa; display: flex; flex-direction: column; gap: 12px;';
     transparencyControl.innerHTML = `
-      <label for="transparency_${index}" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 14px; font-weight: 500; color: #374151;">
-        <span style="flex: 1; min-width: 0;">${label}</span>
-        <span id="transparencyValue_${index}" style="font-weight: 600; color: ${effectivenessColor}; width: 72px; text-align: right; white-space: nowrap;">(${localTransparency[index]}%)</span>
+      <label for="transparency_${index}" style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
+        <span style="display: inline-block; min-width: 0;">${label}</span>
       </label>
       <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${effectivenessDescriptions[index]}
@@ -433,8 +434,6 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
     const rangeInput = document.getElementById(`transparency_${index}`);
     const numberInput = document.getElementById(`transparencyNum_${index}`);
-    const valueDisplay = document.getElementById(`transparencyValue_${index}`);
-
     const updateTransparencyValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       const newColor = newValue >= 70 ? '#22c55e' : newValue >= 40 ? '#f59e0b' : '#ef4444';
@@ -442,8 +441,6 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       localTransparency[index] = newValue;
       rangeInput.value = newValue;
       numberInput.value = newValue;
-      valueDisplay.textContent = `(${newValue}%)`;
-      valueDisplay.style.color = newColor;
 
       const progressBar = transparencyControl.querySelector('div:last-child div');
       if (progressBar) {
@@ -468,11 +465,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       const newColor = effectiveness >= 70 ? '#22c55e' : effectiveness >= 40 ? '#f59e0b' : '#ef4444';
       document.getElementById(`transparency_${index}`).value = effectiveness;
       document.getElementById(`transparencyNum_${index}`).value = effectiveness;
-      document.getElementById(`transparencyValue_${index}`).textContent = `(${effectiveness}%)`;
-      document.getElementById(`transparencyValue_${index}`).style.color = newColor;
-
       const progressBar = transparencyContainer.children[index].querySelector('div:last-child div');
-     if (progressBar) {
+      if (progressBar) {
         progressBar.style.width = `${effectiveness}%`;
         progressBar.style.backgroundColor = newColor;
       }
@@ -498,12 +492,12 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
 
   let localResponsiveness = [...responsiveness];
 
-  const updateResponsiveness = () => {
+   const updateResponsiveness = () => {
     const total = localResponsiveness.reduce((sum, w) => sum + w, 0);
+    const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
     const totalElement = document.getElementById('totalResponsiveness');
     if (totalElement) {
-      totalElement.textContent = total;
-      totalElement.style.color = '#374151';
+      totalElement.textContent = formattedTotal;
     }
     if (onResponsivenessChange) onResponsivenessChange([...localResponsiveness]);
   };
@@ -541,7 +535,7 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
     responsivenessControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
     responsivenessControl.innerHTML = `
       <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
-        ${label} <span id="responsivenessValue_${index}" style="font-weight: 600; color: #1f2937;">(${localResponsiveness[index]}%)</span>
+        ${label}
       </label>
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
         ${responsivenessDescriptions[index]}
@@ -555,14 +549,11 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
 
     const rangeInput = document.getElementById(`responsiveness_${index}`);
     const numberInput = document.getElementById(`responsivenessNum_${index}`);
-    const valueDisplay = document.getElementById(`responsivenessValue_${index}`);
-
     const updateResponsivenessValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       localResponsiveness[index] = newValue;
       rangeInput.value = newValue;
       numberInput.value = newValue;
-      valueDisplay.textContent = `(${newValue}%)`;
       updateResponsiveness();
     };
 
@@ -576,7 +567,6 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
     localResponsiveness.forEach((weight, index) => {
       document.getElementById(`responsiveness_${index}`).value = weight;
       document.getElementById(`responsivenessNum_${index}`).value = weight;
-      document.getElementById(`responsivenessValue_${index}`).textContent = `(${weight}%)`;
     });
     updateResponsiveness();
   });
@@ -599,6 +589,12 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
   let localEffectiveness = [...effectiveness];
 
   const updateEffectiveness = () => {
+    const total = localEffectiveness.reduce((sum, value) => sum + value, 0);
+    const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
+    const totalElement = document.getElementById('totalResponsivenessEffectiveness');
+    if (totalElement) {
+      totalElement.textContent = formattedTotal;
+    }
     if (onEffectivenessChange) onEffectivenessChange([...localEffectiveness]);
   };
 
@@ -613,6 +609,10 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
 
       <div id="responsivenessEffectivenessContainer" style="margin-bottom: 20px;"></div>
 
+      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center; margin-bottom: 20px;">
+        Assumptions total: <span id="totalResponsivenessEffectiveness" style="font-weight: 600; font-size: 16px;">${Math.round(localEffectiveness.reduce((sum, value) => sum + value, 0) * 100) / 100}</span>
+        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
+      </div>
       <div style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Interpreting Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
@@ -628,9 +628,9 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
   responsivenessLabels.forEach((label, index) => {
     const effectivenessControl = document.createElement('div');
     effectivenessControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
-    effectivenessControl.innerHTML = `
+   effectivenessControl.innerHTML = `
       <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
-        ${label} <span id="responsivenessEffectivenessValue_${index}" style="font-weight: 600; color: #1f2937;">(${localEffectiveness[index]}%)</span>
+        ${label}
       </label>
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
         ${effectivenessDescriptions[index]}
@@ -644,14 +644,11 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
 
     const rangeInput = document.getElementById(`responsivenessEffectiveness_${index}`);
     const numberInput = document.getElementById(`responsivenessEffectivenessNum_${index}`);
-    const valueDisplay = document.getElementById(`responsivenessEffectivenessValue_${index}`);
-
     const updateEffectivenessValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       localEffectiveness[index] = newValue;
       rangeInput.value = newValue;
       numberInput.value = newValue;
-      valueDisplay.textContent = `(${newValue}%)`;
       updateEffectiveness();
     };
 
@@ -665,7 +662,6 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
     localEffectiveness.forEach((value, index) => {
       document.getElementById(`responsivenessEffectiveness_${index}`).value = value;
       document.getElementById(`responsivenessEffectivenessNum_${index}`).value = value;
-      document.getElementById(`responsivenessEffectivenessValue_${index}`).textContent = `(${value}%)`;
     });
     updateEffectiveness();
   });
