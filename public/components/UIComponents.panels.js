@@ -799,8 +799,8 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       </div>
 
       <div style="display: flex; gap: 12px; justify-content: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-        <button onclick="window.hrddApp.exportConfiguration()" style="padding: 12px 24px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-          Export Full Report
+        <button onclick="window.hrddApp.generatePDFReport()" style="padding: 12px 24px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+          Generate Report
         </button>
         <button onclick="window.hrddApp.saveState()" style="padding: 12px 24px; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
           Save Configuration

@@ -2,6 +2,7 @@
 import { dataService } from './DataService.js';
 import { riskEngine } from './RiskEngine.js';
 import { UIComponents } from './UIComponents.js';
+import { pdfGenerator } from './PDFGenerator.js';
 
 export class AppController {
   constructor() {
