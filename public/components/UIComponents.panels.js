@@ -3,10 +3,9 @@ import { riskEngine } from './RiskEngine.js';
 let panel3ResizeListenerAttached = false;
 
 function describeFocusLevel(value) {
-  if (value >= 0.9) return 'Active monitoring only for crisis situations.';
-  if (value >= 0.7) return 'Only high risk suppliers are actively monitored.';
-  if (value >= 0.4) return 'Active monitoring for medium and high risk suppliers.';
-  if (value >= 0.1) return 'Most suppliers are actively monitored.';
+  if (value >= 0.75) return 'Only high risk suppliers are actively monitored.';
+  if (value >= 0.5) return 'Active monitoring for medium and high risk suppliers.';
+  if (value >= 0.25) return 'Most suppliers are actively monitored.';
   return 'Even portfolio coverage';
 }
 
@@ -303,12 +302,11 @@ export function createFocusPanel(containerId, { focus, onFocusChange }) {
       </div>
 
       <ul style="margin: 0; font-size: 13px; color: #1e3a8a; padding-left: 20px; line-height: 1.6;">
-        <li><strong>0.00 – 0.10:</strong> Even effort across the portfolio.</li>
-        <li><strong>0.10 – 0.30:</strong> Most suppliers are actively monitored.</li>
-        <li><strong>0.40 – 0.60:</strong> Active monitoring for medium and high risk suppliers.</li>
-        <li><strong>0.70 – 0.90:</strong> Only high risk suppliers are actively monitored.</li>
-        <li><strong>0.90 – 1.00:</strong> Active monitoring only for crisis situations.</li>
-      </ul>
+        <li><strong>0.00 – 0.25:</strong> Even effort across the portfolio.</li>
+        <li><strong>0.25 – 0.50:</strong> Most suppliers are actively monitored.</li>
+        <li><strong>0.50 – 0.75:</strong> Active monitoring for medium and high risk suppliers.</li>
+        <li><strong>0.75 – 1.00:</strong> Only high risk suppliers are actively monitored.</li>
+        </ul>
     </div>
   `;
 
