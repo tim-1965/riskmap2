@@ -225,7 +225,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
     strategyControl.innerHTML = `
       <label style="display: block; font-size: 14px; font-weight: 500; color: #374151;">
         ${label}
-      </label>␊
+      </label>
       <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${strategyDescriptions[index]}
       </div>
