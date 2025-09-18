@@ -450,6 +450,14 @@ function addZoomControls(svg, zoom) {
     .style('pointer-events', 'none').text('⌂');
 }
 
+function disableMouseWheelZoom(svg) {
+  if (!svg || typeof svg.on !== 'function') return;
+  svg
+    .on('wheel.zoom', null)
+    .on('mousewheel.zoom', null)
+    .on('DOMMouseScroll.zoom', null);
+}
+
 function showMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline') {
   const countryId = countryData.__isoCode;
   const countryName = countryMetadata.get(countryId)?.name || countryData.properties?.NAME || countryId || 'Unknown';
@@ -688,7 +696,8 @@ function renderGlobalD3Map(worldData, { container, countries, countryRisks, widt
         mapGroup.attr('transform', event.transform);
       });
 
-    svg.call(zoom);
+   svg.call(zoom);
+    disableMouseWheelZoom(svg);
     addZoomControls(svg, zoom);
   } catch (error) {
     console.warn('D3 global map rendering failed, using fallback:', error);
@@ -818,6 +827,7 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
       });
 
     svg.call(zoom);
+    disableMouseWheelZoom(svg);
     addZoomControls(svg, zoom);
   } catch (error) {
     console.warn('D3 comparison map rendering failed, using fallback:', error);
@@ -928,7 +938,8 @@ function renderD3Map(worldData, { container, countries, countryRisks, selectedCo
         mapGroup.attr('transform', event.transform);
       });
 
-    svg.call(zoom);
+     svg.call(zoom);
+    disableMouseWheelZoom(svg);
     addZoomControls(svg, zoom);
   } catch (error) {
     console.warn('D3 map rendering failed, using fallback:', error);
