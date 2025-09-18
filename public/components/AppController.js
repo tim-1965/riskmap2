@@ -678,9 +678,6 @@ export class AppController {
 
   renderRiskComparison() {
     const hasSelections = this.state.selectedCountries.length > 0;
-    const riskReduction = hasSelections && this.state.managedRisk < this.state.baselineRisk ? 
-      ((this.state.baselineRisk - this.state.managedRisk) / this.state.baselineRisk * 100) : 0;
-    const isImprovement = this.state.managedRisk < this.state.baselineRisk;
 
     if (!hasSelections) {
       return `
@@ -694,53 +691,84 @@ export class AppController {
       `;
     }
 
-    const baselineColor = riskEngine.getRiskColor(this.state.baselineRisk);
-    const managedColor = riskEngine.getRiskColor(this.state.managedRisk);
+    const summary = riskEngine.generateRiskSummary(
+      this.state.baselineRisk,
+      this.state.managedRisk,
+      this.state.selectedCountries,
+      this.state.hrddStrategy,
+      this.state.transparencyEffectiveness,
+      this.state.responsivenessStrategy,
+      this.state.responsivenessEffectiveness,
+      this.state.focus,
+      this.state.riskConcentration
+    );
+
+    const baselineScore = Number.isFinite(summary.baseline?.score) ? summary.baseline.score : 0;
+    const baselineColor = summary.baseline?.color || riskEngine.getRiskColor(baselineScore);
+    const baselineBand = summary.baseline?.band || riskEngine.getRiskBand(baselineScore);
+    const managedScore = Number.isFinite(summary.managed?.score) ? summary.managed.score : 0;
+    const managedColor = summary.managed?.color || riskEngine.getRiskColor(managedScore);
+    const managedBand = summary.managed?.band || riskEngine.getRiskBand(managedScore);
+    const riskReduction = Number.isFinite(summary.improvement?.riskReduction)
+      ? summary.improvement.riskReduction
+      : 0;
+    const absoluteReduction = Number.isFinite(summary.improvement?.absoluteReduction)
+      ? summary.improvement.absoluteReduction
+      : 0;
+    const changePrefix = riskReduction > 0 ? '-' : riskReduction < 0 ? '+' : '';
+    const changeColor = riskReduction > 0 ? '#22c55e' : riskReduction < 0 ? '#ef4444' : '#6b7280';
+    const changeLabel = riskReduction > 0 ? 'Improvement' : riskReduction < 0 ? 'Increase' : 'No Change';
+    const changeDetail = Math.abs(absoluteReduction) > 0
+      ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
+      : 'Risk level unchanged';
 
     return `
       <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
         <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
           Risk Assessment Summary
         </h2>
-        
-        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 24px; align-items: center;">
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: stretch; margin-bottom: 20px;">
           <!-- Baseline Risk -->
-          <div style="text-align: center; padding: 20px; border-radius: 8px; background-color: ${baselineColor}15; border: 2px solid ${baselineColor};">
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${baselineColor}; background-color: ${baselineColor}15; text-align: center;">
             <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
-            <div style="font-size: 36px; font-weight: bold; color: ${baselineColor}; margin-bottom: 4px;">
-              ${this.state.baselineRisk.toFixed(1)}
+            <div style="font-size: 48px; font-weight: bold; color: ${baselineColor}; margin-bottom: 8px;">
+              ${baselineScore.toFixed(1)}
             </div>
-            <div style="font-size: 14px; font-weight: 500; color: ${baselineColor};">
-              ${riskEngine.getRiskBand(this.state.baselineRisk)}
+            <div style="font-size: 16px; font-weight: 600; color: ${baselineColor};">
+              ${baselineBand}
             </div>
           </div>
 
-          <!-- Arrow and Change -->
-          <div style="text-align: center;">
-            <div style="font-size: 24px; margin-bottom: 8px;">${isImprovement ? '↓' : '→'}</div>
-            <div style="font-size: 18px; font-weight: bold; color: ${isImprovement ? '#22c55e' : '#6b7280'};">
-              ${riskReduction.toFixed(1)}%
+          <!-- Risk Change -->
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${changeColor}; background-color: ${changeColor}15; text-align: center;">
+            <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">RISK CHANGE</div>
+            <div style="font-size: 48px; font-weight: bold; color: ${changeColor}; margin-bottom: 8px;">
+              ${changePrefix}${Math.abs(riskReduction).toFixed(1)}%
             </div>
-            <div style="font-size: 12px; color: #6b7280;">
-              ${isImprovement ? 'Reduction' : 'No Change'}
+            <div style="font-size: 16px; font-weight: 600; color: ${changeColor};">
+              ${changeLabel}
+            </div>
+            <div style="font-size: 12px; color: #4b5563; margin-top: 6px;">
+              ${changeDetail}
             </div>
           </div>
 
           <!-- Managed Risk -->
-          <div style="text-align: center; padding: 20px; border-radius: 8px; background-color: ${managedColor}15; border: 2px solid ${managedColor};">
+          <div style="padding: 24px; border-radius: 12px; border: 3px solid ${managedColor}; background-color: ${managedColor}15; text-align: center;">
             <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
-            <div style="font-size: 36px; font-weight: bold; color: ${managedColor}; margin-bottom: 4px;">
-              ${this.state.managedRisk.toFixed(1)}
+            <div style="font-size: 48px; font-weight: bold; color: ${managedColor}; margin-bottom: 8px;">
+              ${managedScore.toFixed(1)}
             </div>
-            <div style="font-size: 14px; font-weight: 500; color: ${managedColor};">
-              ${riskEngine.getRiskBand(this.state.managedRisk)}
+            <div style="font-size: 16px; font-weight: 600; color: ${managedColor};">
+              ${managedBand}
             </div>
           </div>
         </div>
 
-        <div style="text-align: center; margin-top: 16px; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
+        <div style="text-align: center; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
           <span style="font-size: 14px; color: #0369a1;">
-            Portfolio: ${this.state.selectedCountries.length} countries • 
+            Portfolio: ${summary.portfolio?.countriesSelected ?? this.state.selectedCountries.length} countries •
             Step ${this.state.currentStep} of 3 active
           </span>
         </div>
@@ -882,11 +910,16 @@ export class AppController {
       // Update results panel if exists
       if (typeof UIComponents.updateResultsPanel === 'function') {
         UIComponents.updateResultsPanel(
-          this.state.selectedCountries, 
-          this.state.countries, 
-          this.state.countryRisks, 
+          this.state.selectedCountries,
+          this.state.countries,
+          this.state.countryRisks,
           this.state.baselineRisk
         );
+      }
+
+      const riskComparisonContainer = document.getElementById('riskComparison');
+      if (riskComparisonContainer) {
+        riskComparisonContainer.innerHTML = this.renderRiskComparison();
       }
 
     } catch (error) {
