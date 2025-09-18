@@ -486,7 +486,7 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
   };
 
   container.innerHTML = `
-    <div class="responsiveness-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+    <div class="responsiveness-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; height: 100%;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Response Strategy Mix</h2>
         <button id="resetResponsiveness" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
@@ -494,14 +494,14 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
         </button>
       </div>
 
-       <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>␊
+      <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
 
-      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center;">
+      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center; margin-bottom: 20px;">
         Assumptions total: <span id="totalResponsiveness" style="font-weight: 600; font-size: 16px;">${Math.round(localResponsiveness.reduce((sum, w) => sum + w, 0) * 100) / 100}</span>
         <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
       </div>
 
-      <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 20px;">
+      <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategy Portfolio:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Higher percentages = deeper investment in that remediation lever.</li>
@@ -511,7 +511,6 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
       </div>
     </div>
   `;
-
   const responsivenessContainer = document.getElementById('responsivenessContainer');
   responsivenessLabels.forEach((label, index) => {
     const responsivenessControl = document.createElement('div');
@@ -582,7 +581,7 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
   };
 
   container.innerHTML = `
-    <div class="responsiveness-effectiveness-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+    <div class="responsiveness-effectiveness-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; height: 100%;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Response Effectiveness</h2>
         <button id="resetResponsivenessEffectiveness" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
@@ -596,7 +595,7 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
         Assumptions total: <span id="totalResponsivenessEffectiveness" style="font-weight: 600; font-size: 16px;">${Math.round(localEffectiveness.reduce((sum, value) => sum + value, 0) * 100) / 100}</span>
         <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
       </div>
-      <div style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px;">
+      <div style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Interpreting Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Higher percentages = more impactful remediation outcomes.</li>

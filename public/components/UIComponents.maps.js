@@ -1008,13 +1008,16 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
   }
 }
 
-export async function createComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType = 'baseline', managedRisk = null, selectedCountryRisks = null, height = 400, width = 960 }) {
+export async function createComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType = 'baseline', managedRisk = null, baselineRisk = null, selectedCountryRisks = null, height = 400, width = 960 }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const displayTitle = mapType === 'managed' ?
-    `${title} - Overall Risk: ${managedRisk ? managedRisk.toFixed(1) : 'N/A'}` :
-    title;
+  const formatOverallRisk = (value) => Number.isFinite(value) ? value.toFixed(1) : 'N/A';
+  const displayTitle = mapType === 'managed'
+    ? `${title} - Overall Risk: ${formatOverallRisk(managedRisk)}`
+    : mapType === 'baseline'
+      ? `${title} - Overall Risk: ${formatOverallRisk(baselineRisk)}`
+      : title;
 
   container.innerHTML = `
     <div class="comparison-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">

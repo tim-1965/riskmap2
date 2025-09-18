@@ -638,6 +638,9 @@ export class AppController {
 
       case 2: // Baseline Risk
         return `
+          <!-- RISK ASSESSMENT SUMMARY -->
+          <div id="baselineRiskSummary" style="margin-bottom: 32px;"></div>
+
           <!-- BASELINE RISK MAP -->
           <div id="baselineMapContainer" style="margin-bottom: 32px;"></div>
 
@@ -646,9 +649,6 @@ export class AppController {
             <div id="countrySelectionPanel"></div>
             <div id="resultsPanel"></div>
           </div>
-
-          <!-- RISK ASSESSMENT SUMMARY -->
-          <div id="baselineRiskSummary"></div>
 
           <style>
             @media (max-width: 768px) {
@@ -681,13 +681,13 @@ export class AppController {
 
       case 4: // Response Strategy
         return `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;" id="panel4Grid">
+          <!-- RISK ASSESSMENT SUMMARY -->
+          <div id="responseRiskSummary" style="margin-bottom: 32px;"></div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; align-items: stretch;" id="panel4Grid">
             <div id="responsivenessPanel"></div>
             <div id="responsivenessEffectivenessPanel"></div>
           </div>
-
-          <!-- RISK ASSESSMENT SUMMARY -->
-          <div id="responseRiskSummary"></div>
 
           <style>
             @media (max-width: 768px) {
@@ -818,6 +818,7 @@ export class AppController {
           selectedCountries: this.state.selectedCountries,
           title: 'Baseline Risk - Selected Countries Only',
           mapType: 'baseline',
+          baselineRisk: this.state.baselineRisk,
           height: 400,
           width: 1200
         });
