@@ -23,7 +23,7 @@ export class RiskEngine {
       maxRiskRatio: 3
     };
 
-    // Controls how strongly portfolio concentration amplifies focus-driven effectiveness gains
+    // Controls how strongly portfolio concentration amplifies focus-driven effectiveness gains (lower is less amplifcation)
     this.focusConcentrationWeight = 2.75;
 
     // Strategy labels
@@ -85,7 +85,7 @@ export class RiskEngine {
 
   getFocusWeight() {
     return Number.isFinite(this.focusConcentrationWeight)
-      ? Math.max(0, Math.min(1, this.focusConcentrationWeight))
+      ? Math.max(0, Math.min(100, this.focusConcentrationWeight))
       : 0.5;
   }
 
