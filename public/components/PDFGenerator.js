@@ -208,30 +208,58 @@ export class PDFGenerator {
   }
 
   async generatePanelContent(appInstance, panelNumber) {
-    // Temporarily switch to the panel
     const originalPanel = appInstance.state.currentPanel;
     appInstance.state.currentPanel = panelNumber;
     appInstance.render();
 
-    // Wait for rendering to complete
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Capture the panel content
-    const panelContent = document.getElementById('panelContent');
-    if (!panelContent) {
+    try {
+      const panelContent = document.getElementById('panelContent');
+      if (!panelContent) {
+        return [];
+      }
+
+      if (panelNumber === 5) {
+        const sectionCanvases = [];
+
+        const mapSection = document.getElementById('panel5MapsSection');
+        if (mapSection) {
+          const mapsCanvas = await this.captureElement(mapSection);
+          if (mapsCanvas) {
+            sectionCanvases.push({ canvas: mapsCanvas, sectionTitle: 'Risk Maps' });
+          }
+        }
+
+        const resultsSection = document.getElementById('panel5ResultsSection') || document.getElementById('finalResultsPanel');
+        if (resultsSection) {
+          const resultsCanvas = await this.captureElement(resultsSection);
+          if (resultsCanvas) {
+            sectionCanvases.push({ canvas: resultsCanvas, sectionTitle: 'Strategy Summary' });
+          }
+        }
+
+        if (sectionCanvases.length === 0) {
+          const fallbackCanvas = await this.captureElement(panelContent);
+          if (fallbackCanvas) {
+            sectionCanvases.push({ canvas: fallbackCanvas });
+          }
+        }
+
+        return sectionCanvases;
+      }
+
+      const canvas = await this.captureElement(panelContent);
+      if (canvas) {
+        return [{ canvas }];
+      }
+
+      return [];
+    } finally {
       appInstance.state.currentPanel = originalPanel;
       appInstance.render();
-      return null;
     }
-
-    const canvas = await this.captureElement(panelContent);
-    
-    // Restore original panel
-    appInstance.state.currentPanel = originalPanel;
-    appInstance.render();
-    
-    return canvas;
-   }
+  }
 
   formatRiskValue(value) {
     return Number.isFinite(value) ? value.toFixed(1) : 'N/A';

@@ -734,13 +734,15 @@ export class AppController {
       case 5: // Managed Risk
         return `
           <!-- BASELINE VS MANAGED COMPARISON MAPS -->
-          <div style="margin-bottom: 32px;">
+          <div id="panel5MapsSection" style="margin-bottom: 32px;">
             <div id="baselineComparisonMapContainer" style="margin-bottom: 24px;"></div>
             <div id="managedComparisonMapContainer" style="margin-bottom: 24px;"></div>
           </div>
 
           <!-- FINAL RESULTS -->
-          <div id="finalResultsPanel"></div>
+          <div id="panel5ResultsSection">
+            <div id="finalResultsPanel"></div>
+          </div>
         `;
 
       default:
