@@ -24,7 +24,7 @@ export class RiskEngine {
     };
 
     // Controls how strongly portfolio concentration amplifies focus-driven effectiveness gains
-    this.focusConcentrationWeight = 0.75;
+    this.focusConcentrationWeight = 2.75;
 
     // Strategy labels
     this.hrddStrategyLabels = [
@@ -876,7 +876,7 @@ export class RiskEngine {
       : 1;
     const focusWeight = this.getFocusWeight();
     const focusMultiplier = (1 - focusValue * focusWeight) + focusValue * focusWeight * riskConcentration;
-    
+
     return {
       metadata: {
         exportDate: new Date().toISOString(),
