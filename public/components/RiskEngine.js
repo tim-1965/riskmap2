@@ -15,6 +15,17 @@ export class RiskEngine {
     // Focus defaults for directing transparency/response capacity to higher-risk countries
     this.defaultFocus = 0.6;
 
+    // Controls how aggressively focus re-weights coverage toward higher-risk countries
+    this.focusBiasSettings = {
+      minExponent: 1,
+      maxExponent: 2.5,
+      minRiskRatio: 0.1,
+      maxRiskRatio: 3
+    };
+
+    // Controls how strongly portfolio concentration amplifies focus-driven effectiveness gains
+    this.focusConcentrationWeight = 0.75;
+
     // Strategy labels
     this.hrddStrategyLabels = [
       'Continuous Worker Voice',
@@ -42,7 +53,41 @@ export class RiskEngine {
       'High': { min: 60, max: 79.99, color: '#ef4444' }, // Red
       'Very High': { min: 80, max: 100, color: '#991b1b' } // Dark Red
     };
-   }
+  }
+
+  getFocusExponent(focus = 0) {
+    const safeFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+    const settings = this.focusBiasSettings || {};
+    const minExp = Number.isFinite(settings.minExponent) ? settings.minExponent : 1;
+    const maxExp = Number.isFinite(settings.maxExponent) ? Math.max(minExp, settings.maxExponent) : minExp;
+    return minExp + safeFocus * (maxExp - minExp);
+  }
+
+  getBiasedRiskRatio(riskRatio, focus = 0) {
+    const settings = this.focusBiasSettings || {};
+    const maxRatio = Number.isFinite(settings.maxRiskRatio) && settings.maxRiskRatio > 0
+      ? settings.maxRiskRatio
+      : Infinity;
+    const minRatio = Number.isFinite(settings.minRiskRatio) && settings.minRiskRatio >= 0
+      ? settings.minRiskRatio
+      : 0;
+
+    const clampedRatio = Math.min(
+      maxRatio,
+      Math.max(0, Number.isFinite(riskRatio) ? riskRatio : 0)
+    );
+
+    const exponent = this.getFocusExponent(focus);
+    const biasedRatio = Math.pow(clampedRatio, exponent);
+
+    return Math.max(minRatio, biasedRatio);
+  }
+
+  getFocusWeight() {
+    return Number.isFinite(this.focusConcentrationWeight)
+      ? Math.max(0, Math.min(1, this.focusConcentrationWeight))
+      : 0.5;
+  }
 
   normalizeEffectivenessValue(value) {
     if (value === null || value === undefined) {
@@ -181,8 +226,9 @@ export class RiskEngine {
       // Calculate risk adjustment factor
       // At focus=0: all countries get same coverage
       // At focus=1: coverage proportional to risk level
-      const riskRatio = baselineRisk > 0 ? countryRisk / baselineRisk : 1;
-      const riskAdjustmentFactor = (1 - safeFocus) + safeFocus * riskRatio;
+      const rawRiskRatio = baselineRisk > 0 ? countryRisk / baselineRisk : 1;
+      const biasedRiskRatio = this.getBiasedRiskRatio(rawRiskRatio, safeFocus);
+      const riskAdjustmentFactor = (1 - safeFocus) + safeFocus * biasedRiskRatio;
       
       // Apply coverage adjustment with resource conservation
       const adjustedCoverage = hrddStrategy.map(toolCoverage => {
@@ -432,7 +478,8 @@ export class RiskEngine {
 
     // Note: Focus effect is now embedded in the transparency calculation through coverage distribution
     // The focus multiplier here provides additional concentration effect
-    const focusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * sanitizedConcentration;
+    const focusWeight = this.getFocusWeight();
+    const focusMultiplier = (1 - sanitizedFocus * focusWeight) + sanitizedFocus * focusWeight * sanitizedConcentration;
     const managedRisk = baselineRisk * (1 - combinedEffectiveness * focusMultiplier);
 
     // Ensure managed risk doesn't go below 0
@@ -453,11 +500,12 @@ export class RiskEngine {
     const safeSelected = Array.isArray(selectedCountries) ? selectedCountries : [];
     if (safeSelected.length === 0) {
       const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+      const focusWeight = this.getFocusWeight();
       return {
         managedRisk: 0,
         baselineRisk: 0,
         riskConcentration: 1,
-        focusMultiplier: (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * 1,
+        focusMultiplier: (1 - sanitizedFocus * focusWeight) + sanitizedFocus * focusWeight * 1,
         combinedEffectiveness: 0,
         countryManagedRisks: {},
         countrySpecificCoverage: {}
@@ -467,6 +515,7 @@ export class RiskEngine {
     const metrics = this.calculatePortfolioMetrics(safeSelected, countryVolumes, countryRisks);
     const baselineRisk = metrics.baselineRisk;
     const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+    const focusWeight = this.getFocusWeight();
     const sanitizedConcentration = Number.isFinite(metrics.riskConcentration) && metrics.riskConcentration > 0
       ? Math.max(1, metrics.riskConcentration)
       : 1;
@@ -484,7 +533,7 @@ export class RiskEngine {
     const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
     const combinedEffectiveness = overallTransparencyEffectiveness * overallResponsivenessEffectiveness;
 
-    const focusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * sanitizedConcentration;
+        const focusMultiplier = (1 - sanitizedFocus * focusWeight) + sanitizedFocus * focusWeight * sanitizedConcentration;
 
     const managedRisk = baselineRisk > 0
       ? Math.max(0, baselineRisk * (1 - combinedEffectiveness * focusMultiplier))
@@ -512,7 +561,8 @@ export class RiskEngine {
       
       // Apply focus adjustment for individual country
       const riskRatio = baselineRisk > 0 ? countryRisk / baselineRisk : 1;
-      const countryFocusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * riskRatio;
+      const biasedRiskRatio = this.getBiasedRiskRatio(riskRatio, sanitizedFocus);
+      const countryFocusMultiplier = (1 - sanitizedFocus * focusWeight) + sanitizedFocus * focusWeight * biasedRiskRatio;
       
       const managedValue = countryRisk * (1 - Math.min(1, Math.max(0, countryCombinenedEffectiveness * countryFocusMultiplier)));
       managedRisksByCountry[countryCode] = Math.max(0, managedValue);
@@ -653,11 +703,12 @@ export class RiskEngine {
     countryVolumes = null,
     countryRisks = null
   ) {
-    const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
+     const sanitizedFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
     const sanitizedConcentration = Number.isFinite(riskConcentration) && riskConcentration > 0
       ? Math.max(1, riskConcentration)
       : 1;
-    const focusMultiplier = (1 - sanitizedFocus * 0.5) + sanitizedFocus * 0.5 * sanitizedConcentration;
+    const focusWeight = this.getFocusWeight();
+    const focusMultiplier = (1 - sanitizedFocus * focusWeight) + sanitizedFocus * focusWeight * sanitizedConcentration;
 
     // Calculate transparency using appropriate method
     const overallTransparency = selectedCountries && countryVolumes && countryRisks
@@ -823,8 +874,9 @@ export class RiskEngine {
     const riskConcentration = Number.isFinite(state.riskConcentration) && state.riskConcentration > 0
       ? Math.max(1, state.riskConcentration)
       : 1;
-    const focusMultiplier = (1 - focusValue * 0.5) + focusValue * 0.5 * riskConcentration;
-
+    const focusWeight = this.getFocusWeight();
+    const focusMultiplier = (1 - focusValue * focusWeight) + focusValue * focusWeight * riskConcentration;
+    
     return {
       metadata: {
         exportDate: new Date().toISOString(),

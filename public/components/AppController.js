@@ -1055,7 +1055,18 @@ export class AppController {
         managedRisk: this.state.managedRisk,
         focus: this.state.focus,
         riskConcentration: this.state.riskConcentration,
-        focusMultiplier: (1 - this.state.focus) + this.state.focus * Math.max(1, this.state.riskConcentration),
+         focusMultiplier: (() => {
+          const focusWeight = typeof riskEngine.getFocusWeight === 'function'
+            ? riskEngine.getFocusWeight()
+            : (Number.isFinite(riskEngine.focusConcentrationWeight)
+              ? Math.max(0, Math.min(1, riskEngine.focusConcentrationWeight))
+              : 0.5);
+          const sanitizedFocus = Math.max(0, Math.min(1, this.state.focus));
+          const sanitizedConcentration = Math.max(1, Number.isFinite(this.state.riskConcentration)
+            ? this.state.riskConcentration
+            : 1);
+          return (1 - sanitizedFocus * focusWeight) + sanitizedFocus * focusWeight * sanitizedConcentration;
+        })(),
         exportDate: new Date().toISOString(),
         version: '5.0'
       };
