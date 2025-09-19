@@ -863,8 +863,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
     </div>
   `;
 
-  // Create the risk comparison panel at the top
-  UIComponents.createRiskComparisonPanel('finalRiskSummary', {
+ createRiskComparisonPanel('finalRiskSummary', {
     baselineRisk,
     managedRisk,
     selectedCountries

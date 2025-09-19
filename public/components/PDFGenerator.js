@@ -6,22 +6,35 @@ export class PDFGenerator {
     this.loadingPromises = new Map();
   }
 
-  async loadLibrary(libName, scriptSrc, globalCheck) {
+ async loadLibrary(libName, scriptSrc, globalCheck) {
     if (this.loadingPromises.has(libName)) {
       return this.loadingPromises.get(libName);
     }
 
-    if (globalCheck()) {
-      this[`${libName}Loaded`] = true;
-      return Promise.resolve();
+    if (typeof globalCheck === 'function') {
+      try {
+        const existing = globalCheck();
+        if (existing) {
+          this[`${libName}Loaded`] = true;
+          return Promise.resolve(existing);
+        }
+      } catch (error) {
+        console.warn(`Preload check for ${libName} failed:`, error);
+      }
     }
 
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = scriptSrc;
       script.onload = () => {
-        this[`${libName}Loaded`] = true;
-        resolve();
+        try {
+          const result = typeof globalCheck === 'function' ? globalCheck() : true;
+          this[`${libName}Loaded`] = true;
+          resolve(result);
+        } catch (error) {
+          this[`${libName}Loaded`] = true;
+          resolve();
+        }
       };
       script.onerror = () => reject(new Error(`Failed to load ${libName}`));
       document.head.appendChild(script);
@@ -35,16 +48,40 @@ export class PDFGenerator {
     const jsPDFPromise = this.loadLibrary(
       'jsPDF',
       'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-      () => typeof window.jsPDF !== 'undefined'
+      () => this.ensureJsPDFAvailable()
     );
 
     const html2canvasPromise = this.loadLibrary(
       'html2canvas',
       'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-      () => typeof html2canvas !== 'undefined'
+      () => typeof window !== 'undefined' && typeof window.html2canvas !== 'undefined'
     );
 
     await Promise.all([jsPDFPromise, html2canvasPromise]);
+
+    if (!this.ensureJsPDFAvailable()) {
+      throw new Error('jsPDF library failed to load');
+    }
+
+    if (typeof window === 'undefined' || typeof window.html2canvas === 'undefined') {
+      throw new Error('html2canvas library failed to load');
+    }
+  }
+
+  ensureJsPDFAvailable() {
+    if (typeof window === 'undefined') return null;
+
+    if (typeof window.jsPDF === 'function') {
+      return window.jsPDF;
+    }
+
+    const namespace = window.jspdf;
+    if (namespace && typeof namespace.jsPDF === 'function') {
+      window.jsPDF = namespace.jsPDF;
+      return window.jsPDF;
+    }
+
+    return null;
   }
 
   createLoadingModal() {
@@ -244,14 +281,17 @@ export class PDFGenerator {
       this.updateProgress('Loading PDF libraries...');
       await this.loadRequiredLibraries();
 
-      this.updateProgress('Initializing PDF document...');
-      const { jsPDF } = window;
-      const pdf = new jsPDF({
+       const jsPDFConstructor = this.ensureJsPDFAvailable();
+      if (!jsPDFConstructor) {
+        throw new Error('jsPDF is not available');
+      }
+
+      const pdf = new jsPDFConstructor({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
-
+      
       const panelTitles = {
         1: 'Global Risks',
         2: 'Baseline Risk',
