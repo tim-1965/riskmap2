@@ -392,11 +392,11 @@ export class PDFGenerator {
     pdf.setTextColor(33, 37, 41);
   }
 
-  addPageContent(pdf, canvas, { panelNumber, panelTitle, pageNumber }) {
+  addPageContent(pdf, canvas, { panelNumber, panelTitle, pageNumber, sectionTitle }) {
     if (!canvas) return;
 
-    const pageWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm
+    const pageWidth = 210; // A4 width in mm␊
+    const pageHeight = 297; // A4 height in mm␊
     const margin = 20;
     const contentWidth = pageWidth - 2 * margin;
     const headerHeight = 22;
@@ -430,14 +430,16 @@ export class PDFGenerator {
       pdf.text('Error: Could not capture panel content', margin, margin + 40);
     }
 
-    // Header background to keep titles visible
+     // Header background to keep titles visible
     pdf.setFillColor(241, 245, 249);
     pdf.roundedRect(margin - 2, margin - 8, contentWidth + 4, headerHeight + 10, 4, 4, 'F');
 
     pdf.setTextColor(30, 41, 59);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
-    pdf.text(`Panel ${panelNumber}: ${panelTitle}`, margin, margin + 8);
+
+    const sectionLabel = sectionTitle ? ` - ${sectionTitle}` : '';
+    pdf.text(`Panel ${panelNumber}: ${panelTitle}${sectionLabel}`, margin, margin + 8);
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
@@ -479,16 +481,25 @@ export class PDFGenerator {
       for (let panelNumber = 1; panelNumber <= 5; panelNumber++) {
         this.updateProgress(`Capturing Panel ${panelNumber}: ${panelTitles[panelNumber]}...`);
 
-        const canvas = await this.generatePanelContent(appInstance, panelNumber);
-        if (canvas) {
-          this.addPageContent(pdf, canvas, {
-            panelNumber,
-            panelTitle: panelTitles[panelNumber],
-            pageNumber: currentPageNumber
-          });
-          currentPageNumber += 1;
-        }
+         const panelSections = await this.generatePanelContent(appInstance, panelNumber);
 
+        if (Array.isArray(panelSections) && panelSections.length > 0) {
+          const validSections = panelSections.filter(section => section && section.canvas);
+
+          validSections.forEach((section, index) => {
+            const { canvas, sectionTitle } = section;
+
+            this.addPageContent(pdf, canvas, {
+              panelNumber,
+              panelTitle: panelTitles[panelNumber],
+              pageNumber: currentPageNumber + index,
+              sectionTitle
+            });
+          });
+
+          currentPageNumber += validSections.length;
+        }
+        
         // Add a small delay between panels
         await new Promise(resolve => setTimeout(resolve, 500));
       }
