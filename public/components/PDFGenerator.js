@@ -123,8 +123,16 @@ export class PDFGenerator {
   async captureElement(element, options = {}) {
     if (!element) return null;
 
+    const pixelRatio = (() => {
+      if (typeof window !== 'undefined' && window.devicePixelRatio) {
+        const ratio = Math.max(1.25, window.devicePixelRatio);
+        return Math.min(ratio, 1.5);
+      }
+      return 1.35;
+    })();
+
     const defaultOptions = {
-      scale: 2,
+      scale: pixelRatio,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
@@ -223,55 +231,189 @@ export class PDFGenerator {
     appInstance.render();
     
     return canvas;
+   }
+
+  formatRiskValue(value) {
+    return Number.isFinite(value) ? value.toFixed(1) : 'N/A';
   }
 
-  addPageContent(pdf, canvas, pageNumber, panelTitle) {
+  formatCountriesCount(selectedCountries) {
+    if (!Array.isArray(selectedCountries)) return '0';
+    return selectedCountries.length.toString();
+  }
+
+  calculateRiskReduction(baseline, managed) {
+    if (!Number.isFinite(baseline) || !Number.isFinite(managed) || baseline === 0) {
+      return null;
+    }
+
+    const absolute = baseline - managed;
+    const percentage = (absolute / baseline) * 100;
+    return {
+      absolute: absolute.toFixed(1),
+      percentage: percentage.toFixed(1)
+    };
+  }
+
+  formatDateTime(date) {
+    if (!(date instanceof Date)) return '';
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+  }
+
+  createCoverPage(pdf, appInstance, generatedAt) {
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 20;
+    const cardWidth = pageWidth - 2 * margin;
+
+    const baselineRisk = this.formatRiskValue(appInstance.state.baselineRisk);
+    const managedRisk = this.formatRiskValue(appInstance.state.managedRisk);
+    const selectedCount = this.formatCountriesCount(appInstance.state.selectedCountries);
+    const riskReduction = this.calculateRiskReduction(appInstance.state.baselineRisk, appInstance.state.managedRisk);
+
+    // Decorative hero section
+    pdf.setFillColor(17, 24, 39); // Slate-900
+    pdf.rect(0, 0, pageWidth, 120, 'F');
+
+    pdf.setFillColor(59, 130, 246); // Blue-500 accent
+    pdf.circle(pageWidth - 30, 30, 20, 'F');
+    pdf.setFillColor(99, 102, 241); // Indigo-500 accent
+    pdf.circle(pageWidth - 60, 70, 14, 'F');
+
+    // Title content
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(26);
+    pdf.text('Labour Rights Due Diligence', margin, 55);
+
+    pdf.setFontSize(22);
+    pdf.text('Risk Assessment Report', margin, 75);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(12);
+    pdf.text('Comprehensive coverage-based risk management and effectiveness analysis', margin, 92);
+
+    pdf.setDrawColor(255, 255, 255);
+    pdf.setLineWidth(0.6);
+    pdf.line(margin, 98, pageWidth - margin, 98);
+
+    // Summary card
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(margin, 125, cardWidth, 100, 6, 6, 'F');
+
+    pdf.setTextColor(30, 41, 59); // Slate-800
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(16);
+    pdf.text('Engagement Snapshot', margin + 10, 145);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    pdf.setTextColor(100, 116, 139); // Slate-500
+    pdf.text('Generated on', margin + 10, 160);
+
+    pdf.setTextColor(30, 41, 59);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text(this.formatDateTime(generatedAt), margin + 10, 168);
+
+    const metrics = [
+      {
+        label: 'Countries Selected',
+        value: selectedCount
+      },
+      {
+        label: 'Baseline Risk',
+        value: baselineRisk
+      },
+      {
+        label: 'Managed Risk',
+        value: managedRisk
+      }
+    ];
+
+    const columnWidth = (cardWidth - 20) / metrics.length;
+    const metricsY = 200;
+
+    metrics.forEach((metric, index) => {
+      const xCenter = margin + 10 + columnWidth * index + columnWidth / 2;
+      pdf.setTextColor(99, 102, 241);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(22);
+      pdf.text(metric.value, xCenter, metricsY, { align: 'center' });
+
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.text(metric.label, xCenter, metricsY + 8, { align: 'center' });
+    });
+
+    if (riskReduction) {
+      pdf.setTextColor(15, 118, 110); // Teal-700
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(13);
+      pdf.text(`Risk reduction achieved: ${riskReduction.absolute} (${riskReduction.percentage}%)`, margin + 10, metricsY + 26);
+    }
+
+    // Footer note
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text('Insights calculated using the HRDD coverage-based methodology across five analytical panels.', margin, pageHeight - 30);
+
+    // Reset text color for subsequent pages
+    pdf.setTextColor(33, 37, 41);
+  }
+
+  addPageContent(pdf, canvas, { panelNumber, panelTitle, pageNumber }) {
     if (!canvas) return;
 
     const pageWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
     const margin = 20;
     const contentWidth = pageWidth - 2 * margin;
-    const maxContentHeight = pageHeight - 2 * margin - 20; // Reserve space for header
+    const headerHeight = 22;
+    const headerSpacing = 6;
+    const imageTop = margin + headerHeight + headerSpacing;
+    const maxContentHeight = pageHeight - imageTop - margin;
 
     if (pageNumber > 1) {
       pdf.addPage();
     }
-
-    // Add header
-    pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(`Panel ${pageNumber}: ${panelTitle}`, margin, margin);
-    
-    // Add page number
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Page ${pageNumber}`, pageWidth - margin - 20, margin);
 
     // Calculate image dimensions
     const canvasAspectRatio = canvas.width / canvas.height;
     let imgWidth = contentWidth;
     let imgHeight = imgWidth / canvasAspectRatio;
 
-    // If image is too tall, scale down
     if (imgHeight > maxContentHeight) {
       imgHeight = maxContentHeight;
       imgWidth = imgHeight * canvasAspectRatio;
     }
 
-    // Center the image horizontally
     const imgX = margin + (contentWidth - imgWidth) / 2;
-    const imgY = margin + 20;
+    const imgY = imageTop;
 
     try {
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth, imgHeight);
+      const imgData = canvas.toDataURL('image/jpeg', 0.82);
+      pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth, imgHeight, undefined, 'FAST');
     } catch (error) {
       console.error('Error adding image to PDF:', error);
-      // Add error message instead
       pdf.setFontSize(12);
       pdf.text('Error: Could not capture panel content', margin, margin + 40);
     }
+
+    // Header background to keep titles visible
+    pdf.setFillColor(241, 245, 249);
+    pdf.roundedRect(margin - 2, margin - 8, contentWidth + 4, headerHeight + 10, 4, 4, 'F');
+
+    pdf.setTextColor(30, 41, 59);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
+    pdf.text(`Panel ${panelNumber}: ${panelTitle}`, margin, margin + 8);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Page ${pageNumber}`, pageWidth - margin - 20, margin + 8);
   }
 
   async generateReport(appInstance) {
@@ -286,12 +428,13 @@ export class PDFGenerator {
         throw new Error('jsPDF is not available');
       }
 
-      const pdf = new jsPDFConstructor({
+       const pdf = new jsPDFConstructor({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
-      
+
+      const now = new Date();
       const panelTitles = {
         1: 'Global Risks',
         2: 'Baseline Risk',
@@ -300,45 +443,28 @@ export class PDFGenerator {
         5: 'Managed Risk'
       };
 
-      // Add title page
-      pdf.setFontSize(24);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Labour Rights Due Diligence', 105, 60, { align: 'center' });
-      pdf.text('Risk Assessment Report', 105, 80, { align: 'center' });
-      
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Complete 5-Panel Coverage-Based Risk Management Analysis', 105, 100, { align: 'center' });
-      
-      pdf.setFontSize(12);
-      const now = new Date();
-      pdf.text(`Generated: ${now.toLocaleString()}`, 105, 120, { align: 'center' });
-      
-      // Add summary information
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Portfolio Summary', 20, 160);
-      
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      const summaryY = 175;
-      pdf.text(`Selected Countries: ${appInstance.state.selectedCountries.length}`, 20, summaryY);
-      pdf.text(`Baseline Risk: ${appInstance.state.baselineRisk.toFixed(1)}`, 20, summaryY + 10);
-      pdf.text(`Managed Risk: ${appInstance.state.managedRisk.toFixed(1)}`, 20, summaryY + 20);
-      
-      const riskReduction = ((appInstance.state.baselineRisk - appInstance.state.managedRisk) / appInstance.state.baselineRisk * 100);
-      pdf.text(`Risk Reduction: ${riskReduction.toFixed(1)}%`, 20, summaryY + 30);
+      this.updateProgress('Designing cover page...');
+      this.createCoverPage(pdf, appInstance, now);
 
       // Generate each panel
+      let currentPageNumber = 2;
       for (let panelNumber = 1; panelNumber <= 5; panelNumber++) {
         this.updateProgress(`Capturing Panel ${panelNumber}: ${panelTitles[panelNumber]}...`);
-        
+
         const canvas = await this.generatePanelContent(appInstance, panelNumber);
-        this.addPageContent(pdf, canvas, panelNumber, panelTitles[panelNumber]);
-        
+        if (canvas) {
+          this.addPageContent(pdf, canvas, {
+            panelNumber,
+            panelTitle: panelTitles[panelNumber],
+            pageNumber: currentPageNumber
+          });
+          currentPageNumber += 1;
+        }
+
         // Add a small delay between panels
         await new Promise(resolve => setTimeout(resolve, 500));
       }
+
 
       this.updateProgress('Finalizing PDF...');
       
