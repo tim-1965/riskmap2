@@ -698,7 +698,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
   const focusMultiplier = ensureNumber(focusData.portfolioMultiplier, 1);
   const concentrationFactor = ensureNumber(portfolioSummary.riskConcentration, 1);
 
-  const baselineValue = ensureNumber(baselineRisk);
+   const baselineValue = ensureNumber(baselineRisk);
   const managedValue = ensureNumber(managedRisk);
   const transparencyValue = ensureNumber(strategySummary.overallTransparency);
   const responsivenessValue = ensureNumber(strategySummary.overallResponsiveness);
@@ -706,23 +706,163 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
   const riskReductionValue = ensureNumber(improvementSummary.riskReduction);
   const absoluteReductionValue = ensureNumber(improvementSummary.absoluteReduction);
 
-  const riskAfterTransparency = baselineValue * (1 - transparencyValue);
-  const riskAfterResponse = baselineValue * (1 - combinedEffectiveness);
+  const sanitizedTransparency = Math.max(0, Math.min(1, transparencyValue));
+  const sanitizedResponsiveness = Math.max(0, Math.min(1, responsivenessValue));
+  const sanitizedFocusMultiplier = Math.max(0, focusMultiplier);
+
+  const totalReduction = ensureNumber(baselineValue - managedValue);
+  const baseReduction = sanitizedFocusMultiplier > 0
+    ? totalReduction / sanitizedFocusMultiplier
+    : 0;
+  const focusStageReduction = totalReduction - baseReduction;
+
+  const detectionWeight = (sanitizedTransparency + sanitizedResponsiveness) > 0
+    ? sanitizedTransparency / (sanitizedTransparency + sanitizedResponsiveness)
+    : 0.5;
+
+  const detectionStageReduction = baseReduction * detectionWeight;
+  const responseStageReduction = baseReduction - detectionStageReduction;
+
+  const riskAfterDetection = baselineValue - detectionStageReduction;
+  const riskAfterResponse = riskAfterDetection - responseStageReduction;
   const finalManagedRisk = managedValue;
 
-  const transparencyStepPercent = baselineValue > 0
-    ? ((baselineValue - riskAfterTransparency) / baselineValue) * 100
+  const detectionStepPercent = baselineValue > 0
+    ? (detectionStageReduction / baselineValue) * 100
     : 0;
   const responseStepPercent = baselineValue > 0
-    ? ((riskAfterTransparency - riskAfterResponse) / baselineValue) * 100
+    ? (responseStageReduction / baselineValue) * 100
     : 0;
   const focusStepPercent = baselineValue > 0
-    ? ((riskAfterResponse - finalManagedRisk) / baselineValue) * 100
+    ? (focusStageReduction / baselineValue) * 100
     : 0;
+
+  const detectionStageAmount = Math.abs(detectionStageReduction);
+  const responseStageAmount = Math.abs(responseStageReduction);
+  const focusStageAmount = Math.abs(focusStageReduction);
+  const totalReductionAmount = Math.abs(totalReduction);
+
+  const detectionStageVerb = detectionStageReduction >= 0 ? 'removed' : 'added';
+  const responseStageVerb = responseStageReduction >= 0 ? 'removed' : 'added';
+  const focusStageVerb = focusStageReduction >= 0 ? 'removed' : 'added';
+  const totalReductionVerb = totalReduction >= 0 ? 'removed' : 'added';
 
   const strategies = Array.isArray(strategySummary.hrddStrategies)
     ? strategySummary.hrddStrategies
     : [];
+
+  const categoryColors = {
+    'Worker Voice': '#22c55e',
+    'Audit': '#f59e0b',
+    'Passive': '#6b7280'
+  };
+
+  const safeDetectionTotal = strategies.reduce((sum, strategy) => {
+    const contributionValue = ensureNumber(strategy?.contribution);
+    return sum + Math.max(0, contributionValue);
+  }, 0);
+
+  const detectionBreakdown = strategies.map(strategy => {
+    const coverageValue = ensureNumber(strategy?.coverage);
+    const assumedEffectiveness = ensureNumber(strategy?.averageEffectiveness);
+    const contributionValue = Math.max(0, ensureNumber(strategy?.contribution));
+    const stageShare = safeDetectionTotal > 0
+      ? contributionValue / safeDetectionTotal
+      : (strategies.length > 0 ? 1 / strategies.length : 0);
+    const riskPoints = detectionStageReduction * stageShare;
+    const percentOfTotal = totalReduction !== 0
+      ? (riskPoints / totalReduction) * 100
+      : 0;
+
+    return {
+      name: strategy?.name || 'Strategy',
+      category: strategy?.category || 'Strategy',
+      coverage: coverageValue,
+      assumedEffectiveness,
+      riskPoints,
+      percentOfTotal,
+      stageShare: detectionStageReduction !== 0 ? stageShare * 100 : 0
+    };
+  });
+
+  const responseLabels = Array.isArray(riskEngine.responsivenessLabels)
+    ? riskEngine.responsivenessLabels
+    : [];
+
+  const sanitizedResponseWeights = Array.isArray(responsivenessStrategy)
+    ? responsivenessStrategy.map(value => Math.max(0, ensureNumber(value)))
+    : [];
+  const sanitizedResponseEffectiveness = Array.isArray(responsivenessEffectiveness)
+    ? responsivenessEffectiveness.map(value => Math.max(0, ensureNumber(value)))
+    : [];
+
+  const totalResponseWeight = sanitizedResponseWeights.reduce((sum, value) => sum + value, 0);
+
+  const responseDetails = responseLabels.map((label, index) => {
+    const weight = sanitizedResponseWeights[index] || 0;
+    const shareOfIssues = totalResponseWeight > 0 ? weight / totalResponseWeight : 0;
+    const assumedEffectiveness = sanitizedResponseEffectiveness[index] || 0;
+    const contributionScore = shareOfIssues * (assumedEffectiveness / 100);
+
+    return {
+      name: label,
+      shareOfIssues,
+      assumedEffectiveness,
+      contributionScore
+    };
+  });
+
+  const totalResponseContribution = responseDetails.reduce((sum, detail) => sum + detail.contributionScore, 0);
+
+  const responseBreakdown = responseDetails.map(detail => {
+    const stageShare = totalResponseContribution > 0 ? detail.contributionScore / totalResponseContribution : 0;
+    const riskPoints = responseStageReduction * stageShare;
+    const percentOfTotal = totalReduction !== 0
+      ? (riskPoints / totalReduction) * 100
+      : 0;
+
+    return {
+      ...detail,
+      riskPoints,
+      percentOfTotal,
+      stageShare: responseStageReduction !== 0 ? stageShare * 100 : 0
+    };
+  });
+
+  const detectionShareOfTotal = totalReduction !== 0 ? (detectionStageReduction / totalReduction) * 100 : 0;
+  const responseShareOfTotal = totalReduction !== 0 ? (responseStageReduction / totalReduction) * 100 : 0;
+  const focusShareOfTotal = totalReduction !== 0 ? (focusStageReduction / totalReduction) * 100 : 0;
+
+  const detectionBreakdownHtml = detectionBreakdown.length > 0
+    ? detectionBreakdown.map(item => {
+        const color = categoryColors[item.category] || '#3b82f6';
+        return `
+          <div style="padding: 12px 14px; border: 1px solid ${color}30; border-left: 4px solid ${color}; border-radius: 8px; background-color: white; display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-weight: 600; color: #1f2937;">${item.name}</div>
+            <div style="font-size: 12px; color: #4b5563;">
+              Coverage: ${formatNumber(item.coverage, 0)}% • Assumed detection: ${formatNumber(item.assumedEffectiveness, 0)}%
+            </div>
+            <div style="font-size: 12px; color: #1e40af;">
+              Contributes ${formatNumber(item.riskPoints)} pts (${formatNumber(item.percentOfTotal)}% of total reduction)
+            </div>
+          </div>
+        `;
+      }).join('')
+    : '<div style="padding: 12px 14px; border: 1px dashed #94a3b8; border-radius: 8px; background-color: #f8fafc; color: #475569; font-size: 12px;">Adjust your coverage in Panel 3 to unlock detection-driven risk reduction.</div>';
+
+  const responseBreakdownHtml = responseBreakdown.length > 0
+    ? responseBreakdown.map(item => `
+        <div style="padding: 12px 14px; border: 1px solid #a855f730; border-left: 4px solid #8b5cf6; border-radius: 8px; background-color: white; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-weight: 600; color: #312e81;">${item.name}</div>
+          <div style="font-size: 12px; color: #4c1d95;">
+            Issues addressed: ${formatNumber(item.shareOfIssues * 100, 0)}% • Assumed effectiveness: ${formatNumber(item.assumedEffectiveness, 0)}%
+          </div>
+          <div style="font-size: 12px; color: #5b21b6;">
+            Contributes ${formatNumber(item.riskPoints)} pts (${formatNumber(item.percentOfTotal)}% of total reduction)
+          </div>
+        </div>
+      `).join('')
+    : '<div style="padding: 12px 14px; border: 1px dashed #c4b5fd; border-radius: 8px; background-color: #f5f3ff; color: #5b21b6; font-size: 12px;">Allocate response effort in Panel 4 to translate detections into remediation.</div>';
 
   container.innerHTML = `
     <div class="final-results-panel">
@@ -755,34 +895,40 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           </div>
 
           <!-- Arrow -->
-          <div style="text-align: center; color: #6b7280;">
+           <div style="text-align: center; color: #6b7280;">
             <div style="font-size: 20px;">↓</div>
-            <div style="font-size: 12px;">Apply Transparency Strategy</div>
+            <div style="font-size: 12px;">Apply Detection Coverage</div>
           </div>
 
-           <!-- Step 2: After Transparency -->
+          <!-- Step 2: After Detection -->
           <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #dbeafe; border: 1px solid #3b82f6;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">2</div>
             <div style="flex: 1;">
-              <div style="font-weight: 600; color: #1d4ed8; margin-bottom: 4px;">After Issue Detection (${formatNumber(transparencyValue * 100)}% transparency)</div>
-              <div style="font-size: 24px; font-weight: bold; color: #1d4ed8;">${formatNumber(riskAfterTransparency)}</div>
-              <div style="font-size: 12px; color: #1e40af;">Risk reduced by ${formatNumber(transparencyStepPercent)}% through detection capabilities</div>
+              <div style="font-weight: 600; color: #1d4ed8; margin-bottom: 4px;">Detection Coverage Applied (${formatNumber(transparencyValue * 100)}% transparency effectiveness)</div>
+              <div style="font-size: 24px; font-weight: bold; color: #1d4ed8;">${formatNumber(riskAfterDetection)}</div>
+              <div style="font-size: 12px; color: #1e40af;">
+                Detection stage ${detectionStageVerb} ${formatNumber(detectionStageAmount)} pts
+                (${formatNumber(detectionStepPercent)}% of baseline • ${formatNumber(detectionShareOfTotal)}% of total reduction)
+              </div>
             </div>
           </div>
 
           <!-- Arrow -->
           <div style="text-align: center; color: #6b7280;">
             <div style="font-size: 20px;">↓</div>
-            <div style="font-size: 12px;">Apply Response Strategy</div>
+            <div style="font-size: 12px;">Allocate Response Capacity</div>
           </div>
 
           <!-- Step 3: After Response -->
           <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #f3e8ff; border: 1px solid #8b5cf6;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #8b5cf6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">3</div>
             <div style="flex: 1;">
-              <div style="font-weight: 600; color: #7c3aed; margin-bottom: 4px;">After Response Application (${formatNumber(responsivenessValue * 100)}% response effectiveness)</div>
+              <div style="font-weight: 600; color: #7c3aed; margin-bottom: 4px;">Response Allocation Applied (${formatNumber(responsivenessValue * 100)}% response effectiveness)</div>
               <div style="font-size: 24px; font-weight: bold; color: #7c3aed;">${formatNumber(riskAfterResponse)}</div>
-              <div style="font-size: 12px; color: #6d28d9;">Additional ${formatNumber(responseStepPercent)}% reduction through effective remediation</div>
+              <div style="font-size: 12px; color: #6d28d9;">
+                Response levers ${responseStageVerb} ${formatNumber(responseStageAmount)} pts
+                (${formatNumber(responseStepPercent)}% of baseline • ${formatNumber(responseShareOfTotal)}% of total reduction)
+              </div>
             </div>
           </div>
 
@@ -793,13 +939,14 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           </div>
 
            <!-- Step 4: Final Result -->
-          <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #d1fae5; border: 1px solid #22c55e;">
+           <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #d1fae5; border: 1px solid #22c55e;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">4</div>
             <div style="flex: 1;">
               <div style="font-weight: 600; color: #16a34a; margin-bottom: 4px;">Final Managed Risk (${focusPercent}% focus, ${concentrationFactor.toFixed(2)}× concentration)</div>
               <div style="font-size: 24px; font-weight: bold; color: #16a34a;">${formatNumber(finalManagedRisk)}</div>
               <div style="font-size: 12px; color: #15803d;">
-                Final ${formatNumber(focusStepPercent)}% reduction through strategic focus on high-risk countries
+                Focus adjustments ${focusStageVerb} ${formatNumber(focusStageAmount)} pts
+                (${formatNumber(focusStepPercent)}% of baseline • ${formatNumber(focusShareOfTotal)}% of total reduction)
               </div>
             </div>
           </div>
@@ -829,23 +976,36 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       </div>
 
       <!-- DETAILED STRATEGY BREAKDOWN -->
-       <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
-        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">HRDD Strategy Coverage & Effectiveness</h3>
-        <div id="strategyBreakdownList">
-          ${strategies.map(strategy => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e5e7eb; background-color: ${strategy.coverage > 0 ? '#f0f9ff' : '#f9fafb'};">
-              <div style="flex: 1;">
-                <span style="font-weight: 500; color: #1f2937;">[${strategy.category}] ${strategy.name}</span>
-                <div style="font-size: 12px; color: #6b7280;">
-                  Coverage: ${strategy.coverage}% • Base: ${strategy.baseEffectiveness}% • Your Setting: ${strategy.userEffectiveness}% • Avg: ${strategy.averageEffectiveness}%
-                  ${strategy.coverageRange ? ` • Risk-Adjusted Range: ${strategy.coverageRange}` : ''}
-                </div>
-              </div>
-              <div style="width: 80px; height: 8px; background-color: #e5e7eb; border-radius: 4px; margin-left: 12px;">
-                <div style="height: 100%; width: ${Math.min(100, strategy.coverage)}%; background-color: #3b82f6; border-radius: 4px;"></div>
-              </div>
+      <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">How coverage & response choices reduce risk</h3>
+        <p style="font-size: 13px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
+          Your configuration ${totalReductionVerb} ${formatNumber(totalReductionAmount)} pts of risk from the baseline.
+          Panel 3 detection coverage ${detectionStageVerb} ${formatNumber(detectionStageAmount)} pts (~${formatNumber(detectionShareOfTotal)}% of the total change),
+          while Panel 4 response allocation ${responseStageVerb} ${formatNumber(responseStageAmount)} pts (~${formatNumber(responseShareOfTotal)}%).
+          Focus settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts by concentrating effort on higher-risk countries.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+          <div style="border: 1px solid #bfdbfe; background-color: #eff6ff; padding: 16px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #1d4ed8;">Panel 3 · Detection coverage</div>
+              <div style="font-size: 12px; color: #1e40af;">${detectionStageVerb.charAt(0).toUpperCase() + detectionStageVerb.slice(1)} ${formatNumber(detectionStageAmount)} pts (~${formatNumber(detectionShareOfTotal)}% of total)</div>
             </div>
-          `).join('')}
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${detectionBreakdownHtml}
+            </div>
+          </div>
+          <div style="border: 1px solid #ddd6fe; background-color: #f5f3ff; padding: 16px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #5b21b6;">Panel 4 · Response allocation</div>
+              <div style="font-size: 12px; color: #4c1d95;">${responseStageVerb.charAt(0).toUpperCase() + responseStageVerb.slice(1)} ${formatNumber(responseStageAmount)} pts (~${formatNumber(responseShareOfTotal)}% of total)</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${responseBreakdownHtml}
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 16px; font-size: 12px; color: #475569; background-color: #f1f5f9; border: 1px dashed #cbd5f5; border-radius: 8px; padding: 12px;">
+          Focus and concentration settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts (${formatNumber(focusShareOfTotal)}% of the total change) by steering coverage and remediation toward the highest-risk parts of your portfolio.
         </div>
       </div>
 
