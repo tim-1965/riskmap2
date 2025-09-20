@@ -103,104 +103,7 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
     ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
     : 'Risk level unchanged';
 
-  const parseNumber = (value, fallback = 0) => {
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : fallback;
-    }
-    if (typeof value === 'string') {
-      const parsed = parseFloat(value);
-      return Number.isFinite(parsed) ? parsed : fallback;
-    }
-    return fallback;
-  };
-
-  let focusMetricsHtml = '';
-  if (focusEffectivenessMetrics && typeof focusEffectivenessMetrics === 'object') {
-    const focusLevelRaw = parseNumber(focusEffectivenessMetrics.focus, 0);
-    const focusLevel = Math.max(0, Math.min(1, focusLevelRaw));
-
-    if (focusLevel > 0.3) {
-      const focusPercent = Math.round(focusLevel * 100);
-      const effectivenessScore = Math.max(0, parseNumber(focusEffectivenessMetrics.focusEffectiveness, 0));
-      const differentialBenefit = parseNumber(focusEffectivenessMetrics.differentialBenefit, 0);
-      const avgReductionHigh = parseNumber(focusEffectivenessMetrics.avgReductionHigh, 0);
-      const avgReductionMedium = parseNumber(focusEffectivenessMetrics.avgReductionMedium, 0);
-      const avgReductionLow = parseNumber(focusEffectivenessMetrics.avgReductionLow, 0);
-      const highRiskCount = Math.max(0, Math.round(parseNumber(focusEffectivenessMetrics.highRiskCountries, 0)));
-      const mediumRiskCount = Math.max(0, Math.round(parseNumber(focusEffectivenessMetrics.mediumRiskCountries, 0)));
-      const lowRiskCount = Math.max(0, Math.round(parseNumber(focusEffectivenessMetrics.lowRiskCountries, 0)));
-
-      const effectivenessColor = effectivenessScore >= 70 ? '#059669'
-        : effectivenessScore >= 40 ? '#f59e0b'
-          : '#dc2626';
-      const differentialColor = differentialBenefit >= 10 ? '#059669'
-        : differentialBenefit >= 5 ? '#f59e0b'
-          : '#dc2626';
-      const differentialDisplay = `${differentialBenefit >= 0 ? '+' : ''}${differentialBenefit.toFixed(1)}%`;
-
-      const hasHighRiskSelection = highRiskCount > 0;
-      const comparisonText = hasHighRiskSelection
-        ? `High-risk countries average ${avgReductionHigh.toFixed(1)}% reduction vs ${avgReductionLow.toFixed(1)}% for low-risk countries.`
-        : `Low-risk countries currently average ${avgReductionLow.toFixed(1)}% reduction.`;
-
-      let focusInterpretation = '';
-      if (!hasHighRiskSelection) {
-        focusInterpretation = `ℹ Focus insights are limited because no high-risk countries are selected. ${comparisonText}`;
-      } else if (effectivenessScore >= 70) {
-        focusInterpretation = `✓ Focus targeting is highly effective. ${comparisonText}`;
-      } else if (effectivenessScore >= 40) {
-        focusInterpretation = `⚠ Focus targeting shows moderate effectiveness. ${comparisonText}`;
-      } else {
-        focusInterpretation = `⚠ Focus targeting is delivering limited differentiation. ${comparisonText}`;
-      }
-
-      focusMetricsHtml = `
-        <div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, rgba(219, 234, 254, 0.45) 0%, rgba(191, 219, 254, 0.3) 100%); border-radius: 12px; border: 1px solid #bfdbfe;">
-          <h3 style="font-size: 16px; font-weight: 600; color: #1d4ed8; margin-bottom: 12px;">Focus targeting insights</h3>
-
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
-            <div style="padding: 14px; background: white; border-radius: 10px; border: 1px solid #dbeafe; text-align: center;">
-              <div style="font-size: 11px; font-weight: 600; color: #1e3a8a; margin-bottom: 6px;">Effectiveness score</div>
-              <div style="font-size: 26px; font-weight: 700; color: ${effectivenessColor};">${effectivenessScore.toFixed(0)}%</div>
-              <div style="font-size: 11px; color: #1d4ed8;">Focus level ${focusPercent}%</div>
-            </div>
-            <div style="padding: 14px; background: white; border-radius: 10px; border: 1px solid #dbeafe; text-align: center;">
-              <div style="font-size: 11px; font-weight: 600; color: #1e3a8a; margin-bottom: 6px;">Differential benefit</div>
-              <div style="font-size: 26px; font-weight: 700; color: ${differentialColor};">${differentialDisplay}</div>
-              <div style="font-size: 11px; color: #1d4ed8;">High vs low risk</div>
-            </div>
-            <div style="padding: 14px; background: white; border-radius: 10px; border: 1px solid #dbeafe; text-align: center;">
-              <div style="font-size: 11px; font-weight: 600; color: #1e3a8a; margin-bottom: 6px;">Average reduction</div>
-              <div style="font-size: 13px; color: #dc2626; font-weight: 700; margin-bottom: 2px;">High: ${avgReductionHigh.toFixed(1)}%</div>
-              <div style="font-size: 13px; color: #f59e0b; font-weight: 600; margin-bottom: 2px;">Medium: ${avgReductionMedium.toFixed(1)}%</div>
-              <div style="font-size: 13px; color: #16a34a; font-weight: 700;">Low: ${avgReductionLow.toFixed(1)}%</div>
-            </div>
-          </div>
-
-          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
-            <div style="flex: 1; min-width: 140px; padding: 10px 12px; background: white; border-radius: 8px; border: 1px solid #dbeafe; text-align: center;">
-              <div style="font-size: 11px; font-weight: 600; color: #1e3a8a; text-transform: uppercase;">High risk</div>
-              <div style="font-size: 18px; font-weight: 700; color: #dc2626;">${highRiskCount}</div>
-            </div>
-            <div style="flex: 1; min-width: 140px; padding: 10px 12px; background: white; border-radius: 8px; border: 1px solid #dbeafe; text-align: center;">
-              <div style="font-size: 11px; font-weight: 600; color: #1e3a8a; text-transform: uppercase;">Medium risk</div>
-              <div style="font-size: 18px; font-weight: 700; color: #f59e0b;">${mediumRiskCount}</div>
-            </div>
-            <div style="flex: 1; min-width: 140px; padding: 10px 12px; background: white; border-radius: 8px; border: 1px solid #dbeafe; text-align: center;">
-              <div style="font-size: 11px; font-weight: 600; color: #1e3a8a; text-transform: uppercase;">Low risk</div>
-              <div style="font-size: 18px; font-weight: 700; color: #16a34a;">${lowRiskCount}</div>
-            </div>
-          </div>
-
-          <div style="font-size: 12px; color: #1e3a8a; line-height: 1.5;">
-            ${focusInterpretation}
-          </div>
-        </div>
-      `;
-    }
-  }
-
-    container.innerHTML = `
+  container.innerHTML = `
     <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
       <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
         Risk Assessment Summary
@@ -244,12 +147,10 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
       <div style="text-align: center; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
         <span style="font-size: 14px; color: #0369a1;">
           Portfolio: ${selectedCountries.length} countries • 
-          ${riskReduction > 0 ? 'Strategy shows improvement' : 'Consider refining your approach'}
-        </span>
+          </span>
       </div>
       
-      ${focusMetricsHtml}
-    </div>
+      </div>
 
     <style>
       @media (max-width: 768px) {
