@@ -486,6 +486,131 @@ export class RiskEngine {
     return this.calculatePortfolioMetrics(selectedCountries, countryVolumes, countryRisks).baselineRisk;
   }
 
+  // Step 1: Generate a detailed baseline summary for the current selection
+  generateBaselineSummary(selectedCountries, countries, countryRisks, countryVolumes) {
+    const safeSelected = Array.isArray(selectedCountries)
+      ? selectedCountries
+        .map(code => typeof code === 'string' ? code.trim().toUpperCase() : '')
+        .filter(Boolean)
+      : [];
+
+    const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+    const safeCountryVolumes = (countryVolumes && typeof countryVolumes === 'object') ? countryVolumes : {};
+    const safeCountryList = Array.isArray(countries) ? countries : [];
+
+    const countryLookup = safeCountryList.reduce((acc, country) => {
+      if (country && typeof country.isoCode === 'string') {
+        acc[country.isoCode.toUpperCase()] = country;
+      }
+      return acc;
+    }, {});
+
+    if (safeSelected.length === 0) {
+      return {
+        baselineRisk: 0,
+        riskBand: this.getRiskBand(0),
+        riskColor: this.getRiskColor(0),
+        portfolio: {
+          countriesSelected: 0,
+          totalVolume: 0,
+          averageRisk: 0,
+          riskConcentration: 1,
+          weightedRisk: 0
+        },
+        distribution: {
+          byBand: {},
+          statistics: {
+            minRisk: 0,
+            maxRisk: 0,
+            averageRisk: 0,
+            medianRisk: 0
+          }
+        },
+        countries: [],
+        highlights: {
+          topRiskCountries: [],
+          topVolumeCountries: []
+        }
+      };
+    }
+
+    const metrics = this.calculatePortfolioMetrics(safeSelected, countryVolumes, countryRisks);
+    const baselineRisk = Number.isFinite(metrics?.baselineRisk) ? metrics.baselineRisk : 0;
+    const totalVolume = Number.isFinite(metrics?.totalVolume) ? metrics.totalVolume : 0;
+    const riskConcentration = Number.isFinite(metrics?.riskConcentration) && metrics.riskConcentration > 0
+      ? metrics.riskConcentration
+      : 1;
+
+    const countryBreakdown = safeSelected.map(code => {
+      const risk = Number.isFinite(safeCountryRisks[code]) ? safeCountryRisks[code] : 0;
+      const volume = typeof safeCountryVolumes[code] === 'number' ? safeCountryVolumes[code] : 10;
+      const countryInfo = countryLookup[code] || {};
+      const portfolioShare = totalVolume > 0 ? (volume / totalVolume) * 100 : 0;
+      const band = this.getRiskBand(risk);
+
+      return {
+        isoCode: code,
+        name: typeof countryInfo.name === 'string' ? countryInfo.name : code,
+        region: countryInfo.region || countryInfo.subRegion || null,
+        risk,
+        riskBand: band,
+        riskColor: this.getRiskColor(risk),
+        volume,
+        portfolioShare
+      };
+    });
+
+    const sortedByRisk = [...countryBreakdown].sort((a, b) => (b.risk || 0) - (a.risk || 0));
+    const sortedByVolume = [...countryBreakdown].sort((a, b) => (b.volume || 0) - (a.volume || 0));
+
+    const riskValues = sortedByRisk.map(entry => Number.isFinite(entry.risk) ? entry.risk : 0);
+    const riskCount = riskValues.length;
+    const sumRisk = riskValues.reduce((sum, value) => sum + value, 0);
+    const averageRisk = riskCount > 0 ? sumRisk / riskCount : 0;
+    const sortedRiskValues = [...riskValues].sort((a, b) => a - b);
+    let medianRisk = 0;
+    if (sortedRiskValues.length > 0) {
+      const mid = Math.floor(sortedRiskValues.length / 2);
+      medianRisk = sortedRiskValues.length % 2 === 0
+        ? (sortedRiskValues[mid - 1] + sortedRiskValues[mid]) / 2
+        : sortedRiskValues[mid];
+    }
+
+    const riskBandCounts = countryBreakdown.reduce((acc, entry) => {
+      const band = entry.riskBand || 'Unknown';
+      acc[band] = (acc[band] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      baselineRisk,
+      riskBand: this.getRiskBand(baselineRisk),
+      riskColor: this.getRiskColor(baselineRisk),
+      portfolio: {
+        countriesSelected: safeSelected.length,
+        totalVolume,
+        averageRisk: baselineRisk,
+        riskConcentration,
+        weightedRisk: Number.isFinite(metrics?.weightedRisk) ? metrics.weightedRisk : 0,
+        weightedRiskSquares: Number.isFinite(metrics?.weightedRiskSquares) ? metrics.weightedRiskSquares : 0
+      },
+      distribution: {
+        byBand: riskBandCounts,
+        statistics: {
+          minRisk: sortedRiskValues.length > 0 ? sortedRiskValues[0] : 0,
+          maxRisk: sortedRiskValues.length > 0 ? sortedRiskValues[sortedRiskValues.length - 1] : 0,
+          averageRisk,
+          medianRisk
+        }
+      },
+      countries: sortedByRisk,
+      highlights: {
+        topRiskCountries: sortedByRisk.slice(0, 5),
+        topVolumeCountries: sortedByVolume.slice(0, 5)
+      }
+    };
+  }
+
   // NEW: Calculate country-specific transparency using distributed coverage
   calculateCountryTransparencyEffectiveness(countrySpecificCoverage, transparencyEffectiveness, countryCode) {
     const countryCoverage = countrySpecificCoverage[countryCode];
