@@ -103,75 +103,6 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
     ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
     : 'Risk level unchanged';
 
-  // ENHANCED: Focus effectiveness metrics display
-  const focusMetricsHtml = focusEffectivenessMetrics ? `
-    <div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 1px solid #bae6fd;">
-      <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #0c4a6e; text-align: center;">
-        Focus Targeting Effectiveness (${Math.round(focusEffectivenessMetrics.focus * 100)}% focus level)
-      </h4>
-      
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 16px;">
-        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">HIGH RISK</div>
-          <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${focusEffectivenessMetrics.highRiskCountries}</div>
-          <div style="font-size: 11px; color: #4b5563;">countries</div>
-          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
-            ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% avg reduction
-          </div>
-        </div>
-        
-        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">MEDIUM RISK</div>
-          <div style="font-size: 20px; font-weight: bold; color: #f59e0b;">${focusEffectivenessMetrics.mediumRiskCountries}</div>
-          <div style="font-size: 11px; color: #4b5563;">countries</div>
-          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
-            ${focusEffectivenessMetrics.avgReductionMedium.toFixed(1)}% avg reduction
-          </div>
-        </div>
-        
-        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">LOW RISK</div>
-          <div style="font-size: 20px; font-weight: bold; color: #22c55e;">${focusEffectivenessMetrics.lowRiskCountries}</div>
-          <div style="font-size: 11px; color: #4b5563;">countries</div>
-          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
-            ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% avg reduction
-          </div>
-        </div>
-      </div>
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-        <div style="text-align: center; flex: 1;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">FOCUS EFFECTIVENESS</div>
-          <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
-          </div>
-          <div style="font-size: 11px; color: #4b5563;">targeting success</div>
-        </div>
-        <div style="border-left: 1px solid #e0f2fe; height: 40px; margin: 0 16px;"></div>
-        <div style="text-align: center; flex: 1;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">DIFFERENTIAL BENEFIT</div>
-          <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
-          </div>
-          <div style="font-size: 11px; color: #4b5563;">high vs low risk</div>
-        </div>
-      </div>
-      
-      ${focusEffectivenessMetrics.focus > 0.3 ? `
-        <div style="margin-top: 12px; padding: 10px; background: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#dcfce7' : '#fef3c7'}; border-radius: 6px; border: 1px solid ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#bbf7d0' : '#fcd34d'};">
-          <div style="font-size: 12px; color: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#15803d' : '#92400e'}; text-align: center;">
-            ${focusEffectivenessMetrics.focusEffectiveness >= 60 
-              ? '✓ Focus targeting is working effectively - high-risk countries receive significantly more benefit'
-              : focusEffectivenessMetrics.focusEffectiveness >= 30
-                ? '⚠ Focus targeting shows moderate effectiveness - consider adjusting strategy mix'
-                : '⚠ Focus targeting may need adjustment - differential benefits are limited'
-            }
-          </div>
-        </div>
-      ` : ''}
-    </div>
-  ` : '';
-
   container.innerHTML = `
     <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
       <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
@@ -216,12 +147,10 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
       <div style="text-align: center; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
         <span style="font-size: 14px; color: #0369a1;">
           Portfolio: ${selectedCountries.length} countries • 
-          ${riskReduction > 0 ? 'Strategy shows improvement' : 'Consider refining your approach'}
-        </span>
+          </span>
       </div>
       
-      ${focusMetricsHtml}
-    </div>
+      </div>
 
     <style>
       @media (max-width: 768px) {
@@ -229,14 +158,11 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
           grid-template-columns: 1fr !important;
           gap: 16px !important;
         }
-        div[style*="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))"] {
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
-          gap: 12px !important;
-        }
-      }
+          }
     </style>
   `;
 }
+
 
 export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChange, onFocusChange }) {
   const container = document.getElementById(containerId);
@@ -244,12 +170,12 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const strategyDescriptions = [
-    'Percentage of suppliers with always-on worker voice systems capturing daily conditions.',
-    'Percentage of suppliers surveyed with structured worker surveys annually.',
-    'Percentage of suppliers receiving unannounced third-party social audits.',
-    'Percentage of suppliers receiving planned or supplier-arranged social audits.',
-    'Percentage of suppliers completing self-reporting and self-assessment questionnaires.',
-    'Percentage of suppliers assessed through desk-based risk assessment only.'
+    'Percent. of suppliers with always-on worker voice and daily feedback.',
+    'Percent. of suppliers surveyed with annual structured worker surveys.',
+    'Percent. of suppliers having unannounced third-party social audits.',
+    'Percent. of suppliers having planned / self-arranged social audits.',
+    'Percent. of suppliers doing self-reporting and self-assessment questionnaires.',
+    'Percent. of suppliers assessed through desk-based risk assessment.'
   ];
 
   const categoryInfo = [
@@ -266,7 +192,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   };
 
   container.innerHTML = `
-    <div class="hrdd-strategy-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+    <div class="hrdd-strategy-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; height: 100%;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD strategies in use</h2>
         <button id="resetStrategy" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
@@ -362,27 +288,18 @@ export function createFocusPanel(containerId, { focus, onFocusChange, focusEffec
       <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #0c4a6e;">Focus Performance Analysis</h4>
       
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-        <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
-          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">EFFECTIVENESS SCORE</div>
+         <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
+          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">Focus effectiveness</div>
           <div style="font-size: 18px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+            ${Math.abs(focusEffectivenessMetrics.focusEffectiveness).toFixed(0)}%
           </div>
         </div>
         <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
-          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">DIFFERENTIAL BENEFIT</div>
+          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">Reduction Achieved</div>
           <div style="font-size: 18px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+            ${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
           </div>
         </div>
-      </div>
-      
-      <div style="font-size: 12px; color: #0c4a6e; text-align: center;">
-        ${focusEffectivenessMetrics.focusEffectiveness >= 70 
-          ? '✓ Focus targeting is highly effective - high-risk countries benefit significantly'
-          : focusEffectivenessMetrics.focusEffectiveness >= 40
-            ? '⚠ Focus targeting shows moderate effectiveness - room for improvement'
-            : '⚠ Focus targeting may need adjustment - consider increasing focus level or revising strategy mix'
-        }
       </div>
     </div>
   ` : '';
@@ -469,12 +386,21 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const effectivenessDescriptions = [
-    'Base effectiveness: 90%. Real-time worker reporting reveals most hidden issues.',
-    'Base effectiveness: 45%. Structured surveys capture systemic patterns.',
-    'Base effectiveness: 25%. Surprise audits catch unprepared violations.',
-    'Base effectiveness: 15%. Announced audits allow preparation/concealment.',
-    'Base effectiveness: 12%. Self-reporting has inherent transparency limitations.',
-    'Base effectiveness: 5%. Desk-based assessment reveals only visible risks.'
+    'Real-time anonymous feedback direct from workers can reveal almost all issues.',
+    'Periodic anonymous worker surveys can snapshot many risks if suppliers not involved.',
+    'Surprise audits catch unprepared visibile risks and some social risks.',
+    'Announced audits allow are generally poor at identifying social risks.',
+    'Self-reporting has inherent transparency limitations and is likely ineffective.',
+    'Desk-based assessment is likely ineffective.'
+  ];
+
+  const effectivenessAssumptions = [
+    'Effective: workers are likely to say if there are issues.',
+    'Intermittently effective: can show systemic issues at the time of the survey.',
+    'Can be effective where issues are easily visible, likely ineffective otherwise.',
+    'Not that effective as preparation/concealment of issues is possible.',
+    'Not effective as suppliers tend not to self-report problems.',
+    'Not effective as desk-based assessment is remote.'
   ];
 
   const categoryInfo = [
@@ -492,7 +418,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
   };
 
   container.innerHTML = `
-    <div class="transparency-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+    <div class="transparency-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; height: 100%;">
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Transparency Effectiveness</h2>
         <button id="resetTransparency" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
@@ -523,37 +450,32 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     const transparencyControl = document.createElement('div');
     transparencyControl.dataset.transparencyIndex = index;
     transparencyControl.style.cssText = `margin-bottom: 20px; padding: 16px; border: 2px solid ${categoryColor}20; border-radius: 8px; background-color: ${categoryColor}05; display: flex; flex-direction: column; gap: 12px;`;
-    transparencyControl.innerHTML = `
+     transparencyControl.innerHTML = `
       <label for="transparency_${index}" style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
         <span style="color: ${categoryColor}; font-weight: 600;">[${category?.name || 'Other'}]</span> ${label}
       </label>
       <div style="font-size: 12px; color: #6b7280; font-style: italic;">
-        ${effectivenessDescriptions[index]}
+        ${effectivenessAssumptions[index]}
       </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
-        <input type="number" min="0" max="100" value="${localTransparency[index]}" id="transparencyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
-        <span style="font-size: 12px; color: #6b7280; font-weight: 500;">%</span>
+      <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">Ineffective</span>
+        <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: ${categoryColor};">
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">Fully effective</span>
       </div>
     `;
     transparencyContainer.appendChild(transparencyControl);
 
     const rangeInput = document.getElementById(`transparency_${index}`);
-    const numberInput = document.getElementById(`transparencyNum_${index}`);
     const updateTransparencyValue = (value, options = {}) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
 
       localTransparency[index] = newValue;
       rangeInput.value = newValue;
-      numberInput.value = newValue;
-
-      updateTransparency(options);
+        updateTransparency(options);
     };
 
     rangeInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value, { notify: false }));
     rangeInput.addEventListener('change', (e) => updateTransparencyValue(e.target.value));
-    numberInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value, { notify: false }));
-    numberInput.addEventListener('change', (e) => updateTransparencyValue(e.target.value));
   });
 
   ensurePanel3ResizeListener();
@@ -564,7 +486,6 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     localTransparency = [...riskEngine.defaultTransparencyEffectiveness];
     localTransparency.forEach((effectiveness, index) => {
       document.getElementById(`transparency_${index}`).value = effectiveness;
-      document.getElementById(`transparencyNum_${index}`).value = effectiveness;
     });
     updateTransparency();
     schedulePanel3Alignment();
@@ -672,12 +593,12 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
 
   const responsivenessLabels = riskEngine.responsivenessLabels;
   const effectivenessDescriptions = [
-    '0.60 – 0.80 typical effectiveness as real-time data drives behaviour.',
-    '0.70 – 0.90 typical effectiveness as improvements linked to orders.',
-    '0.30 – 0.50 typical effectiveness via periodic review.',
-    '0.20 – 0.30 typical effectiveness via training and education.',
-    '0.10 – 0.20 typical effectiveness via holistic approach.',
-    '0.10 – 0.20 typical effectiveness as strategy is reactive only.'
+    'Effective as real-time data drives supplier behaviour.',
+    'Effective as improvements linked to orders provided follow up is strong.',
+    'Intermittently effective if periodic reviews include further checks.',
+    'Somewhat effective if training and education regularly repeated.',
+    'Limited effectiveness if approach is holistic.',
+    'Limited effectiveness if strategy is only reactive.'
   ];
 
   let localEffectiveness = [...effectiveness];
@@ -990,16 +911,16 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
         <div style="padding: 16px; background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%); border-radius: 8px; text-align: center;">
           <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 8px;">FOCUS EFFECTIVENESS SCORE</div>
-          <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+           <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
+            ${Math.abs(focusEffectivenessMetrics.focusEffectiveness).toFixed(0)}%
           </div>
           <div style="font-size: 12px; color: #92400e; margin-top: 4px;">targeting success</div>
         </div>
         
         <div style="padding: 16px; background: linear-gradient(135deg, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#dcfce7' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fef3c7' : '#fee2e2'} 0%, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#a7f3d0' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fde68a' : '#fecaca'} 100%); border-radius: 8px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-bottom: 8px;">DIFFERENTIAL BENEFIT</div>
+           <div style="font-size: 11px; font-weight: 600; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-bottom: 8px;">Reduction Achieved</div>
           <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+            ${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
           </div>
           <div style="font-size: 12px; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-top: 4px;">high vs low risk</div>
         </div>
@@ -1232,7 +1153,7 @@ export function createCountrySelectionPanel(containerId, { countries, selectedCo
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Click countries on the map above to select them</li>
           <li>Or use the dropdown to add countries</li>
-          <li>Set volume for each country (higher = more influence on risk)</li>
+          <li>Set weighting for each country (higher = more influence on risk)</li>
           <li>Click 'Remove' to deselect countries</li>
         </ul>
       </div>
@@ -1416,7 +1337,7 @@ export function updateSelectedCountriesDisplay(selectedCountries, countries, cou
 
   selectedCountries.forEach((countryCode, index) => {
     const country = countries.find(c => c.isoCode === countryCode);
-    const volume = countryVolumes[countryCode] ?? 1;
+    const volume = countryVolumes[countryCode] ?? 10;
 
     const countryItem = document.createElement('div');
     countryItem.style.cssText = `
@@ -1433,7 +1354,7 @@ export function updateSelectedCountriesDisplay(selectedCountries, countries, cou
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <label style="font-size: 14px; color: #6b7280; font-weight: 500;">Volume:</label>
+          <label style="font-size: 14px; color: #6b7280; font-weight: 500;">Weighting:</label>
           <input type="number" min="0" value="${volume}" id="volume_${countryCode}"
                  style="width: 80px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
         </div>
