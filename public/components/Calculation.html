@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRDD Risk Assessment - Mathematical Formulation</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+            background: white;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .header h1 {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            color: #1a365d;
+        }
+        
+        .header h2 {
+            font-size: 14pt;
+            font-weight: normal;
+            margin: 0 0 5px 0;
+            color: #2d3748;
+        }
+        
+        .header .version {
+            font-size: 10pt;
+            color: #666;
+            font-style: italic;
+        }
+        
+        h2 {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #1a365d;
+            margin: 20px 0 10px 0;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 3px;
+        }
+        
+        h3 {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #2d3748;
+            margin: 15px 0 8px 0;
+        }
+        
+        h4 {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #4a5568;
+            margin: 12px 0 6px 0;
+        }
+        
+        .formula {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+            text-align: center;
+        }
+        
+        .formula-block {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 10px 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+        }
+        
+        .info-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        
+        ul, ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        
+        li {
+            margin: 4px 0;
+        }
+        
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 10pt;
+        }
+        
+        .parameter-table th,
+        .parameter-table td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        
+        .parameter-table th {
+            background: #f7fafc;
+            font-weight: bold;
+        }
+        
+        .code-block {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        .risk-tier {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9pt;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .high-risk { background: #dc2626; }
+        .medium-risk { background: #f59e0b; }
+        .low-risk { background: #22c55e; }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .footnote {
+            font-size: 9pt;
+            color: #666;
+            font-style: italic;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .step-number {
+            background: #3b82f6;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10pt;
+            margin-right: 8px;
+        }
+        
+        @media print {
+            body { margin: 0; padding: 15mm; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>HRDD Risk Assessment Tool</h1>
+        <h2>Mathematical Formulation & Implementation Guide</h2>
+        <div class="version">Focus-Based Risk Allocation with Country-Specific Coverage Distribution</div>
+        <div class="version">December 2024</div>
+    </div>
+
+    <h2>1) Overview</h2>
+    
+    <p>This document provides the complete mathematical formulation for a coverage-based Human Rights Due Diligence (HRDD) risk assessment system. The methodology incorporates country-specific coverage distribution, focus-based targeting, and real-time effectiveness tracking to optimize risk management strategies across multinational supply chains.</p>
+
+    <h2>2) Portfolio Risk Foundation</h2>
+
+    <h3><span class="step-number">1</span>Volume-Weighted Baseline Risk</h3>
+    
+    <div class="formula">
+        B = (Σᵢ wᵢ · bᵢ) / Σᵢ wᵢ
+    </div>
+    
+    <p><strong>Where:</strong></p>
+    <ul>
+        <li><code>wᵢ</code> = volume weight for country i</li>
+        <li><code>bᵢ</code> = baseline risk score for country i (0-100)</li>
+        <li><code>B</code> = portfolio baseline risk</li>
+    </ul>
+
+    <h3><span class="step-number">2</span>Risk Concentration Factor</h3>
+    
+    <div class="formula">
+        C = (Σᵢ (wᵢ/W) · bᵢ²) / B²
+    </div>
+    
+    <p><strong>Properties:</strong></p>
+    <ul>
+        <li><code>C ≥ 1</code> always (mathematical constraint)</li>
+        <li><code>C = 1</code> when all countries have identical risk</li>
+        <li><code>C > 1</code> indicates risk concentration in specific countries</li>
+        <li>Higher C values amplify focus effectiveness</li>
+    </ul>
+
+    <h2>3) Focus-Based Coverage Distribution</h2>
+
+    <p>Coverage is distributed individually to each country based on their risk profile, focus settings, and resource conservation constraints.</p>
+
+    <h3><span class="step-number">1</span>Focus Exponent Calculation</h3>
+    
+    <div class="formula-block">
+        φ = {
+          1 + f · (φₘₐₓ - 1) · (f/0.5)                    if f ≤ 0.5
+          1 + (φₘₐₓ - 1) · [0.5 + (f-0.5)^1.8 · 0.5]     if f > 0.5
+        }
+        
+        Where: φₘₐₓ = 3.5
+    </div>
+
+    <p><strong>Characteristics:</strong></p>
+    <ul>
+        <li>Linear growth up to 50% focus threshold</li>
+        <li>Accelerated exponential growth beyond 50% (exponent 1.8)</li>
+        <li>Maximum exponent of 3.5 for aggressive targeting</li>
+    </ul>
+
+    <h3><span class="step-number">2</span>Biased Risk Ratio with Compression</h3>
+    
+    <div class="formula-block">
+        rᵢ' = max(rₘᵢₙ, min(rₘₐₓ, (bᵢ/B)^φ))
+        
+        If f > 0.6 AND bᵢ/B < 0.8:
+          rᵢ' = rᵢ' · [0.3 + 0.7 · (bᵢ/B)²]
+    </div>
+
+    <p><strong>Parameters:</strong></p>
+    <table class="parameter-table">
+        <tr>
+            <th>Parameter</th>
+            <th>Value</th>
+            <th>Impact</th>
+        </tr>
+        <tr>
+            <td>rₘᵢₙ</td>
+            <td>0.05</td>
+            <td>Strong low-risk penalties</td>
+        </tr>
+        <tr>
+            <td>rₘₐₓ</td>
+            <td>5.0</td>
+            <td>High high-risk benefits</td>
+        </tr>
+        <tr>
+            <td>Compression</td>
+            <td>Quadratic</td>
+            <td>Additional low-risk reduction</td>
+        </tr>
+    </table>
+
+    <h3><span class="step-number">3</span>Country-Specific Coverage Allocation</h3>
+    
+    <div class="formula-block">
+        cᵢⱼ = cⱼ · [(1-f) + f · rᵢ'] · ηᵢ
+        
+        If f > 0.6 AND bᵢ ≥ 60:
+          cᵢⱼ = cᵢⱼ · [1 + (f-0.6) · 0.8]
+    </div>
+
+    <p><strong>Where:</strong></p>
+    <ul>
+        <li><code>cᵢⱼ</code> = coverage for country i, tool j</li>
+        <li><code>cⱼ</code> = base coverage for tool j</li>
+        <li><code>ηᵢ</code> = resource conservation factor</li>
+        <li>Additional 0.8x boost for very high-risk countries at high focus</li>
+    </ul>
+
+    <div class="info-box">
+        <h4>Resource Conservation</h4>
+        <p>The system maintains total resource usage close to original levels while allowing up to 30% expansion for high-focus scenarios to accommodate targeting benefits.</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>4) Country-Specific Transparency Calculation</h2>
+
+    <h3><span class="step-number">1</span>Per-Country Category Transparency</h3>
+    
+    <div class="formula">
+        For each country i and category k:
+        <br><br>
+        Tᵢₖ = 1 - ∏ⱼ∈Jₖ (1 - (cᵢⱼ/100) · (eⱼᵇᵃˢᵉ + eⱼᵘˢᵉʳ)/2)
+    </div>
+
+    <p><strong>Tool Categories:</strong></p>
+    <table class="parameter-table">
+        <tr>
+            <th>Category</th>
+            <th>Tools</th>
+            <th>Base Effectiveness</th>
+            <th>Category Weight (αₖ)</th>
+        </tr>
+        <tr>
+            <td>Worker Voice</td>
+            <td>Continuous (j=0), Surveys (j=1)</td>
+            <td>90%, 45%</td>
+            <td>1.0</td>
+        </tr>
+        <tr>
+            <td>Audit</td>
+            <td>Unannounced (j=2), Announced (j=3)</td>
+            <td>25%, 15%</td>
+            <td>0.85</td>
+        </tr>
+        <tr>
+            <td>Passive</td>
+            <td>Self-Report (j=4), Desk-Based (j=5)</td>
+            <td>12%, 5%</td>
+            <td>0.70</td>
+        </tr>
+    </table>
+
+    <h3><span class="step-number">2</span>Combined Country Transparency</h3>
+    
+    <div class="formula">
+        Tᵢ = min(1 - ∏ₖ₌₁³ (1 - Tᵢₖ · αₖ), 0.90)
+    </div>
+
+    <h3><span class="step-number">3</span>Portfolio-Wide Transparency</h3>
+    
+    <div class="formula">
+        T = (Σᵢ wᵢ · Tᵢ) / Σᵢ wᵢ
+    </div>
+
+    <p>This represents the volume-weighted average transparency across all countries in the portfolio, accounting for their individual coverage allocations.</p>
+
+    <h2>5) Focus Multiplier System</h2>
+
+    <h3><span class="step-number">1</span>Portfolio Focus Multiplier</h3>
+    
+    <div class="formula">
+        Fₘ = (1 - f · γ) + f · γ · C
+        <br><br>
+        Where: γ = 2.75 (focus concentration weight)
+    </div>
+
+    <h3><span class="step-number">2</span>Country-Specific Focus Multipliers</h3>
+    
+    <div class="formula-block">
+        For each country i:
+        
+        If f > 0.6 AND bᵢ ≥ 70:
+          Fᵢ = Fₘ · [1 + (f-0.6) · 0.5]
+        Else:
+          Fᵢ = (1 - f · γ) + f · γ · rᵢ'
+    </div>
+
+    <p><strong>Ultra-High-Risk Bonus:</strong> Countries with baseline risk ≥70 and focus >60% receive additional multiplier benefits up to 20% extra effectiveness.</p>
+
+    <h2>6) Response Effectiveness</h2>
+
+    <div class="formula">
+        R = (Σⱼ rⱼ · ρⱼ) / Σⱼ rⱼ
+    </div>
+
+    <p><strong>Where:</strong></p>
+    <ul>
+        <li><code>rⱼ</code> = response strategy weight for method j</li>
+        <li><code>ρⱼ</code> = response effectiveness rate for method j (0-100%)</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <h2>7) Final Managed Risk Calculation</h2>
+
+    <h3><span class="step-number">1</span>Individual Country Managed Risk</h3>
+    
+    <div class="formula">
+        mᵢ = max(0, bᵢ · [1 - Tᵢ · R · Fᵢ])
+    </div>
+
+    <h3><span class="step-number">2</span>Portfolio Managed Risk</h3>
+    
+    <div class="formula">
+        M = (Σᵢ wᵢ · mᵢ) / Σᵢ wᵢ
+    </div>
+
+    <h2>8) Focus Effectiveness Metrics</h2>
+
+    <p>The system provides comprehensive metrics to evaluate how effectively the focus strategy is targeting high-risk countries.</p>
+
+    <h3>Risk Tier Classification</h3>
+    <ul>
+        <li><span class="risk-tier high-risk">High Risk</span>: bᵢ ≥ 60</li>
+        <li><span class="risk-tier medium-risk">Medium Risk</span>: 40 ≤ bᵢ < 60</li>
+        <li><span class="risk-tier low-risk">Low Risk</span>: bᵢ < 40</li>
+    </ul>
+
+    <h3>Effectiveness Measures</h3>
+    
+    <div class="formula-block">
+        For each risk tier:
+        ē_tier = (Σᵢ∈tier (bᵢ - mᵢ)/bᵢ · 100) / |tier|
+        
+        Differential Benefit = ē_high - ē_low
+        
+        Focus Effectiveness = min(100, (Differential Benefit)/(f · 50) · 100)
+    </div>
+
+    <p><strong>Performance Indicators:</strong></p>
+    <ul>
+        <li><strong>Focus Effectiveness ≥70%:</strong> Excellent targeting</li>
+        <li><strong>Focus Effectiveness 40-70%:</strong> Moderate targeting</li>
+        <li><strong>Focus Effectiveness <40%:</strong> Poor targeting, strategy adjustment needed</li>
+    </ul>
+
+    <h2>9) Implementation Parameters</h2>
+
+    <h3>Focus Parameters</h3>
+    <table class="parameter-table">
+        <tr>
+            <th>Parameter</th>
+            <th>Value</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>φₘᵢₙ</td>
+            <td>1.0</td>
+            <td>Minimum focus exponent (no bias)</td>
+        </tr>
+        <tr>
+            <td>φₘₐₓ</td>
+            <td>3.5</td>
+            <td>Maximum focus exponent (aggressive targeting)</td>
+        </tr>
+        <tr>
+            <td>rₘᵢₙ</td>
+            <td>0.05</td>
+            <td>Minimum risk ratio (strong low-risk penalty)</td>
+        </tr>
+        <tr>
+            <td>rₘₐₓ</td>
+            <td>5.0</td>
+            <td>Maximum risk ratio (strong high-risk benefit)</td>
+        </tr>
+        <tr>
+            <td>γ</td>
+            <td>2.75</td>
+            <td>Focus concentration weight</td>
+        </tr>
+        <tr>
+            <td>Resource expansion</td>
+            <td>30%</td>
+            <td>Maximum allowed resource increase at high focus</td>
+        </tr>
+    </table>
+
+    <h3>Default Coverage Values</h3>
+    <ul>
+        <li><strong>Continuous Worker Voice:</strong> 5% (rare, expensive)</li>
+        <li><strong>Worker Surveys:</strong> 15% (moderate deployment)</li>
+        <li><strong>Unannounced Audits:</strong> 25% (targeted approach)</li>
+        <li><strong>Announced Audits:</strong> 60% (common practice)</li>
+        <li><strong>Supplier Self-Reporting:</strong> 80% (widespread)</li>
+        <li><strong>Desk-Based Assessment:</strong> 90% (universal baseline)</li>
+    </ul>
+
+    <h3>Focus Strategy Guidelines</h3>
+    <table class="parameter-table">
+        <tr>
+            <th>Focus Level</th>
+            <th>Strategy Type</th>
+            <th>Recommended Use</th>
+        </tr>
+        <tr>
+            <td>f = 0.1 - 0.3</td>
+            <td>Legacy audit programs</td>
+            <td>Calendar-driven, even spread</td>
+        </tr>
+        <tr>
+            <td>f = 0.4 - 0.6</td>
+            <td>Risk-led programs</td>
+            <td>Periodic risk-based allocation</td>
+        </tr>
+        <tr>
+            <td>f = 0.7 - 0.9</td>
+            <td>Continuous voice + risk triage</td>
+            <td>Highly targeted</td>
+        </tr>
+        <tr>
+            <td>f = 0.9 - 1.0</td>
+            <td>Crisis response mode</td>
+            <td>Emergency surge to hotspots</td>
+        </tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>10) Worked Example</h2>
+
+    <h3>Portfolio Setup</h3>
+    <p>Three countries with focus level f = 0.8:</p>
+    <ul>
+        <li><strong>Country A:</strong> wₐ = 0.5, bₐ = 80 <span class="risk-tier high-risk">High Risk</span></li>
+        <li><strong>Country B:</strong> wᵦ = 0.3, bᵦ = 50 <span class="risk-tier medium-risk">Medium Risk</span></li>
+        <li><strong>Country C:</strong> wᵧ = 0.2, bᵧ = 20 <span class="risk-tier low-risk">Low Risk</span></li>
+    </ul>
+
+    <h3>Step 1: Portfolio Metrics</h3>
+    <div class="code-block">
+B = (0.5×80 + 0.3×50 + 0.2×20) / (0.5+0.3+0.2) = 59
+C = [(0.5×80² + 0.3×50² + 0.2×20²) / (0.5+0.3+0.2)] / 59² = 1.42
+    </div>
+
+    <h3>Step 2: Focus Calculations</h3>
+    <div class="code-block">
+φ = 1 + (3.5-1) × [0.5 + (0.8-0.5)^1.8 × 0.5] = 2.65
+
+Country A: rₐ' = min(5, (80/59)^2.65) = 2.84
+Country B: rᵦ' = (50/59)^2.65 = 0.53
+Country C: rᵧ' = max(0.05, (20/59)^2.65) = 0.05 (compression applied)
+    </div>
+
+    <h3>Step 3: Coverage Allocation Example (Unannounced Audits, base 25%)</h3>
+    <div class="code-block">
+Country A: cₐ = 25 × [(1-0.8) + 0.8×2.84] × 1.32 = 82.9%
+         (High-risk bonus: 82.9 × 1.16 = 96.2%)
+Country B: cᵦ = 25 × [(1-0.8) + 0.8×0.53] = 15.6%
+Country C: cᵧ = 25 × [(1-0.8) + 0.8×0.05] = 6.0%
+    </div>
+
+    <h3>Step 4: Expected Outcomes</h3>
+    <ul>
+        <li><strong>Country A:</strong> Receives 96% audit coverage (high targeting)</li>
+        <li><strong>Country B:</strong> Receives 16% audit coverage (moderate reduction)</li>
+        <li><strong>Country C:</strong> Receives 6% audit coverage (minimal allocation)</li>
+        <li><strong>Differential Benefit:</strong> High-risk countries receive 16x more coverage than low-risk</li>
+        <li><strong>Resource Conservation:</strong> Total usage ≈ 130% of baseline (within 30% limit)</li>
+    </ul>
+
+    <h2>11) Key Behavioral Properties</h2>
+
+    <div class="info-box">
+        <h4>Monotonic Coverage Response</h4>
+        <p>Increasing coverage for any tool always increases transparency T, ensuring predictable and logical system behavior.</p>
+    </div>
+
+    <div class="info-box">
+        <h4>Realistic Bounds</h4>
+        <ul>
+            <li>Maximum transparency: 90% (some violations always remain hidden)</li>
+            <li>Minimum managed risk: 0 (cannot be negative)</li>
+            <li>Country coverage: 0-100% (practical implementation limits)</li>
+        </ul>
+    </div>
+
+    <div class="info-box">
+        <h4>Focus Effectiveness Validation</h4>
+        <ul>
+            <li>Real-time measurement prevents ineffective focus strategies</li>
+            <li>Differential benefit tracking ensures high-risk countries receive meaningful advantages</li>
+            <li>Performance scoring guides strategy optimization</li>
+        </ul>
+    </div>
+
+    <div class="info-box">
+        <h4>Resource Conservation with Flexibility</h4>
+        <ul>
+            <li>Base resource usage maintained across portfolio</li>
+            <li>Up to 30% expansion allowed for high-focus scenarios</li>
+            <li>Proportional scaling preserves relative allocations</li>
+        </ul>
+    </div>
+
+    <div class="footnote">
+        <p><strong>Document Version:</strong> Current | <strong>Last Updated:</strong> December 2024 | <strong>Implementation:</strong> HRDD Risk Assessment Tool with Country-Specific Coverage Distribution</p>
+        <p><strong>Technical Notes:</strong> All calculations maintain numerical stability through bounded parameters. Focus effectiveness metrics provide real-time validation of targeting success. Country-specific coverage ensures realistic resource allocation while maximizing risk reduction impact.</p>
+    </div>
+</body>
+</html>
