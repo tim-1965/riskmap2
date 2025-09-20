@@ -469,12 +469,12 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const effectivenessDescriptions = [
-    'Base effectiveness: 90%. Real-time worker reporting reveals most hidden issues.',
-    'Base effectiveness: 45%. Structured surveys capture systemic patterns.',
-    'Base effectiveness: 25%. Surprise audits catch unprepared violations.',
-    'Base effectiveness: 15%. Announced audits allow preparation/concealment.',
-    'Base effectiveness: 12%. Self-reporting has inherent transparency limitations.',
-    'Base effectiveness: 5%. Desk-based assessment reveals only visible risks.'
+    'Real-time anonymous feedback direct from workers can reveal almost all issues.',
+    'Periodic anonymous worker surveys can snapshot many risks if suppliers not involved.',
+    'Surprise audits catch unprepared visibile risks and some social risks.',
+    'Announced audits allow are generally poor at identifying social risks.',
+    'Self-reporting has inherent transparency limitations and is likely ineffective.',
+    'Desk-based assessment is likely ineffective.'
   ];
 
   const categoryInfo = [
@@ -531,30 +531,23 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       <div style="font-size: 12px; color: #6b7280; font-style: italic;">
         ${effectivenessDescriptions[index]}
       </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
-        <input type="number" min="0" max="100" value="${localTransparency[index]}" id="transparencyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
-        <span style="font-size: 12px; color: #6b7280; font-weight: 500;">%</span>
+      <div style="padding-top: 4px;">
+        <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="width: 100%; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: ${categoryColor};">
       </div>
     `;
     transparencyContainer.appendChild(transparencyControl);
 
     const rangeInput = document.getElementById(`transparency_${index}`);
-    const numberInput = document.getElementById(`transparencyNum_${index}`);
     const updateTransparencyValue = (value, options = {}) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
 
       localTransparency[index] = newValue;
       rangeInput.value = newValue;
-      numberInput.value = newValue;
-
-      updateTransparency(options);
+        updateTransparency(options);
     };
 
     rangeInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value, { notify: false }));
     rangeInput.addEventListener('change', (e) => updateTransparencyValue(e.target.value));
-    numberInput.addEventListener('input', (e) => updateTransparencyValue(e.target.value, { notify: false }));
-    numberInput.addEventListener('change', (e) => updateTransparencyValue(e.target.value));
   });
 
   ensurePanel3ResizeListener();
@@ -565,7 +558,6 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     localTransparency = [...riskEngine.defaultTransparencyEffectiveness];
     localTransparency.forEach((effectiveness, index) => {
       document.getElementById(`transparency_${index}`).value = effectiveness;
-      document.getElementById(`transparencyNum_${index}`).value = effectiveness;
     });
     updateTransparency();
     schedulePanel3Alignment();
@@ -1233,7 +1225,7 @@ export function createCountrySelectionPanel(containerId, { countries, selectedCo
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Click countries on the map above to select them</li>
           <li>Or use the dropdown to add countries</li>
-          <li>Set volume for each country (higher = more influence on risk)</li>
+          <li>Set weighting for each country (higher = more influence on risk)</li>
           <li>Click 'Remove' to deselect countries</li>
         </ul>
       </div>
@@ -1417,7 +1409,7 @@ export function updateSelectedCountriesDisplay(selectedCountries, countries, cou
 
   selectedCountries.forEach((countryCode, index) => {
     const country = countries.find(c => c.isoCode === countryCode);
-    const volume = countryVolumes[countryCode] ?? 1;
+    const volume = countryVolumes[countryCode] ?? 10;
 
     const countryItem = document.createElement('div');
     countryItem.style.cssText = `
@@ -1434,7 +1426,7 @@ export function updateSelectedCountriesDisplay(selectedCountries, countries, cou
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <label style="font-size: 14px; color: #6b7280; font-weight: 500;">Volume:</label>
+          <label style="font-size: 14px; color: #6b7280; font-weight: 500;">Weighting:</label>
           <input type="number" min="0" value="${volume}" id="volume_${countryCode}"
                  style="width: 80px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
         </div>

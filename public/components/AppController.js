@@ -477,10 +477,9 @@ export class AppController {
 
     // Top-level shell (header + panel nav + status bar)
     this.containerElement.innerHTML = `
-       <div style="min-height:100vh;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;">
-        <div style="max-width:1600px;margin:0 auto;padding:20px;">
-          <header id="hrddAppHeader" style="position:sticky;top:0;z-index:120;margin-bottom:16px;">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);backdrop-filter:blur(4px);">
+      <div style="min-height:100vh;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;">
+        <header id="hrddAppHeader" style="position:sticky;top:0;z-index:200;background:rgba(248,250,252,0.95);padding:20px 20px 12px;box-sizing:border-box;">
+          <div class="hrdd-header-card" style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);backdrop-filter:blur(4px);">
               <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                 <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
                 <p style="font-size:15px;color:#4b5563;margin:0;">Complete 5-Panel Coverage-Based Risk Management and Effectiveness Analysis</p>
@@ -515,22 +514,23 @@ export class AppController {
             </div>
 
             <style>
-              @media (max-width: 768px) {
-                #hrddAppHeader { top: 0; }
-                #hrddAppHeader > div { padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
-                #hrddAppHeader h1 { font-size: 22px !important; }
-                #hrddAppHeader p { font-size: 13px !important; }
-                #hrddAppHeader .panel-nav { gap: 4px; }
-                #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
-                #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
-              }
-            </style>
-          </header>
+            @media (max-width: 768px) {
+              #hrddAppHeader { padding: 12px; }
+              #hrddAppHeader .hrdd-header-card { padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
+              #hrddAppHeader h1 { font-size: 22px !important; }
+              #hrddAppHeader p { font-size: 13px !important; }
+              #hrddAppHeader .panel-nav { gap: 4px; }
+              #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
+              #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
+            }
+          </style>
+        </header>
 
+        <main style="width:100%;max-width:1600px;margin:16px auto 0;padding:0 20px 40px;box-sizing:border-box;">
           <div id="panelContent">
             ${this.renderCurrentPanel()}
           </div>
-        </div>
+        </main>
       </div>
     `;
   }
