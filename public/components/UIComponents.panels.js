@@ -57,7 +57,8 @@ function ensurePanel3ResizeListener() {
   panel3ResizeListenerAttached = true;
 }
 
-export function createRiskComparisonPanel(containerId, { baselineRisk, managedRisk, selectedCountries }) {
+// ENHANCED: Risk comparison panel with focus effectiveness display
+export function createRiskComparisonPanel(containerId, { baselineRisk, managedRisk, selectedCountries, focusEffectivenessMetrics = null }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -101,6 +102,75 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
   const changeDetail = Math.abs(absoluteReduction) > 0
     ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
     : 'Risk level unchanged';
+
+  // ENHANCED: Focus effectiveness metrics display
+  const focusMetricsHtml = focusEffectivenessMetrics ? `
+    <div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 1px solid #bae6fd;">
+      <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #0c4a6e; text-align: center;">
+        Focus Targeting Effectiveness (${Math.round(focusEffectivenessMetrics.focus * 100)}% focus level)
+      </h4>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
+          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">HIGH RISK</div>
+          <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${focusEffectivenessMetrics.highRiskCountries}</div>
+          <div style="font-size: 11px; color: #4b5563;">countries</div>
+          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
+            ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% avg reduction
+          </div>
+        </div>
+        
+        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
+          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">MEDIUM RISK</div>
+          <div style="font-size: 20px; font-weight: bold; color: #f59e0b;">${focusEffectivenessMetrics.mediumRiskCountries}</div>
+          <div style="font-size: 11px; color: #4b5563;">countries</div>
+          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
+            ${focusEffectivenessMetrics.avgReductionMedium.toFixed(1)}% avg reduction
+          </div>
+        </div>
+        
+        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
+          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">LOW RISK</div>
+          <div style="font-size: 20px; font-weight: bold; color: #22c55e;">${focusEffectivenessMetrics.lowRiskCountries}</div>
+          <div style="font-size: 11px; color: #4b5563;">countries</div>
+          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
+            ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% avg reduction
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
+        <div style="text-align: center; flex: 1;">
+          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">FOCUS EFFECTIVENESS</div>
+          <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
+            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+          </div>
+          <div style="font-size: 11px; color: #4b5563;">targeting success</div>
+        </div>
+        <div style="border-left: 1px solid #e0f2fe; height: 40px; margin: 0 16px;"></div>
+        <div style="text-align: center; flex: 1;">
+          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">DIFFERENTIAL BENEFIT</div>
+          <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
+            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+          </div>
+          <div style="font-size: 11px; color: #4b5563;">high vs low risk</div>
+        </div>
+      </div>
+      
+      ${focusEffectivenessMetrics.focus > 0.3 ? `
+        <div style="margin-top: 12px; padding: 10px; background: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#dcfce7' : '#fef3c7'}; border-radius: 6px; border: 1px solid ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#bbf7d0' : '#fcd34d'};">
+          <div style="font-size: 12px; color: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#15803d' : '#92400e'}; text-align: center;">
+            ${focusEffectivenessMetrics.focusEffectiveness >= 60 
+              ? '✓ Focus targeting is working effectively - high-risk countries receive significantly more benefit'
+              : focusEffectivenessMetrics.focusEffectiveness >= 30
+                ? '⚠ Focus targeting shows moderate effectiveness - consider adjusting strategy mix'
+                : '⚠ Focus targeting may need adjustment - differential benefits are limited'
+            }
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  ` : '';
 
   container.innerHTML = `
     <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
@@ -149,6 +219,8 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
           ${riskReduction > 0 ? 'Strategy shows improvement' : 'Consider refining your approach'}
         </span>
       </div>
+      
+      ${focusMetricsHtml}
     </div>
 
     <style>
@@ -156,6 +228,10 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
         div[style*="grid-template-columns: repeat(3, minmax(0, 1fr))"] {
           grid-template-columns: 1fr !important;
           gap: 16px !important;
+        }
+        div[style*="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))"] {
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+          gap: 12px !important;
         }
       }
     </style>
@@ -201,12 +277,12 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
       <div id="strategyContainer" style="margin-bottom: 20px;"></div>
 
       <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Coverage-Based Strategy:</h4>
+        <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Enhanced Coverage-Based Strategy:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
           <li>Higher coverage increases total transparency but with diminishing returns.</li>
           <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Passive</span>.</li>
-          <li>It is assumed that the maximum achievable detection of issues (ie: transparency) is 90% (some issues always remain hidden).</li>
+          <li><strong>NEW:</strong> Focus setting below distributes coverage based on country risk levels for maximum impact.</li>
         </ul>
       </div>
     </div>
@@ -272,12 +348,44 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   schedulePanel3Alignment();
 }
 
-export function createFocusPanel(containerId, { focus, onFocusChange }) {
+// ENHANCED: Focus panel with more detailed guidance and effectiveness tracking
+export function createFocusPanel(containerId, { focus, onFocusChange, focusEffectivenessMetrics = null }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
   let localFocus = typeof focus === 'number' ? focus : defaultFocusValue;
+
+  // ENHANCED: Focus effectiveness assessment
+  const focusEffectivenessHtml = focusEffectivenessMetrics && localFocus > 0.3 ? `
+    <div style="margin-top: 20px; padding: 16px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; border: 1px solid #bae6fd;">
+      <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #0c4a6e;">Focus Performance Analysis</h4>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
+          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">EFFECTIVENESS SCORE</div>
+          <div style="font-size: 18px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
+            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+          </div>
+        </div>
+        <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
+          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">DIFFERENTIAL BENEFIT</div>
+          <div style="font-size: 18px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
+            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+          </div>
+        </div>
+      </div>
+      
+      <div style="font-size: 12px; color: #0c4a6e; text-align: center;">
+        ${focusEffectivenessMetrics.focusEffectiveness >= 70 
+          ? '✓ Focus targeting is highly effective - high-risk countries benefit significantly'
+          : focusEffectivenessMetrics.focusEffectiveness >= 40
+            ? '⚠ Focus targeting shows moderate effectiveness - room for improvement'
+            : '⚠ Focus targeting may need adjustment - consider increasing focus level or revising strategy mix'
+        }
+      </div>
+    </div>
+  ` : '';
 
   container.innerHTML = `
     <div class="focus-panel" style="background: white; padding: 28px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #bfdbfe;">
@@ -307,7 +415,9 @@ export function createFocusPanel(containerId, { focus, onFocusChange }) {
         <li><strong>0.25 – 0.50:</strong> Most suppliers are actively monitored.</li>
         <li><strong>0.50 – 0.75:</strong> Active monitoring for medium and high risk suppliers.</li>
         <li><strong>0.75 – 1.00:</strong> Only high risk suppliers are actively monitored.</li>
-        </ul>
+      </ul>
+      
+      ${focusEffectivenessHtml}
     </div>
   `;
 
@@ -393,12 +503,12 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
        <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
       <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Understanding Transparency Effectiveness:</h4>
+        <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Enhanced Transparency Calculation:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li><strong>Base Effectiveness:</strong> Baseline rates of issue detection per tool.</li>
-          <li><strong>Diminishing Returns:</strong> Note that coverage by multiple tools yields decreasing marginal benefits.</li>
-          <li><strong>Category Overlap:</strong> Tools within categories are assumed to have overlapping coverage.</li>
-          <li><strong>Maximum Transparency:</strong> A 90% cap on detection is assumed on the basis some issues remain hidden.</li>
+          <li><strong>Base Effectiveness:</strong> Research-backed baseline rates of issue detection per tool.</li>
+          <li><strong>Country-Specific Distribution:</strong> Focus setting allocates coverage based on risk levels.</li>
+          <li><strong>Diminishing Returns:</strong> Multiple tools yield decreasing marginal benefits within categories.</li>
+          <li><strong>Maximum Transparency:</strong> 90% cap assumes some issues always remain hidden.</li>
         </ul>
       </div>
     </div>
@@ -651,7 +761,8 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
   });
 }
 
-export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus = 0, riskConcentration = 1, countryVolumes, countryRisks }) {
+// ENHANCED: Final results panel with comprehensive focus analysis
+export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk, selectedCountries, countries, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus = 0, riskConcentration = 1, countryVolumes, countryRisks, focusEffectivenessMetrics = null }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -778,6 +889,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       name: strategy?.name || 'Strategy',
       category: strategy?.category || 'Strategy',
       coverage: coverageValue,
+      coverageRange: strategy?.coverageRange || null,
       assumedEffectiveness,
       riskPoints,
       percentOfTotal,
@@ -836,11 +948,14 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
   const detectionBreakdownHtml = detectionBreakdown.length > 0
     ? detectionBreakdown.map(item => {
         const color = categoryColors[item.category] || '#3b82f6';
+        const coverageDisplay = item.coverageRange ? 
+          `Coverage: ${item.coverageRange} (focus-adjusted)` : 
+          `Coverage: ${formatNumber(item.coverage, 0)}%`;
         return `
           <div style="padding: 12px 14px; border: 1px solid ${color}30; border-left: 4px solid ${color}; border-radius: 8px; background-color: white; display: flex; flex-direction: column; gap: 6px;">
             <div style="font-weight: 600; color: #1f2937;">${item.name}</div>
             <div style="font-size: 12px; color: #4b5563;">
-              Coverage: ${formatNumber(item.coverage, 0)}% • Assumed detection: ${formatNumber(item.assumedEffectiveness, 0)}%
+              ${coverageDisplay} • Assumed detection: ${formatNumber(item.assumedEffectiveness, 0)}%
             </div>
             <div style="font-size: 12px; color: #1e40af;">
               Contributes ${formatNumber(item.riskPoints)} pts (${formatNumber(item.percentOfTotal)}% of total reduction)
@@ -864,20 +979,82 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       `).join('')
     : '<div style="padding: 12px 14px; border: 1px dashed #c4b5fd; border-radius: 8px; background-color: #f5f3ff; color: #5b21b6; font-size: 12px;">Allocate response effort in Panel 4 to translate detections into remediation.</div>';
 
+  // ENHANCED: Focus effectiveness analysis
+  const focusAnalysisHtml = focusEffectivenessMetrics && focusLevel > 0.3 ? `
+    <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px; border-left: 4px solid #3b82f6;">
+      <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1d4ed8;">Focus Targeting Analysis</h3>
+      <p style="font-size: 14px; color: #4b5563; margin-bottom: 20px;">
+        Your ${focusPercent}% focus setting concentrates resources on high-risk countries. Here's how effective this targeting has been:
+      </p>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+        <div style="padding: 16px; background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%); border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 8px;">FOCUS EFFECTIVENESS SCORE</div>
+          <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
+            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+          </div>
+          <div style="font-size: 12px; color: #92400e; margin-top: 4px;">targeting success</div>
+        </div>
+        
+        <div style="padding: 16px; background: linear-gradient(135deg, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#dcfce7' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fef3c7' : '#fee2e2'} 0%, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#a7f3d0' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fde68a' : '#fecaca'} 100%); border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 600; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-bottom: 8px;">DIFFERENTIAL BENEFIT</div>
+          <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
+            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+          </div>
+          <div style="font-size: 12px; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-top: 4px;">high vs low risk</div>
+        </div>
+        
+        <div style="padding: 16px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 600; color: #0c4a6e; margin-bottom: 8px;">COUNTRIES BY RISK TIER</div>
+          <div style="display: flex; justify-content: space-around; align-items: center;">
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #dc2626;">${focusEffectivenessMetrics.highRiskCountries}</div>
+              <div style="font-size: 10px; color: #0c4a6e;">High</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #f59e0b;">${focusEffectivenessMetrics.mediumRiskCountries}</div>
+              <div style="font-size: 10px; color: #0c4a6e;">Med</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: bold; color: #22c55e;">${focusEffectivenessMetrics.lowRiskCountries}</div>
+              <div style="font-size: 10px; color: #0c4a6e;">Low</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="padding: 16px; background: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#f0fdf4' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#fffbeb' : '#fef2f2'}; border-radius: 8px; border: 1px solid ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#bbf7d0' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#fcd34d' : '#fecaca'};">
+        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#166534' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#92400e' : '#991b1b'};">
+          Focus Performance Assessment
+        </h4>
+        <div style="font-size: 13px; color: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#166534' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#92400e' : '#991b1b'}; line-height: 1.5;">
+          ${focusEffectivenessMetrics.focusEffectiveness >= 60 
+            ? `✓ <strong>Excellent targeting:</strong> High-risk countries receive ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% average risk reduction vs ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% for low-risk countries. Your focus strategy is working very effectively.`
+            : focusEffectivenessMetrics.focusEffectiveness >= 30
+              ? `⚠ <strong>Moderate targeting:</strong> High-risk countries receive ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% average risk reduction vs ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% for low-risk countries. Consider increasing focus level or adjusting strategy mix.`
+              : `⚠ <strong>Limited targeting:</strong> High-risk countries receive ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% average risk reduction vs ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% for low-risk countries. Focus targeting may need significant adjustment.`
+          }
+        </div>
+      </div>
+    </div>
+  ` : '';
+
   container.innerHTML = `
     <div class="final-results-panel">
       <!-- RISK ASSESSMENT SUMMARY -->
       <div id="finalRiskSummary" style="margin-bottom: 32px;"></div>
 
+      ${focusAnalysisHtml}
+
       <!-- RISK TRANSFORMATION EXPLANATION -->
       <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
-        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">How Your HRDD Strategy Reduces Risk</h3>
+        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">How Your Enhanced HRDD Strategy Reduces Risk</h3>
         
         <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 20px;">
           <p style="font-size: 14px; margin: 0; color: #1e40af; line-height: 1.5;">
-            <strong>Your HRDD strategy transforms baseline risk through four key mechanisms:</strong> 
-            detecting issues through transparency tools, responding effectively when issues are found, 
-            focusing resources on high-risk countries, and leveraging portfolio concentration effects.
+            <strong>Your enhanced HRDD strategy transforms baseline risk through five key mechanisms:</strong> 
+            detecting issues through focus-adjusted transparency tools, responding effectively when issues are found, 
+            concentrating resources on high-risk countries, leveraging portfolio effects, and optimizing coverage allocation.
           </p>
         </div>
 
@@ -890,14 +1067,14 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
             <div style="flex: 1;">
               <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">Baseline Portfolio Risk</div>
               <div style="font-size: 24px; font-weight: bold; color: #92400e;">${formatNumber(baselineValue)}</div>
-              <div style="font-size: 12px; color: #a16207;">Starting risk level before HRDD strategy application</div>
+              <div style="font-size: 12px; color: #a16207;">Starting risk level before enhanced HRDD strategy application</div>
             </div>
           </div>
 
           <!-- Arrow -->
            <div style="text-align: center; color: #6b7280;">
             <div style="font-size: 20px;">↓</div>
-            <div style="font-size: 12px;">Apply Detection Coverage</div>
+            <div style="font-size: 12px;">Apply Focus-Adjusted Detection Coverage</div>
           </div>
 
           <!-- Step 2: After Detection -->
@@ -935,17 +1112,17 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           <!-- Arrow -->
           <div style="text-align: center; color: #6b7280;">
             <div style="font-size: 20px;">↓</div>
-            <div style="font-size: 12px;">Apply Focus & Concentration Effects</div>
+            <div style="font-size: 12px;">Apply Enhanced Focus & Concentration Effects</div>
           </div>
 
            <!-- Step 4: Final Result -->
            <div style="display: flex; align-items: center; padding: 16px; border-radius: 8px; background-color: #d1fae5; border: 1px solid #22c55e;">
             <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 16px;">4</div>
             <div style="flex: 1;">
-              <div style="font-weight: 600; color: #16a34a; margin-bottom: 4px;">Final Managed Risk (${focusPercent}% focus, ${concentrationFactor.toFixed(2)}× concentration)</div>
+              <div style="font-weight: 600; color: #16a34a; margin-bottom: 4px;">Final Enhanced Managed Risk (${focusPercent}% focus, ${concentrationFactor.toFixed(2)}× concentration)</div>
               <div style="font-size: 24px; font-weight: bold; color: #16a34a;">${formatNumber(finalManagedRisk)}</div>
               <div style="font-size: 12px; color: #15803d;">
-                Focus adjustments ${focusStageVerb} ${formatNumber(focusStageAmount)} pts
+                Enhanced focus adjustments ${focusStageVerb} ${formatNumber(focusStageAmount)} pts
                 (${formatNumber(focusStepPercent)}% of baseline • ${formatNumber(focusShareOfTotal)}% of total reduction)
               </div>
             </div>
@@ -954,7 +1131,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
 
         <!-- EFFECTIVENESS BREAKDOWN -->
         <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
-          <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #374151;">Strategy Impact Summary</h4>
+          <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #374151;">Enhanced Strategy Impact Summary</h4>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
             <div>
               <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">TOTAL RISK REDUCTION</div>
@@ -967,7 +1144,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
               <div style="font-size: 11px; color: #6b7280;">Transparency × Response</div>
             </div>
             <div>
-              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">FOCUS MULTIPLIER</div>
+              <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">ENHANCED FOCUS MULTIPLIER</div>
               <div style="font-size: 20px; font-weight: bold; color: #1d4ed8;">${formatNumber(focusMultiplier, 2)}×</div>
               <div style="font-size: 11px; color: #6b7280;">Resource concentration effect</div>
             </div>
@@ -979,15 +1156,15 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
         <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">How coverage & response choices reduce risk</h3>
         <p style="font-size: 13px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
-          Your configuration ${totalReductionVerb} ${formatNumber(totalReductionAmount)} pts of risk from the baseline.
+          Your enhanced configuration ${totalReductionVerb} ${formatNumber(totalReductionAmount)} pts of risk from the baseline.
           Panel 3 detection coverage ${detectionStageVerb} ${formatNumber(detectionStageAmount)} pts (~${formatNumber(detectionShareOfTotal)}% of the total change),
           while Panel 4 response allocation ${responseStageVerb} ${formatNumber(responseStageAmount)} pts (~${formatNumber(responseShareOfTotal)}%).
-          Focus settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts by concentrating effort on higher-risk countries.
+          Enhanced focus settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts by intelligently concentrating effort on higher-risk countries.
         </p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
           <div style="border: 1px solid #bfdbfe; background-color: #eff6ff; padding: 16px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px;">
             <div>
-              <div style="font-size: 14px; font-weight: 600; color: #1d4ed8;">Panel 3 · Detection coverage</div>
+              <div style="font-size: 14px; font-weight: 600; color: #1d4ed8;">Panel 3 · Enhanced Detection coverage</div>
               <div style="font-size: 12px; color: #1e40af;">${detectionStageVerb.charAt(0).toUpperCase() + detectionStageVerb.slice(1)} ${formatNumber(detectionStageAmount)} pts (~${formatNumber(detectionShareOfTotal)}% of total)</div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1005,11 +1182,11 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           </div>
         </div>
         <div style="margin-top: 16px; font-size: 12px; color: #475569; background-color: #f1f5f9; border: 1px dashed #cbd5f5; border-radius: 8px; padding: 12px;">
-          Focus and concentration settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts (${formatNumber(focusShareOfTotal)}% of the total change) by steering coverage and remediation toward the highest-risk parts of your portfolio.
+          Enhanced focus and concentration settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts (${formatNumber(focusShareOfTotal)}% of the total change) by intelligently steering coverage and remediation toward the highest-risk parts of your portfolio with advanced risk-based allocation algorithms.
         </div>
       </div>
 
-      <div style="display: flex; gap: 12px; justify-content: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+      <div style="display: flex; gap: 12px; justify-content: center; padding-top: 20px; border-top: 1px solid #e5e7eb; flex-wrap: wrap;">
         <button onclick="window.hrddApp.generatePDFReport()" style="padding: 12px 24px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
           Generate Report
         </button>
@@ -1026,7 +1203,8 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
  createRiskComparisonPanel('finalRiskSummary', {
     baselineRisk,
     managedRisk,
-    selectedCountries
+    selectedCountries,
+    focusEffectivenessMetrics
   });
 }
 
@@ -1122,8 +1300,8 @@ export function createResultsPanel(containerId, { selectedCountries, countries, 
       <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 16px; border-radius: 8px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Next Steps:</h4>
         <p style="font-size: 14px; margin: 0; line-height: 1.5;">
-          This baseline risk will be used in Panels 3-4 to configure HRDD strategies and
-          in Panel 5 to calculate managed risk levels after implementing controls.
+          This baseline risk will be used in Panels 3-4 to configure enhanced HRDD strategies and
+          in Panel 5 to calculate managed risk levels with intelligent focus-based allocation.
         </p>
       </div>
     </div>

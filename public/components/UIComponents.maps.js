@@ -410,7 +410,6 @@ function createManagedRiskDisplay(selectedCountries, managedRisk, managedRisksBy
   return managedRiskDisplay;
 }
 
-
 function addZoomControls(svg, zoom) {
   const zoomControls = svg.append('g')
     .attr('class', 'zoom-controls')
@@ -495,10 +494,17 @@ function showMapTooltip(event, countryData, countryRisks, countryMetadata = new 
   .style('top', (pageY - 10) + 'px');
 }
 
+// ENHANCED: Show detailed tooltip with focus effects for comparison maps
 function showComparisonMapTooltip(event, countryData, countryRisks, countryMetadata = new Map(), nameLookup = new Map(), mapType = 'baseline', options = {}) {
   const countryId = countryData.__isoCode;
   const countryName = countryMetadata.get(countryId)?.name || countryData.properties?.NAME || countryId || 'Unknown';
-  const { highlight = false, fallbackRisks = null } = options;
+  const { 
+    highlight = false, 
+    fallbackRisks = null, 
+    baselineRisks = null, 
+    focus = 0,
+    focusEffectivenessMetrics = null 
+  } = options;
 
   let risk = countryId ? countryRisks?.[countryId] : undefined;
   if (!Number.isFinite(risk) && fallbackRisks && countryId) {
@@ -508,16 +514,49 @@ function showComparisonMapTooltip(event, countryData, countryRisks, countryMetad
     }
   }
 
+  // ENHANCED: Calculate focus benefits for this country
+  let focusBenefitInfo = '';
+  if (mapType === 'managed' && baselineRisks && countryId && Number.isFinite(focus)) {
+    const baselineRisk = baselineRisks[countryId];
+    if (Number.isFinite(baselineRisk) && Number.isFinite(risk)) {
+      const riskReduction = baselineRisk - risk;
+      const reductionPercentage = baselineRisk > 0 ? (riskReduction / baselineRisk) * 100 : 0;
+      
+      // Determine focus benefit level
+      const baselinePortfolioRisk = focusEffectivenessMetrics?.riskData?.reduce((sum, d) => sum + d.baselineRisk, 0) / 
+                                   (focusEffectivenessMetrics?.riskData?.length || 1) || baselineRisk;
+      const focusBenefitLevel = riskEngine.getFocusBenefitLevel(baselineRisk, baselinePortfolioRisk, focus);
+      
+      const benefitDescriptions = {
+        'high': 'High priority - receives enhanced coverage',
+        'medium': 'Medium priority - receives moderate boost',
+        'standard': 'Standard coverage allocation',
+        'reduced': 'Lower priority - reduced coverage allocation'
+      };
+      
+      focusBenefitInfo = `
+        <div style="border-top: 1px solid #444; margin: 6px 0; padding-top: 6px;">
+          <div style="color: ${riskReduction > 0 ? '#22c55e' : '#ef4444'};">
+            <strong>Risk Reduction:</strong> ${riskReduction.toFixed(1)} pts (${reductionPercentage.toFixed(1)}%)
+          </div>
+          <div style="font-size: 11px; color: #ccc; margin-top: 4px;">
+            <strong>Focus Impact:</strong> ${benefitDescriptions[focusBenefitLevel] || 'Standard coverage'}
+          </div>
+        </div>
+      `;
+    }
+  }
+
   d3.selectAll('.map-tooltip').remove();
 
   const tooltip = d3.select('body')
     .append('div')
     .attr('class', 'map-tooltip')
     .style('position', 'absolute')
-    .style('background', 'rgba(0, 0, 0, 0.8)')
+    .style('background', 'rgba(0, 0, 0, 0.9)')
     .style('color', 'white')
-    .style('padding', '8px')
-    .style('border-radius', '4px')
+    .style('padding', '12px')
+    .style('border-radius', '8px')
     .style('font-size', '12px')
     .style('pointer-events', 'none')
     .style('opacity', 0);
@@ -527,12 +566,12 @@ function showComparisonMapTooltip(event, countryData, countryRisks, countryMetad
   const pageX = event.pageX || 0;
   const pageY = event.pageY || 0;
   const riskLabel = mapType === 'managed' ? 'Managed Risk (Coverage-Based)' : 'Baseline Risk';
-  const highlightNote = highlight ? '<br/><em>Selected Country</em>' : '';
+  const highlightNote = highlight ? '<br/><em style="color: #3b82f6;">Selected Country</em>' : '';
 
   tooltip.html(`
     <strong>${countryName}</strong><br/>
     ${Number.isFinite(risk) ?
-      `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}${highlightNote}` :
+      `${riskLabel}: ${risk.toFixed(1)}<br/>Risk Band: ${riskEngine.getRiskBand(risk)}${highlightNote}${focusBenefitInfo}` :
       'No data available'}
   `)
   .style('left', (pageX + 10) + 'px')
@@ -705,7 +744,8 @@ function renderGlobalD3Map(worldData, { container, countries, countryRisks, widt
   }
 }
 
-function renderComparisonD3Map(worldData, { container, countries, countryRisks, selectedCountryRisks, selectedCountries, width, height, mapType }) {
+// ENHANCED: Render comparison map with focus visualization
+function renderComparisonD3Map(worldData, { container, countries, countryRisks, selectedCountryRisks, selectedCountries, width, height, mapType, baselineRisks = null, focus = 0, focusEffectivenessMetrics = null }) {
   const wrapper = document.getElementById(container);
   if (!wrapper) return;
   wrapper.innerHTML = '';
@@ -796,6 +836,7 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
       return undefined;
     };
 
+    // ENHANCED: Add visual indicators based on focus benefit levels
     const countryGroup = mapGroup.append('g').attr('class', 'countries');
 
     countryGroup.selectAll('path.country')
@@ -811,12 +852,54 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
         const risk = getSelectedRisk(countryId);
         return Number.isFinite(risk) ? riskEngine.getRiskColor(risk) : '#e5e7eb';
       })
-      .style('stroke', '#111827')
-      .style('stroke-width', 1.5)
-      .style('opacity', 0.95)
+      .style('stroke', d => {
+        // ENHANCED: Different stroke styles based on focus benefits
+        const countryId = d.__isoCode;
+        if (mapType === 'managed' && baselineRisks && Number.isFinite(focus) && focus > 0.3) {
+          const baselineRisk = baselineRisks[countryId];
+          const baselinePortfolioRisk = focusEffectivenessMetrics?.riskData?.reduce((sum, d) => sum + d.baselineRisk, 0) / 
+                                       (focusEffectivenessMetrics?.riskData?.length || 1) || baselineRisk;
+          const focusBenefitLevel = riskEngine.getFocusBenefitLevel(baselineRisk, baselinePortfolioRisk, focus);
+          
+          switch (focusBenefitLevel) {
+            case 'high': return '#059669'; // Green for high benefit
+            case 'medium': return '#3b82f6'; // Blue for medium benefit
+            case 'reduced': return '#dc2626'; // Red for reduced allocation
+            default: return '#111827'; // Default black
+          }
+        }
+        return '#111827';
+      })
+      .style('stroke-width', d => {
+        // ENHANCED: Thicker borders for high-benefit countries
+        const countryId = d.__isoCode;
+        if (mapType === 'managed' && baselineRisks && Number.isFinite(focus) && focus > 0.3) {
+          const baselineRisk = baselineRisks[countryId];
+          const baselinePortfolioRisk = focusEffectivenessMetrics?.riskData?.reduce((sum, d) => sum + d.baselineRisk, 0) / 
+                                       (focusEffectivenessMetrics?.riskData?.length || 1) || baselineRisk;
+          const focusBenefitLevel = riskEngine.getFocusBenefitLevel(baselineRisk, baselinePortfolioRisk, focus);
+          return focusBenefitLevel === 'high' ? 2.5 : focusBenefitLevel === 'medium' ? 2.0 : 1.5;
+        }
+        return 1.5;
+      })
+      .style('opacity', d => {
+        // ENHANCED: Slight opacity differences to show focus allocation
+        const countryId = d.__isoCode;
+        if (mapType === 'managed' && baselineRisks && Number.isFinite(focus) && focus > 0.5) {
+          const baselineRisk = baselineRisks[countryId];
+          const baselinePortfolioRisk = focusEffectivenessMetrics?.riskData?.reduce((sum, d) => sum + d.baselineRisk, 0) / 
+                                       (focusEffectivenessMetrics?.riskData?.length || 1) || baselineRisk;
+          const focusBenefitLevel = riskEngine.getFocusBenefitLevel(baselineRisk, baselinePortfolioRisk, focus);
+          return focusBenefitLevel === 'high' ? 1.0 : focusBenefitLevel === 'reduced' ? 0.8 : 0.95;
+        }
+        return 0.95;
+      })
       .on('mouseover', (event, d) => showComparisonMapTooltip(event, d, highlightRisks, metadataMap, nameLookup, mapType, {
         highlight: true,
-        fallbackRisks: countryRisks
+        fallbackRisks: countryRisks,
+        baselineRisks: baselineRisks,
+        focus: focus,
+        focusEffectivenessMetrics: focusEffectivenessMetrics
       }))
       .on('mouseout', () => hideMapTooltip());
 
@@ -972,7 +1055,6 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
 
   const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
 
-
   try {
     await loadD3();
     const worldData = await loadWorldData();
@@ -1008,16 +1090,24 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
   }
 }
 
-export async function createComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType = 'baseline', managedRisk = null, baselineRisk = null, selectedCountryRisks = null, height = 400, width = 960 }) {
+// ENHANCED: Create comparison map with focus visualization
+export async function createComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType = 'baseline', managedRisk = null, baselineRisk = null, selectedCountryRisks = null, height = 400, width = 960, baselineRisks = null, focus = 0, focusEffectivenessMetrics = null }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const formatOverallRisk = (value) => Number.isFinite(value) ? value.toFixed(1) : 'N/A';
-  const displayTitle = mapType === 'managed'
+  
+  // ENHANCED: Show focus information in title for managed risk maps
+  let displayTitle = mapType === 'managed'
     ? `${title} - Overall Risk: ${formatOverallRisk(managedRisk)}`
     : mapType === 'baseline'
       ? `${title} - Overall Risk: ${formatOverallRisk(baselineRisk)}`
       : title;
+
+  if (mapType === 'managed' && Number.isFinite(focus) && focus > 0.3) {
+    const focusPercent = Math.round(focus * 100);
+    displayTitle += ` (${focusPercent}% focus)`;
+  }
 
   container.innerHTML = `
     <div class="comparison-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
@@ -1030,6 +1120,15 @@ export async function createComparisonMap(containerId, { countries, countryRisks
       </div>
       <div class="risk-legend" id="compMapLegend-${mapType}" style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
       </div>
+      
+      ${mapType === 'managed' && Number.isFinite(focus) && focus > 0.3 ? `
+        <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 12px; border-radius: 6px; margin-top: 16px; font-size: 13px;">
+          <strong>Focus Visualization:</strong> 
+          <span style="color: #059669;">Green borders</span> = High priority countries (enhanced coverage), 
+          <span style="color: #3b82f6;">Blue borders</span> = Medium priority, 
+          <span style="color: #dc2626;">Red borders</span> = Lower priority
+        </div>
+      ` : ''}
     </div>
   `;
 
@@ -1100,6 +1199,7 @@ export async function createComparisonMap(containerId, { countries, countryRisks
       return baselineHighlight;
     })();
 
+    // ENHANCED: Pass additional parameters for focus visualization
     renderComparisonD3Map(worldData, {
       container: `comp-map-wrapper-${mapType}`,
       countries,
@@ -1108,7 +1208,10 @@ export async function createComparisonMap(containerId, { countries, countryRisks
       selectedCountries: safeSelectedCountries,
       width,
       height: Math.max(height, 300),
-      mapType
+      mapType,
+      baselineRisks: baselineRisks,
+      focus: focus,
+      focusEffectivenessMetrics: focusEffectivenessMetrics
     });
 
     createMapLegend(`compMapLegend-${mapType}`);
