@@ -288,20 +288,19 @@ export function createFocusPanel(containerId, { focus, onFocusChange, focusEffec
       <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #0c4a6e;">Focus Performance Analysis</h4>
       
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-        <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
-          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">EFFECTIVENESS SCORE</div>
+         <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
+          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">Focus effectiveness</div>
           <div style="font-size: 18px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+            ${Math.abs(focusEffectivenessMetrics.focusEffectiveness).toFixed(0)}%
           </div>
         </div>
         <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0f2fe; text-align: center;">
-          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">DIFFERENTIAL BENEFIT</div>
+          <div style="font-size: 11px; color: #0369a1; margin-bottom: 2px;">Reduction Achieved</div>
           <div style="font-size: 18px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+            ${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
           </div>
         </div>
       </div>
-      
     </div>
   ` : '';
 
@@ -902,16 +901,16 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
         <div style="padding: 16px; background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%); border-radius: 8px; text-align: center;">
           <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 8px;">FOCUS EFFECTIVENESS SCORE</div>
-          <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+           <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
+            ${Math.abs(focusEffectivenessMetrics.focusEffectiveness).toFixed(0)}%
           </div>
           <div style="font-size: 12px; color: #92400e; margin-top: 4px;">targeting success</div>
         </div>
         
         <div style="padding: 16px; background: linear-gradient(135deg, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#dcfce7' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fef3c7' : '#fee2e2'} 0%, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#a7f3d0' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fde68a' : '#fecaca'} 100%); border-radius: 8px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-bottom: 8px;">DIFFERENTIAL BENEFIT</div>
+           <div style="font-size: 11px; font-weight: 600; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-bottom: 8px;">Reduction Achieved</div>
           <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+            ${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
           </div>
           <div style="font-size: 12px; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-top: 4px;">high vs low risk</div>
         </div>
