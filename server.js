@@ -14,11 +14,25 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Serve static component files for embedding
-const componentsDir = path.join(__dirname, 'public', 'components');
+// Serve static assets for embedding
+const publicDir = path.join(__dirname, 'public');
+const componentsDir = path.join(publicDir, 'components');
+
+app.use(express.static(publicDir));
 app.use('/components', express.static(componentsDir));
 app.use('/public/components', express.static(componentsDir));
+console.log('Static asset directory configured at:', publicDir);
 console.log('Static component directory configured at:', componentsDir);
+
+// Serve Wix embed shell
+const wixEmbedPath = path.join(__dirname, 'wix-embed.html');
+app.get(['/wix-embed', '/wix-embed.html'], (req, res, next) => {
+  res.sendFile(wixEmbedPath, err => {
+    if (err) {
+      next(err);
+    }
+  });
+});
 
 // Country schema
 const countrySchema = new mongoose.Schema({
