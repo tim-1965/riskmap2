@@ -105,70 +105,24 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
 
   // ENHANCED: Focus effectiveness metrics display
   const focusMetricsHtml = focusEffectivenessMetrics ? `
-    <div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 1px solid #bae6fd;">
-      <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #0c4a6e; text-align: center;">
-        Focus Targeting Effectiveness (${Math.round(focusEffectivenessMetrics.focus * 100)}% focus level)
-      </h4>
-      
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 16px;">
-        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">HIGH RISK</div>
-          <div style="font-size: 20px; font-weight: bold; color: #dc2626;">${focusEffectivenessMetrics.highRiskCountries}</div>
-          <div style="font-size: 11px; color: #4b5563;">countries</div>
-          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
-            ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% avg reduction
-          </div>
-        </div>
-        
-        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">MEDIUM RISK</div>
-          <div style="font-size: 20px; font-weight: bold; color: #f59e0b;">${focusEffectivenessMetrics.mediumRiskCountries}</div>
-          <div style="font-size: 11px; color: #4b5563;">countries</div>
-          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
-            ${focusEffectivenessMetrics.avgReductionMedium.toFixed(1)}% avg reduction
-          </div>
-        </div>
-        
-        <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">LOW RISK</div>
-          <div style="font-size: 20px; font-weight: bold; color: #22c55e;">${focusEffectivenessMetrics.lowRiskCountries}</div>
-          <div style="font-size: 11px; color: #4b5563;">countries</div>
-          <div style="font-size: 12px; font-weight: 600; color: #059669; margin-top: 4px;">
-            ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% avg reduction
-          </div>
-        </div>
-      </div>
-      
+    <div style="margin-top: 24px;">
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
         <div style="text-align: center; flex: 1;">
           <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">FOCUS EFFECTIVENESS</div>
           <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.focusEffectiveness.toFixed(0)}%
+            ${Math.abs(focusEffectivenessMetrics.focusEffectiveness).toFixed(0)}%
           </div>
           <div style="font-size: 11px; color: #4b5563;">targeting success</div>
         </div>
         <div style="border-left: 1px solid #e0f2fe; height: 40px; margin: 0 16px;"></div>
         <div style="text-align: center; flex: 1;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">DIFFERENTIAL BENEFIT</div>
+          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">REDUCTION ACHIEVED</div>
           <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            +${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
+            ${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
           </div>
           <div style="font-size: 11px; color: #4b5563;">high vs low risk</div>
         </div>
       </div>
-      
-      ${focusEffectivenessMetrics.focus > 0.3 ? `
-        <div style="margin-top: 12px; padding: 10px; background: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#dcfce7' : '#fef3c7'}; border-radius: 6px; border: 1px solid ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#bbf7d0' : '#fcd34d'};">
-          <div style="font-size: 12px; color: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#15803d' : '#92400e'}; text-align: center;">
-            ${focusEffectivenessMetrics.focusEffectiveness >= 60 
-              ? '✓ Focus targeting is working effectively - high-risk countries receive significantly more benefit'
-              : focusEffectivenessMetrics.focusEffectiveness >= 30
-                ? '⚠ Focus targeting shows moderate effectiveness - consider adjusting strategy mix'
-                : '⚠ Focus targeting may need adjustment - differential benefits are limited'
-            }
-          </div>
-        </div>
-      ` : ''}
     </div>
   ` : '';
 
@@ -244,12 +198,12 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const strategyDescriptions = [
-    'Percentage of suppliers with always-on worker voice systems capturing daily conditions.',
-    'Percentage of suppliers surveyed with structured worker surveys annually.',
-    'Percentage of suppliers receiving unannounced third-party social audits.',
-    'Percentage of suppliers receiving planned or supplier-arranged social audits.',
-    'Percentage of suppliers completing self-reporting and self-assessment questionnaires.',
-    'Percentage of suppliers assessed through desk-based risk assessment only.'
+    'Percent. of suppliers with always-on worker voice and daily feedback.',
+    'Percent. of suppliers surveyed with annual structured worker surveys.',
+    'Percent. of suppliers having unannounced third-party social audits.',
+    'Percent. of suppliers having planned / self-arranged social audits.',
+    'Percent. of suppliers doing self-reporting and self-assessment questionnaires.',
+    'Percent. of suppliers assessed through desk-based risk assessment.'
   ];
 
   const categoryInfo = [
