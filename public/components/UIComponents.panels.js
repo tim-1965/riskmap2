@@ -302,14 +302,6 @@ export function createFocusPanel(containerId, { focus, onFocusChange, focusEffec
         </div>
       </div>
       
-      <div style="font-size: 12px; color: #0c4a6e; text-align: center;">
-        ${focusEffectivenessMetrics.focusEffectiveness >= 70 
-          ? '✓ Focus targeting is highly effective - high-risk countries benefit significantly'
-          : focusEffectivenessMetrics.focusEffectiveness >= 40
-            ? '⚠ Focus targeting shows moderate effectiveness - room for improvement'
-            : '⚠ Focus targeting may need adjustment - consider increasing focus level or revising strategy mix'
-        }
-      </div>
     </div>
   ` : '';
 
