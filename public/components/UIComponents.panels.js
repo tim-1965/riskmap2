@@ -396,8 +396,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const effectivenessAssumptions = [
     'Effective: workers are likely to say if there are issues.',
-    'Intermittently effective: can show systemic issues at the time of the survey.',
-    'Can be effective where issues are easily visible, likely ineffective otherwise.',
+    'Intermittently effective if done well: can show issues survey time.',
+    'Can be effective where issues are easily visible.',
     'Not that effective as preparation/concealment of issues is possible.',
     'Not effective as suppliers tend not to self-report problems.',
     'Not effective as desk-based assessment is remote.'
