@@ -103,30 +103,7 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
     ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
     : 'Risk level unchanged';
 
-  // ENHANCED: Focus effectiveness metrics display
-  const focusMetricsHtml = focusEffectivenessMetrics ? `
-    <div style="margin-top: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e0f2fe;">
-        <div style="text-align: center; flex: 1;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">FOCUS EFFECTIVENESS</div>
-          <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${Math.abs(focusEffectivenessMetrics.focusEffectiveness).toFixed(0)}%
-          </div>
-          <div style="font-size: 11px; color: #4b5563;">targeting success</div>
-        </div>
-        <div style="border-left: 1px solid #e0f2fe; height: 40px; margin: 0 16px;"></div>
-        <div style="text-align: center; flex: 1;">
-          <div style="font-size: 11px; font-weight: 500; color: #0369a1; margin-bottom: 4px;">REDUCTION ACHIEVED</div>
-          <div style="font-size: 24px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
-          </div>
-          <div style="font-size: 11px; color: #4b5563;">high vs low risk</div>
-        </div>
-      </div>
-    </div>
-  ` : '';
-
-  container.innerHTML = `
+    container.innerHTML = `
     <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
       <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
         Risk Assessment Summary
@@ -183,14 +160,11 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
           grid-template-columns: 1fr !important;
           gap: 16px !important;
         }
-        div[style*="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))"] {
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
-          gap: 12px !important;
-        }
-      }
+          }
     </style>
   `;
 }
+
 
 export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChange, onFocusChange }) {
   const container = document.getElementById(containerId);
@@ -482,11 +456,12 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       <label for="transparency_${index}" style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
         <span style="color: ${categoryColor}; font-weight: 600;">[${category?.name || 'Other'}]</span> ${label}
       </label>
-      <div style="font-size: 12px; color: #6b7280; font-style: italic;">
-        ${effectivenessDescriptions[index]}
-      </div>
       <div style="padding-top: 4px;">
         <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="width: 100%; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: ${categoryColor};">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b7280; margin-top: 4px;">
+          <span style="text-align: left;">Ineffective</span>
+          <span style="text-align: right;">Fully effective</span>
+        </div>
       </div>
     `;
     transparencyContainer.appendChild(transparencyControl);
