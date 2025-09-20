@@ -64,6 +64,10 @@ export class DataService {
     }
   }
 
+  async getCountries() {
+    return this.getAllCountries();
+  }
+
   async getCountry(isoCode) {
     try {
       return await this._fetchWithCache(`${this.baseURL}/countries/${isoCode}`);

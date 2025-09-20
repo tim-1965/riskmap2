@@ -83,12 +83,19 @@ export class AppController {
 
     this.calculateAllRisks = this.calculateAllRisks.bind(this);
     this.calculateBaselineRisk = this.calculateBaselineRisk.bind(this);
-    this.calculateManagedRisk = this.calculateManagedRisk.bind(this);
+   this.calculateManagedRisk = this.calculateManagedRisk.bind(this);
 
     this.generatePDFReport = this.generatePDFReport.bind(this);
     this.exportConfiguration = this.exportConfiguration.bind(this);
     this.saveState = this.saveState.bind(this);
     this.restoreState = this.restoreState.bind(this);
+    this.loadSavedState = this.loadSavedState.bind(this);
+    this.loadDemoData = this.loadDemoData.bind(this);
+    this.getState = this.getState.bind(this);
+    this.setState = this.setState.bind(this);
+    this.setCurrentStep = this.setCurrentStep.bind(this);
+    this.addCountry = this.addCountry.bind(this);
+    this.removeCountry = this.removeCountry.bind(this);
     this.destroy = this.destroy.bind(this);
 
     // Container
@@ -136,8 +143,8 @@ export class AppController {
       this.state.apiHealthy = true;
       this.state.countries = Array.isArray(countries) ? countries : [];
 
-      // Restore any prior state (if present)
-      this.restoreState();
+       // Restore any prior state (if present)
+      this.loadSavedState();
 
       // Compute initial risks
       this.calculateAllRisks();
@@ -246,7 +253,31 @@ export class AppController {
   }
 
   onCountrySelect(nextSelected) {
-    this.state.selectedCountries = Array.isArray(nextSelected) ? [...nextSelected] : [];
+    let updatedSelection;
+
+    if (Array.isArray(nextSelected)) {
+      updatedSelection = nextSelected
+        .map(code => (typeof code === 'string' ? code.trim().toUpperCase() : ''))
+        .filter(Boolean);
+    } else if (typeof nextSelected === 'string') {
+      const trimmed = nextSelected.trim().toUpperCase();
+      if (!trimmed) return;
+      const selectionSet = new Set(
+        Array.isArray(this.state.selectedCountries)
+          ? this.state.selectedCountries.map(code => (typeof code === 'string' ? code.trim().toUpperCase() : code))
+          : []
+      );
+      if (selectionSet.has(trimmed)) {
+        selectionSet.delete(trimmed);
+      } else {
+        selectionSet.add(trimmed);
+      }
+      updatedSelection = Array.from(selectionSet);
+    } else {
+      updatedSelection = [];
+    }
+
+    this.state.selectedCountries = updatedSelection;
     this.state.isDirty = true;
 
     // Recalculate baseline + managed on selection
@@ -255,6 +286,7 @@ export class AppController {
     this.state.lastUpdate = new Date().toISOString();
     this.updateUI();
   }
+  
 
   onVolumeChange(isoCode, volume) {
     clearTimeout(this.volumeTimeout);
@@ -343,9 +375,48 @@ export class AppController {
     }
   }
 
-  updateUI() {
+   updateUI() {
     // Fast re-render for panels that depend on managed/baseline numbers
     if (!this.containerElement) return;
+
+    const apiIndicator = this.containerElement.querySelector('#hrddApiIndicator');
+    if (apiIndicator) {
+      apiIndicator.style.backgroundColor = this.state.apiHealthy ? '#22c55e' : '#ef4444';
+    }
+
+    const apiStatus = this.containerElement.querySelector('#hrddApiStatus');
+    if (apiStatus) {
+      apiStatus.textContent = `API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}`;
+    }
+
+    const countryCountEl = this.containerElement.querySelector('#hrddCountryCount');
+    if (countryCountEl) {
+      countryCountEl.textContent = this.state.countries.length;
+    }
+
+    const selectedCountEl = this.containerElement.querySelector('#hrddSelectedCount');
+    if (selectedCountEl) {
+      selectedCountEl.textContent = this.state.selectedCountries.length;
+    }
+
+    const lastUpdatedGroup = this.containerElement.querySelector('#hrddLastUpdatedGroup');
+    const lastUpdatedEl = this.containerElement.querySelector('#hrddLastUpdated');
+    if (lastUpdatedGroup && lastUpdatedEl) {
+      if (this.state.lastUpdate) {
+        let formatted = '';
+        try {
+          formatted = new Date(this.state.lastUpdate).toLocaleTimeString();
+        } catch (error) {
+          formatted = '';
+        }
+        lastUpdatedGroup.style.display = 'flex';
+        lastUpdatedEl.textContent = formatted ? `Updated: ${formatted}` : '';
+      } else {
+        lastUpdatedGroup.style.display = 'none';
+        lastUpdatedEl.textContent = '';
+      }
+    }
+
     const panelContent = this.containerElement.querySelector('#panelContent');
     if (panelContent) {
       panelContent.innerHTML = this.renderCurrentPanel();
@@ -367,44 +438,45 @@ export class AppController {
     this.containerElement.innerHTML = `
       <div style="min-height:100vh;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;">
         <div style="max-width:1600px;margin:0 auto;padding:20px;">
-          <header id="hrddAppHeader" style="position:sticky;top:16px;z-index:90;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;margin-bottom:24px;padding:18px 24px;background:rgba(255,255,255,0.95);border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,0.12);backdrop-filter:blur(6px);">
-            <div style="display:flex;flex-direction:column;gap:6px;">
-              <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
+          <header id="hrddAppHeader" style="position:sticky;top:0;z-index:120;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;margin-bottom:16px;padding:12px 20px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);backdrop-filter:blur(4px);">              <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
               <p style="font-size:15px;color:#4b5563;margin:0;">Complete 5-Panel Coverage-Based Risk Management and Effectiveness Analysis</p>
             </div>
 
-            <div class="panel-nav" style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+           <div class="panel-nav" style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
               ${[1,2,3,4,5].map(panel => `
                 <button onclick="window.hrddApp.setCurrentPanel(${panel})"
-                        style="padding:8px 14px;border:2px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
-                               background:${this.state.currentPanel===panel?'#2563eb':'white'};
+                        style="padding:6px 12px;border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
+                               background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
                                color:${this.state.currentPanel===panel?'white':'#475569'};
-                               border-radius:9999px;cursor:pointer;font-weight:600;transition:transform .2s,box-shadow .2s;font-size:13px;box-shadow:${this.state.currentPanel===panel?'0 10px 24px rgba(37,99,235,.3)':'0 4px 10px rgba(15,23,42,.08)'};">
+                               border-radius:9999px;cursor:pointer;font-weight:600;transition:transform .2s,box-shadow .2s;font-size:12px;box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};">
                   ${panel}. ${panelTitles[panel]}
                 </button>
               `).join('')}
             </div>
 
-            <div class="status-bar" style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;color:#475569;flex-wrap:wrap;">
+            <div class="status-bar" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
               <div style="display:flex;align-items:center;gap:6px;">
-                <div style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
-                <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
+                <div id="hrddApiIndicator" style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
+                <span id="hrddApiStatus">API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
               </div>
               <div style="opacity:.5;">•</div>
-              <div>${this.state.countries.length} Countries</div>
+              <div><span id="hrddCountryCount">${this.state.countries.length}</span> Countries</div>
               <div style="opacity:.5;">•</div>
-              <div>${this.state.selectedCountries.length} Selected</div>
-              ${this.state.lastUpdate ? `<div style="opacity:.5;">•</div><div>Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}</div>` : ''}
+              <div><span id="hrddSelectedCount">${this.state.selectedCountries.length}</span> Selected</div>
+              <div id="hrddLastUpdatedGroup" style="display:${this.state.lastUpdate ? 'flex' : 'none'};align-items:center;gap:4px;">
+                <div style="opacity:.5;">•</div>
+                <div id="hrddLastUpdated">${this.state.lastUpdate ? `Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}` : ''}</div>
+              </div>
             </div>
 
             <style>
               @media (max-width: 768px) {
-                #hrddAppHeader { top: 0; padding: 14px 16px; margin-bottom: 16px; border-radius: 10px; }
+                #hrddAppHeader { top: 0; padding: 10px 14px; margin-bottom: 14px; border-radius: 10px; box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
                 #hrddAppHeader h1 { font-size: 22px !important; }
                 #hrddAppHeader p { font-size: 13px !important; }
-                #hrddAppHeader .panel-nav { gap: 6px; }
-                #hrddAppHeader .panel-nav button { font-size: 12px !important; padding: 7px 12px !important; }
-                #hrddAppHeader .status-bar { gap: 8px; font-size: 12px !important; }
+                #hrddAppHeader .panel-nav { gap: 4px; }
+                #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
+                #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
               }
             </style>
           </header>
@@ -654,19 +726,7 @@ export class AppController {
       this.state.isGeneratingReport = true;
       this.updateUI();
 
-      await pdfGenerator.generate({
-        baselineRisk: this.state.baselineRisk,
-        managedRisk: this.state.managedRisk,
-        selectedCountries: this.state.selectedCountries,
-        focusEffectiveness: this.state.focusEffectivenessMetrics,
-        hrddStrategy: this.state.hrddStrategy,
-        transparencyEffectiveness: this.state.transparencyEffectiveness,
-        responsivenessStrategy: this.state.responsivenessStrategy,
-        responsivenessEffectiveness: this.state.responsivenessEffectiveness,
-        focus: this.state.focus,
-        riskConcentration: this.state.riskConcentration,
-        countryVolumes: this.state.countryVolumes
-      });
+    await pdfGenerator.generateReport(this);
 
       console.log('PDF generated');
     } catch (error) {
@@ -708,8 +768,239 @@ export class AppController {
       console.log('Configuration exported');
     } catch (error) {
       console.error('Failed to export configuration:', error);
-    }
+       }
   };
+
+  /* ----------------------- External Integrations ------------------------ */
+
+  loadSavedState() {
+    const restored = this.restoreState();
+    if (restored) {
+      this.calculateAllRisks();
+      this.calculateBaselineRisk();
+      this.calculateManagedRisk();
+      this.state.lastUpdate = new Date().toISOString();
+      this.state.isDirty = false;
+    }
+    return restored;
+  }
+
+  loadDemoData() {
+    const demoCountries = [
+      {
+        name: 'Bangladesh',
+        isoCode: 'BGD',
+        itucRightsRating: 68,
+        corruptionIndex: 25,
+        migrantWorkerPrevalence: 42,
+        wjpIndex: 30,
+        walkfreeSlaveryIndex: 48,
+        baseRiskScore: 58
+      },
+      {
+        name: 'Vietnam',
+        isoCode: 'VNM',
+        itucRightsRating: 64,
+        corruptionIndex: 36,
+        migrantWorkerPrevalence: 29,
+        wjpIndex: 45,
+        walkfreeSlaveryIndex: 38,
+        baseRiskScore: 52
+      },
+      {
+        name: 'Brazil',
+        isoCode: 'BRA',
+        itucRightsRating: 52,
+        corruptionIndex: 38,
+        migrantWorkerPrevalence: 24,
+        wjpIndex: 54,
+        walkfreeSlaveryIndex: 32,
+        baseRiskScore: 46
+      },
+      {
+        name: 'Germany',
+        isoCode: 'DEU',
+        itucRightsRating: 18,
+        corruptionIndex: 80,
+        migrantWorkerPrevalence: 12,
+        wjpIndex: 79,
+        walkfreeSlaveryIndex: 15,
+        baseRiskScore: 28
+      }
+    ];
+
+    this.state.countries = demoCountries.map(country => ({ ...country }));
+    this.state.selectedCountries = demoCountries.slice(0, 3).map(country => country.isoCode);
+    this.state.countryVolumes = {
+      BGD: 30,
+      VNM: 20,
+      BRA: 15
+    };
+    this.state.apiHealthy = false;
+    this.state.error = null;
+    this.state.loading = false;
+
+    this.calculateAllRisks();
+    this.calculateBaselineRisk();
+    this.calculateManagedRisk();
+
+    this.state.lastUpdate = new Date().toISOString();
+    this.state.isDirty = false;
+
+    if (this.containerElement) {
+      this.render();
+    }
+  }
+
+  getState() {
+    const snapshot = {
+      ...this.state,
+      countries: Array.isArray(this.state.countries)
+        ? this.state.countries.map(country => ({ ...country }))
+        : [],
+      selectedCountries: Array.isArray(this.state.selectedCountries)
+        ? [...this.state.selectedCountries]
+        : [],
+      weights: Array.isArray(this.state.weights) ? [...this.state.weights] : [],
+      hrddStrategy: Array.isArray(this.state.hrddStrategy) ? [...this.state.hrddStrategy] : [],
+      transparencyEffectiveness: Array.isArray(this.state.transparencyEffectiveness)
+        ? [...this.state.transparencyEffectiveness]
+        : [],
+      responsivenessStrategy: Array.isArray(this.state.responsivenessStrategy)
+        ? [...this.state.responsivenessStrategy]
+        : [],
+      responsivenessEffectiveness: Array.isArray(this.state.responsivenessEffectiveness)
+        ? [...this.state.responsivenessEffectiveness]
+        : [],
+      countryVolumes: this.state.countryVolumes ? { ...this.state.countryVolumes } : {},
+      countryRisks: this.state.countryRisks ? { ...this.state.countryRisks } : {},
+      countryManagedRisks: this.state.countryManagedRisks ? { ...this.state.countryManagedRisks } : {}
+    };
+
+    try {
+      if (typeof structuredClone === 'function') {
+        return structuredClone(snapshot);
+      }
+    } catch (error) {
+      console.warn('structuredClone failed, falling back to JSON clone:', error);
+    }
+
+    return JSON.parse(JSON.stringify(snapshot));
+  }
+
+  setState(partialState = {}) {
+    if (!partialState || typeof partialState !== 'object') {
+      return;
+    }
+
+    const assignArray = (key, normalizer) => {
+      if (Array.isArray(partialState[key])) {
+        this.state[key] = normalizer(partialState[key]);
+        return true;
+      }
+      return false;
+    };
+
+    assignArray('countries', arr => arr.map(country => ({ ...country })));
+    assignArray('selectedCountries', arr => Array.from(new Set(arr)));
+    assignArray('weights', arr => [...arr]);
+    assignArray('hrddStrategy', arr => [...arr]);
+    assignArray('transparencyEffectiveness', arr => this.normalizeTransparencyEffectiveness(arr));
+    assignArray('responsivenessStrategy', arr => [...arr]);
+    assignArray('responsivenessEffectiveness', arr => this.normalizeResponsivenessEffectiveness(arr));
+
+    if (typeof partialState.focus === 'number') {
+      this.state.focus = this.clamp01(partialState.focus);
+    }
+    if (typeof partialState.riskConcentration === 'number') {
+      this.state.riskConcentration = partialState.riskConcentration;
+    }
+    if (partialState.countryVolumes && typeof partialState.countryVolumes === 'object') {
+      const normalizedVolumes = {};
+      Object.entries(partialState.countryVolumes).forEach(([key, value]) => {
+        if (typeof key === 'string') {
+          normalizedVolumes[key.trim().toUpperCase()] = value;
+        }
+      });
+      this.state.countryVolumes = normalizedVolumes;
+    }
+    if (partialState.countryRisks && typeof partialState.countryRisks === 'object') {
+      const normalizedRisks = {};
+      Object.entries(partialState.countryRisks).forEach(([key, value]) => {
+        if (typeof key === 'string') {
+          normalizedRisks[key.trim().toUpperCase()] = value;
+        }
+      });
+      this.state.countryRisks = normalizedRisks;
+    }
+    if (partialState.countryManagedRisks && typeof partialState.countryManagedRisks === 'object') {
+      const normalizedManaged = {};
+      Object.entries(partialState.countryManagedRisks).forEach(([key, value]) => {
+        if (typeof key === 'string') {
+          normalizedManaged[key.trim().toUpperCase()] = value;
+        }
+      });
+      this.state.countryManagedRisks = normalizedManaged;
+    }
+
+    const simpleKeys = [
+      'baselineRisk',
+      'managedRisk',
+      'loading',
+      'error',
+      'apiHealthy',
+      'lastUpdate',
+      'isGeneratingReport'
+    ];
+    simpleKeys.forEach(key => {
+      if (partialState[key] !== undefined) {
+        this.state[key] = partialState[key];
+      }
+    });
+
+    if (typeof partialState.currentPanel === 'number') {
+      this.state.currentPanel = Math.max(1, Math.min(5, Math.round(partialState.currentPanel)));
+    }
+
+    this.state.isDirty = true;
+    this.calculateAllRisks();
+    this.calculateBaselineRisk();
+    this.calculateManagedRisk();
+    this.state.lastUpdate = new Date().toISOString();
+
+    if (this.containerElement) {
+      this.render();
+    }
+  }
+
+  setCurrentStep(step) {
+    this.setCurrentPanel(step);
+  }
+
+  addCountry(isoCode, volume = null) {
+    if (typeof isoCode !== 'string') return;
+    const normalized = isoCode.trim().toUpperCase();
+    if (!normalized) return;
+
+    const nextSelection = Array.from(new Set([...this.state.selectedCountries, normalized]));
+    this.onCountrySelect(nextSelection);
+
+    if (volume !== null) {
+      this.onVolumeChange(normalized, volume);
+    }
+  }
+
+  removeCountry(isoCode) {
+    if (typeof isoCode !== 'string') return;
+    const normalized = isoCode.trim().toUpperCase();
+    if (!normalized) return;
+
+    const { [normalized]: _, ...remainingVolumes } = this.state.countryVolumes || {};
+    this.state.countryVolumes = remainingVolumes;
+
+    const nextSelection = this.state.selectedCountries.filter(code => code !== normalized);
+    this.onCountrySelect(nextSelection);
+  }
 
   /* ---------------------------- Persistence -------------------------- */
 
@@ -736,20 +1027,61 @@ export class AppController {
   restoreState() {
     try {
       const raw = localStorage.getItem('hrdd_app_state_v5');
-      if (!raw) return;
+      if (!raw) return false;
       const parsed = JSON.parse(raw);
 
-      if (Array.isArray(parsed.weights)) this.state.weights = parsed.weights;
-      if (Array.isArray(parsed.selectedCountries)) this.state.selectedCountries = parsed.selectedCountries;
-      if (Array.isArray(parsed.hrddStrategy)) this.state.hrddStrategy = parsed.hrddStrategy;
-      if (Array.isArray(parsed.transparencyEffectiveness)) this.state.transparencyEffectiveness = parsed.transparencyEffectiveness;
-      if (Array.isArray(parsed.responsivenessStrategy)) this.state.responsivenessStrategy = parsed.responsivenessStrategy;
-      if (Array.isArray(parsed.responsivenessEffectiveness)) this.state.responsivenessEffectiveness = parsed.responsivenessEffectiveness;
-      if (typeof parsed.focus === 'number') this.state.focus = this.clamp01(parsed.focus);
-      if (typeof parsed.riskConcentration === 'number') this.state.riskConcentration = parsed.riskConcentration;
-      if (parsed.countryVolumes && typeof parsed.countryVolumes === 'object') this.state.countryVolumes = parsed.countryVolumes;
+      let restored = false;
+
+      if (Array.isArray(parsed.weights)) {
+        this.state.weights = [...parsed.weights];
+        restored = true;
+      }
+      if (Array.isArray(parsed.selectedCountries)) {
+        this.state.selectedCountries = parsed.selectedCountries
+          .map(code => (typeof code === 'string' ? code.trim().toUpperCase() : ''))
+          .filter(Boolean);
+        restored = true;
+      }
+      if (Array.isArray(parsed.hrddStrategy)) {
+        this.state.hrddStrategy = [...parsed.hrddStrategy];
+        restored = true;
+      }
+      if (Array.isArray(parsed.transparencyEffectiveness)) {
+        this.state.transparencyEffectiveness = this.normalizeTransparencyEffectiveness(parsed.transparencyEffectiveness);
+        restored = true;
+      }
+      if (Array.isArray(parsed.responsivenessStrategy)) {
+        this.state.responsivenessStrategy = [...parsed.responsivenessStrategy];
+        restored = true;
+      }
+      if (Array.isArray(parsed.responsivenessEffectiveness)) {
+        this.state.responsivenessEffectiveness = this.normalizeResponsivenessEffectiveness(parsed.responsivenessEffectiveness);
+        restored = true;
+      }
+      if (typeof parsed.focus === 'number') {
+        this.state.focus = this.clamp01(parsed.focus);
+        restored = true;
+      }
+      if (typeof parsed.riskConcentration === 'number') {
+        this.state.riskConcentration = parsed.riskConcentration;
+        restored = true;
+      }
+      if (parsed.countryVolumes && typeof parsed.countryVolumes === 'object') {
+        const normalizedVolumes = {};
+        Object.entries(parsed.countryVolumes).forEach(([key, value]) => {
+          if (typeof key === 'string') {
+            normalizedVolumes[key.trim().toUpperCase()] = value;
+          }
+        });
+        this.state.countryVolumes = normalizedVolumes;
+        restored = true;
+      }
+
+      this.state.isDirty = false;
+      return restored;
     } catch (e) {
       console.warn('restoreState failed:', e);
+      return false;
     }
   }
 
