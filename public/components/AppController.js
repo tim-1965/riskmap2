@@ -128,6 +128,38 @@ export class AppController {
     });
   }
 
+  normalizeResponsivenessEffectiveness(arr) {
+    const defaultValues = Array.isArray(riskEngine?.defaultResponsivenessEffectiveness)
+      ? [...riskEngine.defaultResponsivenessEffectiveness]
+      : [70, 85, 35, 25, 15, 5];
+
+    const expectedLength = Array.isArray(riskEngine?.responsivenessLabels)
+      ? riskEngine.responsivenessLabels.length
+      : defaultValues.length;
+
+    const sanitized = new Array(expectedLength);
+
+    for (let i = 0; i < expectedLength; i += 1) {
+      const fallback = Number.isFinite(defaultValues[i]) ? defaultValues[i] : 0;
+
+      if (!Array.isArray(arr)) {
+        sanitized[i] = Math.max(0, Math.min(100, fallback));
+        continue;
+      }
+
+      const parsed = parseFloat(arr[i]);
+      if (!Number.isFinite(parsed)) {
+        sanitized[i] = Math.max(0, Math.min(100, fallback));
+        continue;
+      }
+
+      const scaled = Math.abs(parsed) <= 1 ? parsed * 100 : parsed;
+      sanitized[i] = Math.max(0, Math.min(100, scaled));
+    }
+
+    return sanitized;
+  }
+  
   clamp01(v) {
     const n = parseFloat(v);
     if (!Number.isFinite(n)) return 0;
