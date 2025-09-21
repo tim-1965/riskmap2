@@ -48,11 +48,11 @@ export class AppController {
       focus: typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6,
 
       // Strategy (coverage %) and effectiveness (%)
-      hrddStrategy: riskEngine.defaultHRDDStrategy || [5, 15, 25, 60, 80, 90],
+      hrddStrategy: riskEngine.defaultHRDDStrategy || [35, 15, 25, 60, 80, 90],
       transparencyEffectiveness: this.normalizeTransparencyEffectiveness(
         riskEngine.defaultTransparencyEffectiveness || [90, 45, 25, 15, 12, 5]
       ),
-      responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [20, 5, 25, 25, 10, 10],
+      responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [35, 5, 25, 25, 10, 10],
       responsivenessEffectiveness: this.normalizeResponsivenessEffectiveness(
         riskEngine.defaultResponsivenessEffectiveness || [70, 85, 35, 25, 15, 5]
       ),

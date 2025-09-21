@@ -272,7 +272,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
       <div id="strategyContainer" style="margin-bottom: 20px;"></div>
 
-       <div style="margin-top: auto; padding-top: 20px;">
+       <div style="margin-top: 16px;">
         <div data-panel3-info="strategy" style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px;">
           <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Enhanced Coverage-Based Strategy:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
@@ -493,15 +493,15 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     <div class="transparency-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; height: 100%;">
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Transparency Effectiveness</h2>
+        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Transparency effectiveness</h2>
         <button id="resetTransparency" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
           Reset to Default
         </button>
       </div>
 
-       <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
+       < <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
-      <div style="margin-top: auto; padding-top: 20px;">
+      <div style="margin-top: 16px;">
         <div data-panel3-info="transparency" style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
           <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Enhanced Transparency Calculation:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
@@ -600,9 +600,9 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
         </button>
       </div>
 
-     <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
+      <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
 
-      <div data-panel4-info="strategyDetails" style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
+      <div data-panel4-info="strategyDetails" style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 16px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategies:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Slider to the right = deeper investment in that remediation lever.</li>
@@ -693,8 +693,8 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
         </button>
       </div>
 
-      <div id="responsivenessEffectivenessContainer" style="margin-bottom: 20px;"></div>
-      <div data-panel4-info="effectivenessDetails" style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
+       <div id="responsivenessEffectivenessContainer" style="margin-bottom: 20px;"></div>
+      <div data-panel4-info="effectivenessDetails" style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: 16px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Interpreting Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Slider to the right means remediation outcomes are more impactful.</li>
