@@ -257,7 +257,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
           <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
           <li>Higher coverage increases total transparency but with diminishing returns.</li>
           <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Passive</span>.</li>
-          <li><strong>NEW:</strong> Focus setting below distributes coverage based on country risk levels for maximum impact.</li>
+          <li><strong>Use the focus setting below</strong> to distribute your coverage based on country risk levels for maximum impact.</li>
         </ul>
       </div>
     </div>
@@ -481,11 +481,10 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Enhanced Transparency Calculation:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li><strong>Base Effectiveness:</strong> Research-backed baseline rates of issue detection per tool.</li>
-          <li><strong>Country-Specific Distribution:</strong> Focus setting allocates coverage based on risk levels.</li>
-          <li><strong>Diminishing Returns:</strong> Multiple tools yield decreasing marginal benefits within categories.</li>
-          <li><strong>Maximum Transparency:</strong> 90% cap assumes some issues always remain hidden.</li>
-        </ul>
+          <li><strong>Effectiveness:</strong> Rates of risk detection achieved by each tool.</li>
+          <li><strong>Use the focus setting below</strong> to allocate your coverage based on country risk levels.</li>
+          <li><strong>Note diminishing returns:</strong> Tools are assumed to overlap in suppliers; the model has a 90% cap implemented on effectiveness (some risks may always remain hidden).</li>
+          </ul>
       </div>
     </div>
   `;
