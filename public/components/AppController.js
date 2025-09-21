@@ -832,21 +832,77 @@ export class AppController {
             <div style="height:${isMobile ? '60px' : '40px'};"></div>
           </div>
         </main>
-        ${isMobile ? `
-          <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.98);border-top:1px solid #e5e7eb;padding:8px 12px;z-index:999;display:flex;justify-content:space-around;align-items:center;backdrop-filter:blur(10px);">
-            <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))"
-                    style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
-                    ${this.state.currentPanel === 1 ? 'disabled' : ''}>
-              ← Prev
-            </button>
-            <span style="font-size:12px;color:#4b5563;font-weight:600;">
-              Panel ${this.state.currentPanel} of 5
-            </span>
-            <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))"
-                    style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
-                    ${this.state.currentPanel === 5 ? 'disabled' : ''}>
-              Next →
-            </button>
+         ${isMobile ? `
+          <div style="position:fixed;left:0;right:0;bottom:0;padding:0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);display:flex;justify-content:center;z-index:999;background:linear-gradient(180deg, rgba(248,250,252,0) 0%, rgba(248,250,252,0.9) 45%);">
+            <div style="width:calc(100% - 24px);max-width:744px;background:rgba(255,255,255,0.98);border:1px solid #e5e7eb;border-radius:9999px;box-shadow:0 12px 30px rgba(15,23,42,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;backdrop-filter:blur(12px);">
+              <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))"
+                      style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 1 ? 'disabled' : ''}>
+                ← Prev
+              </button>
+              <span style="flex:1;font-size:12px;color:#4b5563;font-weight:600;text-align:center;white-space:nowrap;">
+                Panel ${this.state.currentPanel} of 5
+              </span>
+              <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))"
+                      style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 5 ? 'disabled' : ''}>
+                Next →
+              </button>
+            </div>
+          </div>
+        ` : ''} ${isMobile ? `
+          <div style="position:fixed;left:0;right:0;bottom:0;padding:0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);display:flex;justify-content:center;z-index:999;background:linear-gradient(180deg, rgba(248,250,252,0) 0%, rgba(248,250,252,0.9) 45%);">
+            <div style="width:calc(100% - 24px);max-width:744px;background:rgba(255,255,255,0.98);border:1px solid #e5e7eb;border-radius:9999px;box-shadow:0 12px 30px rgba(15,23,42,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;backdrop-filter:blur(12px);">
+              <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))"
+                      style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 1 ? 'disabled' : ''}>
+                ← Prev
+              </button>
+              <span style="flex:1;font-size:12px;color:#4b5563;font-weight:600;text-align:center;white-space:nowrap;">
+                Panel ${this.state.currentPanel} of 5
+              </span>
+              <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))"
+                      style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 5 ? 'disabled' : ''}>
+                Next →
+              </button>
+            </div>
+          </div>
+        ` : ''} ${isMobile ? `
+          <div style="position:fixed;left:0;right:0;bottom:0;padding:0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);display:flex;justify-content:center;z-index:999;background:linear-gradient(180deg, rgba(248,250,252,0) 0%, rgba(248,250,252,0.9) 45%);">
+            <div style="width:calc(100% - 24px);max-width:744px;background:rgba(255,255,255,0.98);border:1px solid #e5e7eb;border-radius:9999px;box-shadow:0 12px 30px rgba(15,23,42,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;backdrop-filter:blur(12px);">
+              <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))"
+                      style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 1 ? 'disabled' : ''}>
+                ← Prev
+              </button>
+              <span style="flex:1;font-size:12px;color:#4b5563;font-weight:600;text-align:center;white-space:nowrap;">
+                Panel ${this.state.currentPanel} of 5
+              </span>
+              <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))"
+                      style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 5 ? 'disabled' : ''}>
+                Next →
+              </button>
+            </div>
+          </div>
+        ` : ''} ${isMobile ? `
+          <div style="position:fixed;left:0;right:0;bottom:0;padding:0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);display:flex;justify-content:center;z-index:999;background:linear-gradient(180deg, rgba(248,250,252,0) 0%, rgba(248,250,252,0.9) 45%);">
+            <div style="width:calc(100% - 24px);max-width:744px;background:rgba(255,255,255,0.98);border:1px solid #e5e7eb;border-radius:9999px;box-shadow:0 12px 30px rgba(15,23,42,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;backdrop-filter:blur(12px);">
+              <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))"
+                      style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 1 ? 'disabled' : ''}>
+                ← Prev
+              </button>
+              <span style="flex:1;font-size:12px;color:#4b5563;font-weight:600;text-align:center;white-space:nowrap;">
+                Panel ${this.state.currentPanel} of 5
+              </span>
+              <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))"
+                      style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
+                      ${this.state.currentPanel === 5 ? 'disabled' : ''}>
+                Next →
+              </button>
+            </div>
           </div>
         ` : ''}
       </div>
