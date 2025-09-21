@@ -657,15 +657,292 @@ renderCurrentPanel() {
     `;
   }
   
-  if (this.state.error) {
-    return `
-      <div style="min-height:calc(100vh - 220px);padding:20px;">
-        <div style="padding:16px;border:1px solid #fecaca;border-radius:10px;background:#fef2f2;color:#7f1d1d;">
-          ${this.state.error}
+  render() {
+  if (!this.containerElement) return;
+
+  const panelTitles = {
+    1: 'Global Risks',
+    2: 'Baseline Risk',
+    3: 'HRDD Strategy',
+    4: 'Response Strategy',
+    5: 'Managed Risk'
+  };
+
+  // Detect mobile device
+  const isMobile = window.innerWidth <= 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  // Mobile-optimized header height
+  const headerHeight = isMobile ? '120px' : '180px';
+
+  // Create a fixed-height container that will have its own scrollbar
+  this.containerElement.innerHTML = `
+    <!-- App Container with fixed height to enable internal scrolling -->
+    <div id="hrddAppContainer" style="position:relative;width:100%;height:100vh;height:100dvh;overflow:hidden;background-color:#f8fafc;">
+      
+      <!-- Fixed Header within app container -->
+      <header id="hrddHeader" style="position:absolute;top:0;left:0;right:0;z-index:1000;background:rgba(248,250,252,0.98);padding:${isMobile ? '12px 12px 8px' : '20px 20px 12px'};box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);backdrop-filter:blur(10px);">
+        <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:${isMobile ? '8px' : '12px'};text-align:center;padding:${isMobile ? '8px 12px' : '12px 20px'};background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:${isMobile ? '8px' : '12px'};box-shadow:0 6px 18px rgba(15,23,42,0.08);">
+          
+          ${isMobile ? `
+            <!-- Mobile Header -->
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;">
+              <h1 style="font-size:18px;font-weight:700;color:#1f2937;margin:0;line-height:1.2;">HRDD Risk Assessment</h1>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#475569;">
+                <span style="color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};">●</span>
+                <span>${this.state.countries.length} Countries</span>
+                <span>•</span>
+                <span>${this.state.selectedCountries.length} Selected</span>
+              </div>
+            </div>
+          ` : `
+            <!-- Desktop Header -->
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+              <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
+              <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
+            </div>
+          `}
+
+          <!-- Panel Navigation -->
+          <div style="display:flex;justify-content:center;gap:${isMobile ? '4px' : '6px'};flex-wrap:wrap;width:100%;">
+            ${[1,2,3,4,5].map(panel => `
+              <button onclick="window.hrddApp.setCurrentPanel(${panel})"
+                      style="padding:${isMobile ? '8px 10px' : '6px 12px'};
+                             border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
+                             background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
+                             color:${this.state.currentPanel===panel?'white':'#475569'};
+                             border-radius:9999px;cursor:pointer;font-weight:600;
+                             transition:all .2s;font-size:${isMobile ? '11px' : '12px'};
+                             box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};
+                             min-width:${isMobile ? '44px' : 'auto'};
+                             min-height:${isMobile ? '36px' : 'auto'};
+                             flex:${isMobile ? '1' : 'initial'};
+                             max-width:${isMobile ? '80px' : 'none'};">
+                ${isMobile ? panel : `${panel}. ${panelTitles[panel]}`}
+              </button>
+            `).join('')}
+          </div>
+
+          ${!isMobile ? `
+            <!-- Desktop Status Bar -->
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
+                <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
+              </div>
+              <div style="opacity:.5;">•</div>
+              <div><span>${this.state.countries.length}</span> Countries</div>
+              <div style="opacity:.5;">•</div>
+              <div><span>${this.state.selectedCountries.length}</span> Selected</div>
+              ${this.state.lastUpdate ? `
+                <div style="opacity:.5;">•</div>
+                <div>Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}</div>
+              ` : ''}
+            </div>
+          ` : ''}
         </div>
-      </div>
-    `;
+      </header>
+
+      <!-- Scrollable Content Area -->
+      <main id="hrddMainContent" style="position:absolute;top:${headerHeight};left:0;right:0;bottom:${isMobile ? '60px' : '0'};overflow-y:auto;overflow-x:hidden;background-color:#f8fafc;box-sizing:border-box;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+        <div style="width:100%;max-width:${isMobile ? '100%' : '1600px'};margin:0 auto;padding:${isMobile ? '12px 12px 80px' : '20px 20px 60px'};box-sizing:border-box;">
+          <div id="panelContent">
+            ${this.renderCurrentPanel()}
+          </div>
+          
+          <!-- Extra padding at bottom to ensure last content is visible -->
+          <div style="height:${isMobile ? '60px' : '40px'};"></div>
+        </div>
+      </main>
+
+      ${isMobile ? `
+        <!-- Mobile Quick Actions Bar -->
+        <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.98);border-top:1px solid #e5e7eb;padding:8px 12px;z-index:999;display:flex;justify-content:space-around;align-items:center;backdrop-filter:blur(10px);">
+          <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))" 
+                  style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
+                  ${this.state.currentPanel === 1 ? 'disabled' : ''}>
+            ← Prev
+          </button>
+          <span style="font-size:12px;color:#4b5563;font-weight:600;">
+            Panel ${this.state.currentPanel} of 5
+          </span>
+          <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))" 
+                  style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
+                  ${this.state.currentPanel === 5 ? 'disabled' : ''}>
+            Next →
+          </button>
+        </div>
+      ` : ''}
+    </div>
+
+    <style>
+      /* Mobile-specific resets */
+      * {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+      
+      /* Reset any conflicting styles */
+      html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden; /* Prevent outer scrolling */
+        height: 100%;
+        position: fixed;
+        width: 100%;
+      }
+      
+      /* Use dvh units for better mobile viewport handling */
+      @supports (height: 100dvh) {
+        #hrddAppContainer {
+          height: 100dvh !important;
+        }
+      }
+      
+      /* Ensure the container fills the viewport */
+      #${this.containerElement.id} {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      /* Custom scrollbar for the main content */
+      #hrddMainContent::-webkit-scrollbar {
+        width: ${isMobile ? '4px' : '10px'};
+      }
+      
+      #hrddMainContent::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 5px;
+      }
+      
+      #hrddMainContent::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 5px;
+      }
+      
+      #hrddMainContent::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+      
+      /* Mobile-optimized form controls */
+      @media (max-width: 768px) {
+        input[type="range"] {
+          min-height: 44px;
+          padding: 12px 0;
+        }
+        
+        input[type="number"], select {
+          min-height: 44px;
+          font-size: 16px !important; /* Prevents zoom on iOS */
+        }
+        
+        button {
+          min-height: 44px;
+          min-width: 44px;
+        }
+        
+        /* Stack grid layouts on mobile */
+        div[style*="grid-template-columns: repeat(3"] {
+          grid-template-columns: 1fr !important;
+        }
+        
+        div[style*="grid-template-columns: 1fr 1fr"] {
+          grid-template-columns: 1fr !important;
+        }
+        
+        /* Responsive text sizes */
+        h1 { font-size: 20px !important; }
+        h2 { font-size: 18px !important; }
+        h3 { font-size: 16px !important; }
+        p { font-size: 14px !important; }
+        
+        /* Mobile map container */
+        #globalMapContainer, #baselineMapContainer {
+          min-height: 300px !important;
+          max-height: 400px !important;
+        }
+        
+        /* Adjust main content for mobile bottom nav */
+        #hrddMainContent {
+          top: 120px !important;
+        }
+        
+        /* Hide verbose descriptions on mobile */
+        .desktop-only {
+          display: none !important;
+        }
+      }
+      
+      /* Touch-friendly hover states */
+      @media (hover: none) {
+        button:hover {
+          background-color: inherit !important;
+        }
+      }
+      
+      /* Landscape orientation adjustments */
+      @media (max-height: 500px) and (orientation: landscape) {
+        #hrddHeader {
+          padding: 8px !important;
+        }
+        
+        #hrddMainContent {
+          top: 80px !important;
+        }
+      }
+      
+      /* High z-index for overlays */
+      .map-tooltip {
+        z-index: 10000 !important;
+        font-size: ${isMobile ? '11px' : '12px'} !important;
+      }
+      
+      #pdfLoadingModal {
+        z-index: 10001 !important;
+      }
+      
+      /* Ensure buttons and interactive elements work */
+      button {
+        -webkit-appearance: none;
+        appearance: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      
+      /* Ensure interactive elements are touch-friendly */
+      input, button, select, textarea {
+        -webkit-appearance: none;
+        appearance: none;
+        border-radius: 6px;
+      }
+      
+      /* Fix for iOS momentum scrolling */
+      #hrddMainContent {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+      }
+      
+      /* Prevent pull-to-refresh on Chrome mobile */
+      body {
+        overscroll-behavior-y: none;
+      }
+    </style>
+  `;
+  
+  // After rendering, ensure the scroll position resets to top when changing panels
+  const mainContent = document.getElementById('hrddMainContent');
+  if (mainContent) {
+    mainContent.scrollTop = 0;
   }
+  
+  // Add swipe gestures for mobile panel navigation if on mobile
+  if (isMobile && typeof this.addMobileGestures === 'function') {
+    this.addMobileGestures();
+  }
+}
 
   // For panels 1-4, ensure minimum height to guarantee scrollability
   const ensureMinHeight = (content) => `

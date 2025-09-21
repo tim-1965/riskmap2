@@ -3,6 +3,14 @@ import { riskEngine } from './RiskEngine.js';
 let panel3ResizeListenerAttached = false;
 let panel4ResizeListenerAttached = false;
 
+// At the top of each create function, detect mobile:
+const isMobile = window.innerWidth <= 768;
+
+// Then adjust styles accordingly:
+style="padding: ${isMobile ? '12px' : '24px'};"
+style="font-size: ${isMobile ? '14px' : '16px'};"
+style="grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'};"
+
 function describeFocusLevel(value) {
   if (value >= 0.75) return 'Only high risk suppliers are actively monitored.';
   if (value >= 0.5) return 'Active monitoring for medium and high risk suppliers.';
