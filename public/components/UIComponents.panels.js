@@ -1,6 +1,7 @@
 import { riskEngine } from './RiskEngine.js';
 
 let panel3ResizeListenerAttached = false;
+let panel4ResizeListenerAttached = false;
 
 function describeFocusLevel(value) {
   if (value >= 0.75) return 'Only high risk suppliers are actively monitored.';
@@ -55,6 +56,54 @@ function ensurePanel3ResizeListener() {
   if (typeof window === 'undefined' || panel3ResizeListenerAttached) return;
   window.addEventListener('resize', () => schedulePanel3Alignment());
   panel3ResizeListenerAttached = true;
+}
+
+function alignPanel4Rows() {
+  if (typeof document === 'undefined') return;
+
+  const responsivenessContainer = document.getElementById('responsivenessContainer');
+  const effectivenessContainer = document.getElementById('responsivenessEffectivenessContainer');
+  if (!responsivenessContainer || !effectivenessContainer) return;
+
+  const responsivenessControls = responsivenessContainer.querySelectorAll('[data-responsiveness-index]');
+  const effectivenessControls = effectivenessContainer.querySelectorAll('[data-responsiveness-effectiveness-index]');
+
+  const totalControls = Math.max(responsivenessControls.length, effectivenessControls.length);
+  for (let i = 0; i < totalControls; i++) {
+    if (responsivenessControls[i]) responsivenessControls[i].style.minHeight = '';
+    if (effectivenessControls[i]) effectivenessControls[i].style.minHeight = '';
+  }
+
+  const shouldAlign = typeof window !== 'undefined' ? window.innerWidth > 768 : true;
+  if (!shouldAlign) return;
+
+  const pairCount = Math.min(responsivenessControls.length, effectivenessControls.length);
+  for (let i = 0; i < pairCount; i++) {
+    const left = responsivenessControls[i];
+    const right = effectivenessControls[i];
+    if (!left || !right) continue;
+
+    const maxHeight = Math.max(left.offsetHeight, right.offsetHeight);
+    left.style.minHeight = `${maxHeight}px`;
+    right.style.minHeight = `${maxHeight}px`;
+  }
+}
+
+function schedulePanel4Alignment() {
+  if (typeof window === 'undefined') return;
+
+  const callback = () => alignPanel4Rows();
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(callback);
+  } else {
+    setTimeout(callback, 50);
+  }
+}
+
+function ensurePanel4ResizeListener() {
+  if (typeof window === 'undefined' || panel4ResizeListenerAttached) return;
+  window.addEventListener('resize', () => schedulePanel4Alignment());
+  panel4ResizeListenerAttached = true;
 }
 
 // ENHANCED: Risk comparison panel with focus effectiveness display
@@ -396,7 +445,7 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const effectivenessAssumptions = [
     'Effective: workers are likely to say if there are issues.',
-    'Intermittently effective if done well: can show issues survey time.',
+    'Intermittently effective if done well: can show issues at survey time.',
     'Can be effective where issues are easily visible.',
     'Not that effective as preparation/concealment of issues is possible.',
     'Not effective as suppliers tend not to self-report problems.',
@@ -516,6 +565,7 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
       totalElement.textContent = formattedTotal;
     }
     if (onResponsivenessChange) onResponsivenessChange([...localResponsiveness]);
+    schedulePanel4Alignment();
   };
 
   container.innerHTML = `
@@ -547,6 +597,7 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
   const responsivenessContainer = document.getElementById('responsivenessContainer');
   responsivenessLabels.forEach((label, index) => {
     const responsivenessControl = document.createElement('div');
+    responsivenessControl.dataset.responsivenessIndex = index;
     responsivenessControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
     responsivenessControl.innerHTML = `
       <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
@@ -585,6 +636,9 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
     });
     updateResponsiveness();
   });
+
+  ensurePanel4ResizeListener();
+  schedulePanel4Alignment();
 }
 
 export function createResponsivenessEffectivenessPanel(containerId, { effectiveness, onEffectivenessChange }) {
@@ -603,7 +657,7 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
 
   let localEffectiveness = [...effectiveness];
 
-  const updateEffectiveness = () => {
+   const updateEffectiveness = () => {
     const total = localEffectiveness.reduce((sum, value) => sum + value, 0);
     const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
     const totalElement = document.getElementById('totalResponsivenessEffectiveness');
@@ -611,6 +665,7 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
       totalElement.textContent = formattedTotal;
     }
     if (onEffectivenessChange) onEffectivenessChange([...localEffectiveness]);
+    schedulePanel4Alignment();
   };
 
   container.innerHTML = `
@@ -642,33 +697,33 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
   const effectivenessContainer = document.getElementById('responsivenessEffectivenessContainer');
   responsivenessLabels.forEach((label, index) => {
     const effectivenessControl = document.createElement('div');
+    effectivenessControl.dataset.responsivenessEffectivenessIndex = index;
     effectivenessControl.style.cssText = 'margin-bottom: 20px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #fafafa;';
-   effectivenessControl.innerHTML = `
+    effectivenessControl.innerHTML = `
       <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
         ${label}
       </label>
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
         ${effectivenessDescriptions[index]}
       </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="range" min="0" max="100" value="${localEffectiveness[index]}" id="responsivenessEffectiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
-        <input type="number" min="0" max="100" value="${localEffectiveness[index]}" id="responsivenessEffectivenessNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+      <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">ineffective</span>
+        <input type="range" min="0" max="100" value="${localEffectiveness[index]}" id="responsivenessEffectiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: #0ea5e9;">
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">effective</span>
       </div>
     `;
     effectivenessContainer.appendChild(effectivenessControl);
 
     const rangeInput = document.getElementById(`responsivenessEffectiveness_${index}`);
-    const numberInput = document.getElementById(`responsivenessEffectivenessNum_${index}`);
     const updateEffectivenessValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       localEffectiveness[index] = newValue;
       rangeInput.value = newValue;
-      numberInput.value = newValue;
       updateEffectiveness();
     };
 
     rangeInput.addEventListener('input', (e) => updateEffectivenessValue(e.target.value));
-    numberInput.addEventListener('input', (e) => updateEffectivenessValue(e.target.value));
+    rangeInput.addEventListener('change', (e) => updateEffectivenessValue(e.target.value));
   });
 
   const resetButton = document.getElementById('resetResponsivenessEffectiveness');
@@ -676,10 +731,12 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
     localEffectiveness = [...riskEngine.defaultResponsivenessEffectiveness];
     localEffectiveness.forEach((value, index) => {
       document.getElementById(`responsivenessEffectiveness_${index}`).value = value;
-      document.getElementById(`responsivenessEffectivenessNum_${index}`).value = value;
     });
     updateEffectiveness();
   });
+
+  ensurePanel4ResizeListener();
+  schedulePanel4Alignment();
 }
 
 // ENHANCED: Final results panel with comprehensive focus analysis
