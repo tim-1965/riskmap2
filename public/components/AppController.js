@@ -115,9 +115,12 @@ export class AppController {
     this.addCountry = this.addCountry.bind(this);
     this.removeCountry = this.removeCountry.bind(this);
     this.destroy = this.destroy.bind(this);
+    this.handleWheelScroll = this.handleWheelScroll.bind(this);
 
     // Container
     this.containerElement = null;
+    this.mainScrollElement = null;
+    this._wheelListenerAttached = false;
 
     // Expose for onclick handlers in rendered HTML (panel nav etc.)
     if (typeof window !== 'undefined') {
@@ -490,6 +493,69 @@ export class AppController {
     }
   }
 
+  handleWheelScroll(event) {
+    if (!this.mainScrollElement) return;
+
+    const main = this.mainScrollElement;
+    if (!main || main.scrollHeight <= main.clientHeight) {
+      return;
+    }
+
+    if (event?.ctrlKey) {
+      return;
+    }
+
+    let allowDefault = false;
+    if (event?.target && typeof event.target.closest === 'function') {
+      const interactive = event.target.closest('input, select, textarea, [contenteditable="true"]');
+      if (interactive) {
+        const tagName = interactive.tagName ? interactive.tagName.toLowerCase() : '';
+        if (tagName === 'input') {
+          const inputType = (interactive.getAttribute('type') || '').toLowerCase();
+          if (inputType !== 'range' && inputType !== 'number') {
+            allowDefault = true;
+          }
+        } else if (tagName === 'textarea') {
+          allowDefault = true;
+        } else {
+          allowDefault = true;
+        }
+      }
+    }
+
+    if (allowDefault) {
+      return;
+    }
+
+    let deltaY = Number.isFinite(event?.deltaY) ? event.deltaY : 0;
+    if (event?.deltaMode === 1) {
+      deltaY *= 16;
+    } else if (event?.deltaMode === 2) {
+      deltaY *= main.clientHeight;
+    }
+
+    if (!deltaY) {
+      return;
+    }
+
+    const atTop = main.scrollTop <= 0;
+    const atBottom = Math.ceil(main.scrollTop + main.clientHeight) >= main.scrollHeight;
+
+    if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+      return;
+    }
+
+    event.preventDefault();
+    if (typeof main.scrollBy === 'function') {
+      main.scrollBy({
+        top: deltaY,
+        behavior: 'auto'
+      });
+    } else {
+      main.scrollTop += deltaY;
+    }
+  }
+
   render() {
     if (!this.containerElement) return;
 
@@ -682,9 +748,19 @@ export class AppController {
       </style>
     `;
 
-    const mainContent = document.getElementById('hrddMainContent');
+     const mainContent = document.getElementById('hrddMainContent');
+    this.mainScrollElement = mainContent || null;
     if (mainContent) {
       mainContent.scrollTop = 0;
+    }
+
+    if (typeof window !== 'undefined' && this.mainScrollElement && !this._wheelListenerAttached) {
+      try {
+        window.addEventListener('wheel', this.handleWheelScroll, { passive: false });
+      } catch (error) {
+        window.addEventListener('wheel', this.handleWheelScroll);
+      }
+      this._wheelListenerAttached = true;
     }
 
     if (isMobile && typeof this.addMobileGestures === 'function') {
@@ -1326,6 +1402,11 @@ export class AppController {
     if (this.focusTimeout) clearTimeout(this.focusTimeout);
 
     if (this.state.isDirty) this.saveState();
+    if (this._wheelListenerAttached && typeof window !== 'undefined') {
+      window.removeEventListener('wheel', this.handleWheelScroll);
+      this._wheelListenerAttached = false;
+    }
+    this.mainScrollElement = null;
     console.log('AppController cleaned up');
   }
 }
