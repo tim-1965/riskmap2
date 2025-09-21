@@ -501,7 +501,8 @@ render() {
   // Top-level shell (header + panel nav + status bar)
   this.containerElement.innerHTML = `
     <div style="min-height:100vh;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;">
-      <header id="hrddAppHeader" style="position:fixed;top:0;left:0;width:100%;z-index:200;background:rgba(248,250,252,0.95);padding:20px 20px 12px;box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);">
+      <!-- Fixed Header -->
+      <header id="hrddAppHeader" style="position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(248,250,252,0.95);padding:20px 20px 12px;box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);">
         <div class="hrdd-header-card" style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);backdrop-filter:blur(4px);">
             <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
               <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
@@ -537,20 +538,48 @@ render() {
           </div>
       </header>
 
-      <!-- Header spacer to push content below fixed header -->
-      <div id="headerSpacer" style="height:180px;width:100%;"></div>
-
-      <main style="width:100%;max-width:1600px;margin:0 auto;padding:0 20px 40px;box-sizing:border-box;">
-        <div id="panelContent">
-          ${this.renderCurrentPanel()}
-        </div>
-      </main>
+      <!-- Scrollable Content Container -->
+      <div id="scrollableContent" style="padding-top:180px;min-height:100vh;box-sizing:border-box;">
+        <main style="width:100%;max-width:1600px;margin:0 auto;padding:0 20px 40px;box-sizing:border-box;">
+          <div id="panelContent">
+            ${this.renderCurrentPanel()}
+          </div>
+        </main>
+      </div>
 
       <style>
+        /* Ensure proper scrolling behavior */
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          overflow-x: hidden;
+        }
+        
+        body {
+          overflow-y: auto;
+          scroll-behavior: smooth;
+        }
+        
+        /* Ensure maps don't interfere with scrolling */
+        .world-map-container,
+        .global-risk-map-container,
+        .comparison-map-container {
+          position: relative !important;
+          overflow: visible !important;
+        }
+        
         /* Ensure all panel content has proper spacing */
         #panelContent > div {
           margin-top: 0 !important;
           padding-top: 0 !important;
+          position: relative !important;
+        }
+        
+        /* Fix any absolute positioned elements that might escape */
+        #panelContent {
+          position: relative;
+          overflow: visible;
         }
         
         /* Fix header height on mobile */
@@ -562,27 +591,69 @@ render() {
           #hrddAppHeader .panel-nav { gap: 4px; }
           #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
           #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
-          #headerSpacer { height: 160px !important; }
+          #scrollableContent { padding-top: 160px !important; }
         }
         
-        /* Ensure smooth scrolling and prevent overlap */
+        /* Ensure smooth scrolling */
         html {
           scroll-behavior: smooth;
         }
         
-        /* Fix any conflicting margins in panels */
-        .world-map-container,
-        .global-risk-map-container,
-        .comparison-map-container,
-        .country-selection-panel,
-        .results-panel,
+        /* Fix any z-index issues with tooltips */
+        .map-tooltip {
+          z-index: 999999 !important;
+        }
+        
+        /* Ensure panels don't have fixed positioning */
         .hrdd-strategy-panel,
         .transparency-panel,
         .focus-panel,
         .responsiveness-panel,
         .responsiveness-effectiveness-panel,
+        .country-selection-panel,
+        .results-panel,
+        .weightings-panel,
         .final-results-panel {
+          position: relative !important;
           margin-top: 0 !important;
+        }
+        
+        /* Prevent any overflow issues */
+        #globalMapContainer,
+        #weightingsPanel,
+        #baselineMapContainer,
+        #countrySelectionPanel,
+        #resultsPanel,
+        #strategyRiskSummary,
+        #hrddStrategyPanel,
+        #transparencyPanel,
+        #focusPanel,
+        #responsivenessPanel,
+        #responsivenessEffectivenessPanel,
+        #responseRiskSummary,
+        #baselineComparisonMapContainer,
+        #managedComparisonMapContainer,
+        #finalResultsPanel {
+          position: relative !important;
+          overflow: visible !important;
+        }
+        
+        /* Ensure SVG maps don't break layout */
+        svg {
+          max-width: 100% !important;
+          height: auto !important;
+        }
+        
+        /* Fix panel 3 grid layout */
+        #panel3Grid {
+          position: relative !important;
+          overflow: visible !important;
+        }
+        
+        /* Fix panel 4 grid layout */
+        #panel4Grid {
+          position: relative !important;
+          overflow: visible !important;
         }
       </style>
     </div>
