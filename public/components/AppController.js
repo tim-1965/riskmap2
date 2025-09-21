@@ -850,7 +850,7 @@ export class AppController {
               </button>
             </div>
           </div>
-        ` : ''} ${isMobile ? `
+        ` : ''}
           <div style="position:fixed;left:0;right:0;bottom:0;padding:0 0 calc(env(safe-area-inset-bottom, 0px) + 12px);display:flex;justify-content:center;z-index:999;background:linear-gradient(180deg, rgba(248,250,252,0) 0%, rgba(248,250,252,0.9) 45%);">
             <div style="width:calc(100% - 24px);max-width:744px;background:rgba(255,255,255,0.98);border:1px solid #e5e7eb;border-radius:9999px;box-shadow:0 12px 30px rgba(15,23,42,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;backdrop-filter:blur(12px);">
               <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))"
