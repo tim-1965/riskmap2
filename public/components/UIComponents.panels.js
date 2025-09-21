@@ -600,12 +600,7 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
         </button>
       </div>
 
-      <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
-
-      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center; margin-bottom: 20px;">
-        Assumptions total: <span id="totalResponsiveness" style="font-weight: 600; font-size: 16px;">${Math.round(localResponsiveness.reduce((sum, w) => sum + w, 0) * 100) / 100}</span>
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
-      </div>
+     <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
 
       <div data-panel4-info="strategyDetails" style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategy Portfolio:</h4>
@@ -629,25 +624,24 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
         ${responsivenessDescriptions[index]}
       </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="range" min="0" max="100" value="${localResponsiveness[index]}" id="responsiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
-        <input type="number" min="0" max="100" value="${localResponsiveness[index]}" id="responsivenessNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+       <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">No suppliers</span>
+        <input type="range" min="0" max="100" value="${localResponsiveness[index]}" id="responsiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: #0ea5e9;">
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">All suppliers</span>
       </div>
     `;
     responsivenessContainer.appendChild(responsivenessControl);
 
-    const rangeInput = document.getElementById(`responsiveness_${index}`);
-    const numberInput = document.getElementById(`responsivenessNum_${index}`);
+     const rangeInput = document.getElementById(`responsiveness_${index}`);
     const updateResponsivenessValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       localResponsiveness[index] = newValue;
       rangeInput.value = newValue;
-      numberInput.value = newValue;
       updateResponsiveness();
     };
 
     rangeInput.addEventListener('input', (e) => updateResponsivenessValue(e.target.value));
-    numberInput.addEventListener('input', (e) => updateResponsivenessValue(e.target.value));
+    rangeInput.addEventListener('change', (e) => updateResponsivenessValue(e.target.value));
   });
 
   const resetButton = document.getElementById('resetResponsiveness');
@@ -655,7 +649,6 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
     localResponsiveness = [...riskEngine.defaultResponsivenessStrategy];
     localResponsiveness.forEach((weight, index) => {
       document.getElementById(`responsiveness_${index}`).value = weight;
-      document.getElementById(`responsivenessNum_${index}`).value = weight;
     });
     updateResponsiveness();
   });
@@ -701,11 +694,6 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
       </div>
 
       <div id="responsivenessEffectivenessContainer" style="margin-bottom: 20px;"></div>
-
-      <div style="font-size: 14px; color: #1f2937; padding: 12px; background-color: #eef2ff; border-radius: 6px; text-align: center; margin-bottom: 20px;">
-        Assumptions total: <span id="totalResponsivenessEffectiveness" style="font-weight: 600; font-size: 16px;">${Math.round(localEffectiveness.reduce((sum, value) => sum + value, 0) * 100) / 100}</span>
-        <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
-      </div>
       <div data-panel4-info="effectivenessDetails" style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Interpreting Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
