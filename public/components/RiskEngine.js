@@ -1038,12 +1038,56 @@ export class RiskEngine {
       : 1;
     const portfolioFocusMultiplier = this.calculatePortfolioFocusMultiplier(sanitizedFocus, sanitizedConcentration);
 
-    const overallTransparency = selectedCountries && countryVolumes && countryRisks
-      ? this.calculateTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness, selectedCountries, countryVolumes, countryRisks, sanitizedFocus)
-      : this.calculateOriginalTransparencyEffectiveness(hrddStrategy, transparencyEffectiveness);
-    
-    const countrySpecificCoverage = selectedCountries && countryVolumes && countryRisks
-      ? this.calculateCountrySpecificCoverage(selectedCountries, countryVolumes, countryRisks, hrddStrategy, sanitizedFocus)
+    const defaultStrategy = Array.isArray(this.defaultHRDDStrategy)
+      ? this.defaultHRDDStrategy
+      : [];
+    const defaultTransparency = Array.isArray(this.defaultTransparencyEffectiveness)
+      ? this.defaultTransparencyEffectiveness
+      : [];
+    const toolCount = Array.isArray(this.hrddStrategyLabels) && this.hrddStrategyLabels.length > 0
+      ? this.hrddStrategyLabels.length
+      : Math.max(
+        defaultStrategy.length,
+        defaultTransparency.length,
+        Array.isArray(hrddStrategy) ? hrddStrategy.length : 0
+      );
+
+    const normalizedStrategy = new Array(toolCount).fill(0);
+    const normalizedTransparency = new Array(toolCount).fill(0);
+
+    for (let i = 0; i < toolCount; i++) {
+      const strategyValue = Array.isArray(hrddStrategy) ? Number(hrddStrategy[i]) : NaN;
+      const fallbackStrategyValue = Number(defaultStrategy[i]);
+      const resolvedStrategyValue = Number.isFinite(strategyValue)
+        ? strategyValue
+        : (Number.isFinite(fallbackStrategyValue) ? fallbackStrategyValue : 0);
+      normalizedStrategy[i] = Math.max(0, Math.min(100, resolvedStrategyValue));
+
+      const transparencyValue = Array.isArray(transparencyEffectiveness) ? Number(transparencyEffectiveness[i]) : NaN;
+      const fallbackTransparencyValue = Number(defaultTransparency[i]);
+      const resolvedTransparencyValue = Number.isFinite(transparencyValue)
+        ? transparencyValue
+        : (Number.isFinite(fallbackTransparencyValue) ? fallbackTransparencyValue : 0);
+      normalizedTransparency[i] = Math.max(0, Math.min(100, resolvedTransparencyValue));
+    }
+
+    const safeSelectedCountries = Array.isArray(selectedCountries)
+      ? selectedCountries.filter(code => typeof code === 'string' && code.length > 0)
+      : [];
+
+    const overallTransparency = safeSelectedCountries.length > 0 && countryVolumes && countryRisks
+      ? this.calculateTransparencyEffectiveness(
+        normalizedStrategy,
+        normalizedTransparency,
+        safeSelectedCountries,
+        countryVolumes,
+        countryRisks,
+        sanitizedFocus
+      )
+      : this.calculateOriginalTransparencyEffectiveness(normalizedStrategy, normalizedTransparency);
+
+    const countrySpecificCoverage = safeSelectedCountries.length > 0 && countryVolumes && countryRisks
+      ? this.calculateCountrySpecificCoverage(safeSelectedCountries, countryVolumes, countryRisks, normalizedStrategy, sanitizedFocus)
       : null;
 
     const toolCategories = [
@@ -1077,26 +1121,26 @@ export class RiskEngine {
         concentration: sanitizedConcentration,
         portfolioMultiplier: portfolioFocusMultiplier
       },
-      countrySpecificCoverage: countrySpecificCoverage
+       countrySpecificCoverage: countrySpecificCoverage
     };
 
-    for (let i = 0; i < hrddStrategy.length; i++) {
-      const baseCoverage = Math.max(0, Math.min(100, hrddStrategy[i] || 0));
-      const userEffectiveness = Math.max(0, Math.min(100, transparencyEffectiveness[i] || 0));
-      
+    for (let i = 0; i < normalizedStrategy.length; i++) {
+      const baseCoverage = Math.max(0, Math.min(100, normalizedStrategy[i] || 0));
+      const userEffectiveness = Math.max(0, Math.min(100, normalizedTransparency[i] || 0));
+
       let category = toolCategories.find(cat => cat.tools.includes(i));
       if (!category) category = { name: 'Other', baseEffectiveness: [0.05], categoryWeight: 0.5 };
-      
+
       const toolIndexInCategory = category.tools ? category.tools.indexOf(i) : 0;
       const baseEffectiveness = category.baseEffectiveness[toolIndexInCategory] || 0.05;
       const averageEffectiveness = (baseEffectiveness + userEffectiveness / 100) / 2;
 
       let coverageRange = null;
-      if (countrySpecificCoverage && selectedCountries) {
-        const coverages = selectedCountries.map(countryCode => 
+      if (countrySpecificCoverage && safeSelectedCountries.length > 0) {
+        const coverages = safeSelectedCountries.map(countryCode =>
           countrySpecificCoverage[countryCode] ? countrySpecificCoverage[countryCode][i] : baseCoverage
         ).filter(c => Number.isFinite(c));
-        
+
         if (coverages.length > 0) {
           const minCoverage = Math.min(...coverages);
           const maxCoverage = Math.max(...coverages);
@@ -1105,9 +1149,11 @@ export class RiskEngine {
             : `${minCoverage.toFixed(1)}%`;
         }
       }
-      
+
       breakdown.hrddStrategies.push({
-        name: this.hrddStrategyLabels[i],
+        name: Array.isArray(this.hrddStrategyLabels) && this.hrddStrategyLabels[i]
+          ? this.hrddStrategyLabels[i]
+          : `Tool ${i + 1}`,
         coverage: baseCoverage,
         coverageRange: coverageRange,
         baseEffectiveness: Math.round(baseEffectiveness * 100),
