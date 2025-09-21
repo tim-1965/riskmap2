@@ -867,14 +867,14 @@ renderCurrentPanel() {
       `;
     }
 
-     if (panel === 1) {
+      if (panel === 1) {
       // Global Risks (overview map + weightings)
       // Shell:
       const html = `
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
           <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-            <div id="globalMapContainer"></div>
+            <div id="globalMapContainer" style="min-height:500px;"></div>
             <div id="weightingsPanel"></div>
           </div>
         </div>
@@ -882,11 +882,9 @@ renderCurrentPanel() {
 
       // Defer actual rendering to next microtask so the nodes exist
       queueMicrotask(() => {
-        UIComponents.createWorldMap('globalMapContainer', {
+        UIComponents.createGlobalRiskMap('globalMapContainer', {
           countries: this.state.countries,
           countryRisks: this.state.countryRisks,
-          selectedCountries: this.state.selectedCountries,
-          onCountrySelect: this.onCountrySelect,
           title: 'Global Risk Overview',
           height: 500,
           width: 1200
