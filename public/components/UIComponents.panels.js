@@ -19,12 +19,16 @@ function alignPanel3Rows() {
 
   const strategyControls = strategyContainer.querySelectorAll('[data-strategy-index]');
   const transparencyControls = transparencyContainer.querySelectorAll('[data-transparency-index]');
+  const strategyInfo = document.querySelector('[data-panel3-info="strategy"]');
+  const transparencyInfo = document.querySelector('[data-panel3-info="transparency"]');
 
   const totalControls = Math.max(strategyControls.length, transparencyControls.length);
   for (let i = 0; i < totalControls; i++) {
     if (strategyControls[i]) strategyControls[i].style.minHeight = '';
     if (transparencyControls[i]) transparencyControls[i].style.minHeight = '';
   }
+  if (strategyInfo) strategyInfo.style.minHeight = '';
+  if (transparencyInfo) transparencyInfo.style.minHeight = '';
 
   const shouldAlign = typeof window !== 'undefined' ? window.innerWidth > 768 : true;
   if (!shouldAlign) return;
@@ -38,6 +42,12 @@ function alignPanel3Rows() {
     const maxHeight = Math.max(left.offsetHeight, right.offsetHeight);
     left.style.minHeight = `${maxHeight}px`;
     right.style.minHeight = `${maxHeight}px`;
+  }
+
+  if (strategyInfo && transparencyInfo) {
+    const infoHeight = Math.max(strategyInfo.offsetHeight, transparencyInfo.offsetHeight);
+    strategyInfo.style.minHeight = `${infoHeight}px`;
+    transparencyInfo.style.minHeight = `${infoHeight}px`;
   }
 }
 
@@ -262,14 +272,16 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
       <div id="strategyContainer" style="margin-bottom: 20px;"></div>
 
-      <div style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px; margin-top: 20px;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Enhanced Coverage-Based Strategy:</h4>
-        <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
-          <li>Higher coverage increases total transparency but with diminishing returns.</li>
-          <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Passive</span>.</li>
-          <li><strong>Use the focus setting below</strong> to distribute your coverage based on country risk levels for maximum impact.</li>
-        </ul>
+       <div style="margin-top: auto; padding-top: 20px;">
+        <div data-panel3-info="strategy" style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Enhanced Coverage-Based Strategy:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
+            <li>Higher coverage increases total transparency but with diminishing returns.</li>
+            <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Passive</span>.</li>
+            <li><strong>Use the focus setting below</strong> to distribute your coverage based on country risk levels for maximum impact.</li>
+          </ul>
+        </div>
       </div>
     </div>
   `;
@@ -489,15 +501,16 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
        <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
-      <div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Enhanced Transparency Calculation:</h4>
-        <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li><strong>Effectiveness:</strong> Rates of risk detection achieved by each tool.</li>
-          <li><strong>Use the focus setting below</strong> to allocate your coverage based on country risk levels.</li>
-          <li><strong>Note diminishing returns:</strong> Tools are assumed to overlap in suppliers; the model has a 90% cap implemented on effectiveness (some risks may always remain hidden).</li>
+      <div style="margin-top: auto; padding-top: 20px;">
+        <div data-panel3-info="transparency" style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Enhanced Transparency Calculation:</h4>
+          <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li><strong>Effectiveness:</strong> Rates of risk detection achieved by each tool.</li>
+            <li><strong>Use the focus setting below</strong> to allocate your coverage based on country risk levels.</li>
+            <li><strong>Note diminishing returns:</strong> Tools are assumed to overlap in suppliers; the model has a 90% cap implemented on effectiveness (some risks may always remain hidden).</li>
           </ul>
+        </div>
       </div>
-    </div>
   `;
 
   const transparencyContainer = document.getElementById('transparencyContainer');
@@ -717,9 +730,9 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
         ${effectivenessDescriptions[index]}
       </div>
       <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
-        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">ineffective</span>
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">Ineffective</span>
         <input type="range" min="0" max="100" value="${localEffectiveness[index]}" id="responsivenessEffectiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: #0ea5e9;">
-        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">effective</span>
+        <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">Fully effective</span>
       </div>
     `;
     effectivenessContainer.appendChild(effectivenessControl);
