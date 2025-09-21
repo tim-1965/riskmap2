@@ -807,7 +807,7 @@ export class AppController {
     this.containerElement.innerHTML = `
       <div id="hrddAppContainer" style="position:relative;width:100%;height:100vh;overflow:hidden;background-color:#f8fafc;">
         <header id="hrddHeader" style="position:absolute;top:0;left:0;right:0;z-index:1000;background:rgba(248,250,252,0.98);padding:${isMobile ? '12px 12px 8px' : '20px 20px 12px'};box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);backdrop-filter:blur(10px);">
-          <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:${isMobile ? '8px' : '12px'};text-align:center;padding:${isMobile ? '8px 12px' : '12px 20px'};background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:${isMobile ? '8px' : '12px'};box-shadow:0 6px 18px rgba(15,23,42,0.08);">
+           <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:${isMobile ? '8px' : '12px'};text-align:center;padding:${isMobile ? '8px 12px' : '12px 20px'};background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:${isMobile ? '8px' : '12px'};box-shadow:0 6px 18px rgba(15,23,42,0.08);box-sizing:border-box;">
             ${isMobile ? `
               <div style="display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;">
                 <h1 style="font-size:18px;font-weight:700;color:#1f2937;margin:0;line-height:1.2;">HRDD Risk Assessment</h1>
@@ -851,9 +851,10 @@ export class AppController {
         ` : ''}
       </div>
       <style>
-        * {
+         * {
           -webkit-tap-highlight-color: transparent;
           touch-action: manipulation;
+          box-sizing: border-box;
         }
         html, body {
           margin: 0;
