@@ -54,7 +54,7 @@ export class AppController {
       ),
       responsivenessStrategy: riskEngine.defaultResponsivenessStrategy || [35, 5, 25, 25, 10, 10],
       responsivenessEffectiveness: this.normalizeResponsivenessEffectiveness(
-        riskEngine.defaultResponsivenessEffectiveness || [70, 85, 35, 25, 15, 5]
+        riskEngine.defaultResponsivenessEffectiveness || [75, 85, 35, 25, 15, 5]
       ),
 
       // Focus analytics (optional, shown when available)
