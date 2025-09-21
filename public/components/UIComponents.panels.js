@@ -74,6 +74,11 @@ function alignPanel4Rows() {
     if (effectivenessControls[i]) effectivenessControls[i].style.minHeight = '';
   }
 
+  const strategyDetails = document.querySelector('[data-panel4-info="strategyDetails"]');
+  const effectivenessDetails = document.querySelector('[data-panel4-info="effectivenessDetails"]');
+  if (strategyDetails) strategyDetails.style.minHeight = '';
+  if (effectivenessDetails) effectivenessDetails.style.minHeight = '';
+
   const shouldAlign = typeof window !== 'undefined' ? window.innerWidth > 768 : true;
   if (!shouldAlign) return;
 
@@ -86,6 +91,12 @@ function alignPanel4Rows() {
     const maxHeight = Math.max(left.offsetHeight, right.offsetHeight);
     left.style.minHeight = `${maxHeight}px`;
     right.style.minHeight = `${maxHeight}px`;
+  }
+
+  if (strategyDetails && effectivenessDetails) {
+    const infoHeight = Math.max(strategyDetails.offsetHeight, effectivenessDetails.offsetHeight);
+    strategyDetails.style.minHeight = `${infoHeight}px`;
+    effectivenessDetails.style.minHeight = `${infoHeight}px`;
   }
 }
 
@@ -583,7 +594,7 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
         <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
       </div>
 
-      <div style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
+      <div data-panel4-info="strategyDetails" style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategy Portfolio:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Higher percentages = deeper investment in that remediation lever.</li>
@@ -682,7 +693,7 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
         Assumptions total: <span id="totalResponsivenessEffectiveness" style="font-weight: 600; font-size: 16px;">${Math.round(localEffectiveness.reduce((sum, value) => sum + value, 0) * 100) / 100}</span>
         <span style="font-size: 12px; opacity: 0.8; display: block; margin-top: 4px;">Each component is weighted by the value you give it divided by the total. It does not matter what the total adds up to.</span>
       </div>
-      <div style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
+      <div data-panel4-info="effectivenessDetails" style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Interpreting Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
           <li>Higher percentages = more impactful remediation outcomes.</li>
