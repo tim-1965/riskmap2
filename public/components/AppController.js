@@ -122,6 +122,7 @@ export class AppController {
     this.mainScrollElement = null;
     this._wheelListenerAttached = false;
     this._wheelListenerTarget = null;
+    this._touchScrollHandlers = null;
 
     // Expose for onclick handlers in rendered HTML (panel nav etc.)
     if (typeof window !== 'undefined') {
@@ -492,7 +493,7 @@ export class AppController {
     if (panelContent) {
       panelContent.innerHTML = this.renderCurrentPanel();
     }
-  }
+   }
 
   handleWheelScroll(event) {
     const main = this.mainScrollElement || (event && event.currentTarget) || null;
@@ -560,12 +561,182 @@ export class AppController {
       });
     } else {
       main.scrollTop += deltaY;
+       }
+  }
+
+  addMobileGestures() {
+    const element = this.mainScrollElement;
+
+    if (!element) {
+      this.removeMobileGestures();
+      return;
     }
+
+    if (this._touchScrollHandlers?.element === element) {
+      return;
+    }
+
+    this.removeMobileGestures();
+
+    const state = {
+      active: false,
+      startY: 0,
+      startX: 0,
+      startScrollTop: 0,
+      allowMapPan: false,
+      isScrolling: false
+    };
+
+    const isInteractiveTarget = (target) => {
+      if (!target || typeof target.closest !== 'function') {
+        return false;
+      }
+      return Boolean(target.closest('input, select, textarea, button, a[href], [role="button"], [contenteditable="true"], .zoom-controls'));
+    };
+
+    const resetState = () => {
+      state.active = false;
+      state.isScrolling = false;
+      state.allowMapPan = false;
+    };
+
+    const handleTouchStart = (event) => {
+      if (!event?.touches || event.touches.length !== 1) {
+        resetState();
+        return;
+      }
+
+      const target = event.target || null;
+      if (isInteractiveTarget(target)) {
+        resetState();
+        return;
+      }
+
+      const touch = event.touches[0];
+      state.active = true;
+      state.isScrolling = false;
+      state.allowMapPan = Boolean(target && typeof target.closest === 'function' && target.closest('svg, canvas'));
+      state.startY = touch.clientY;
+      state.startX = touch.clientX;
+      state.startScrollTop = element.scrollTop;
+    };
+
+    const handleTouchMove = (event) => {
+      if (!state.active || !event?.touches || event.touches.length !== 1) {
+        return;
+      }
+
+      const touch = event.touches[0];
+      const deltaY = state.startY - touch.clientY;
+      const deltaX = state.startX - touch.clientX;
+
+      if (!state.isScrolling) {
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+        if (Math.max(absX, absY) < 6) {
+          return;
+        }
+
+        if (state.allowMapPan && absX > absY) {
+          resetState();
+          return;
+        }
+
+        state.isScrolling = true;
+      }
+
+      const atTop = element.scrollTop <= 0 && deltaY < 0;
+      const atBottom = Math.ceil(element.scrollTop + element.clientHeight) >= element.scrollHeight && deltaY > 0;
+      if (atTop || atBottom) {
+        return;
+      }
+
+      if (typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+      if (typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+      }
+
+      element.scrollTop = state.startScrollTop + deltaY;
+    };
+
+    const handleTouchEnd = () => {
+      resetState();
+    };
+
+    const handleTouchCancel = () => {
+      resetState();
+    };
+
+    const addListener = (type, handler, options) => {
+      try {
+        element.addEventListener(type, handler, options);
+      } catch (error) {
+        element.addEventListener(type, handler);
+      }
+    };
+
+    const previousTouchAction = element.style.touchAction;
+    const previousOverflowScrolling = element.style.webkitOverflowScrolling;
+
+    element.style.touchAction = 'pan-y';
+    element.style.webkitOverflowScrolling = 'touch';
+
+    addListener('touchstart', handleTouchStart, { passive: true });
+    addListener('touchmove', handleTouchMove, { passive: false });
+    addListener('touchend', handleTouchEnd, { passive: true });
+    addListener('touchcancel', handleTouchCancel, { passive: true });
+
+    this._touchScrollHandlers = {
+      element,
+      handleTouchStart,
+      handleTouchMove,
+      handleTouchEnd,
+      handleTouchCancel,
+      previousTouchAction,
+      previousOverflowScrolling
+    };
+  }
+
+  removeMobileGestures() {
+    const handlers = this._touchScrollHandlers;
+    if (!handlers?.element) {
+      return;
+    }
+
+    const {
+      element,
+      handleTouchStart,
+      handleTouchMove,
+      handleTouchEnd,
+      handleTouchCancel,
+      previousTouchAction,
+      previousOverflowScrolling
+    } = handlers;
+
+    try { element.removeEventListener('touchstart', handleTouchStart); } catch (error) { /* ignore */ }
+    try { element.removeEventListener('touchmove', handleTouchMove); } catch (error) { /* ignore */ }
+    try { element.removeEventListener('touchend', handleTouchEnd); } catch (error) { /* ignore */ }
+    try { element.removeEventListener('touchcancel', handleTouchCancel); } catch (error) { /* ignore */ }
+
+    if (typeof previousTouchAction === 'string') {
+      element.style.touchAction = previousTouchAction;
+    } else {
+      element.style.removeProperty('touch-action');
+    }
+
+    if (typeof previousOverflowScrolling === 'string') {
+      element.style.webkitOverflowScrolling = previousOverflowScrolling;
+    } else {
+      element.style.removeProperty('-webkit-overflow-scrolling');
+    }
+
+    this._touchScrollHandlers = null;
   }
 
   render() {
     if (!this.containerElement) return;
-
     const panelTitles = {
       1: 'Global Risks',
       2: 'Baseline Risk',
@@ -786,10 +957,13 @@ export class AppController {
     } else {
       this._wheelListenerAttached = false;
       this._wheelListenerTarget = null;
+      this.removeMobileGestures();
     }
 
     if (isMobile && typeof this.addMobileGestures === 'function') {
       this.addMobileGestures();
+    } else if (typeof this.removeMobileGestures === 'function') {
+      this.removeMobileGestures();
     }
   }
 
@@ -1436,6 +1610,7 @@ export class AppController {
       this._wheelListenerAttached = false;
       this._wheelListenerTarget = null;
     }
+    this.removeMobileGestures();
     this.mainScrollElement = null;
     console.log('AppController cleaned up');
   }
