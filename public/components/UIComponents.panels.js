@@ -499,7 +499,7 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
         </button>
       </div>
 
-       < <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
+      <div id="transparencyContainer" style="margin-bottom: 20px;"></div>
 
       <div style="margin-top: 16px;">
         <div data-panel3-info="transparency" style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
@@ -522,7 +522,7 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     const transparencyControl = document.createElement('div');
     transparencyControl.dataset.transparencyIndex = index;
     transparencyControl.style.cssText = `margin-bottom: 20px; padding: 16px; border: 2px solid ${categoryColor}20; border-radius: 8px; background-color: ${categoryColor}05; display: flex; flex-direction: column; gap: 12px;`;
-     transparencyControl.innerHTML = `
+    transparencyControl.innerHTML = `
       <label for="transparency_${index}" style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
         <span style="color: ${categoryColor}; font-weight: 600;">[${category?.name || 'Other'}]</span> ${label}
       </label>

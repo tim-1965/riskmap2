@@ -622,12 +622,10 @@ renderCurrentPanel() {
       </div>
     `);
 
-    queueMicrotask(() => {
-      UIComponents.createWorldMap('globalMapContainer', {
+     queueMicrotask(() => {
+      UIComponents.createGlobalRiskMap('globalMapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
-        selectedCountries: this.state.selectedCountries,
-        onCountrySelect: this.onCountrySelect,
         title: 'Global Risk Overview',
         height: 500,
         width: 1200
