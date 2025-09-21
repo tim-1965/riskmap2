@@ -603,11 +603,11 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
      <div id="responsivenessContainer" style="margin-bottom: 20px;"></div>
 
       <div data-panel4-info="strategyDetails" style="background-color: #e0f2fe; border: 1px solid #0891b2; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
-        <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategy Portfolio:</h4>
+        <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Response Strategies:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li>Higher percentages = deeper investment in that remediation lever.</li>
+          <li>Slider to the right = deeper investment in that remediation lever.</li>
           <li>Combine quick fixes with systemic levers for durable change.</li>
-          <li>Effectiveness assumptions for each lever are set out in Panel 4B.</li>
+          <li>The assumed effectiveness of each lever is set out in the right hand panel.</li>
         </ul>
       </div>
     </div>
@@ -697,9 +697,9 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
       <div data-panel4-info="effectivenessDetails" style="background-color: #ecfeff; border: 1px solid #06b6d4; color: #0e7490; padding: 16px; border-radius: 8px; margin-top: auto;">
         <h4 style="font-weight: 600; margin-bottom: 8px; color: #155e75;">Interpreting Effectiveness:</h4>
         <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
-          <li>Higher percentages = more impactful remediation outcomes.</li>
-          <li>Values reflect typical risk reduction delivered by each lever.</li>
-          <li>Combining levers increases overall effectiveness.</li>
+          <li>Slider to the right means remediation outcomes are more impactful.</li>
+          <li>Higher and more effective levels of responsiveness can reduce risk.</li>
+          <li>Combining levers can increase overall effectiveness.</li>
         </ul>
       </div>
     </div>
