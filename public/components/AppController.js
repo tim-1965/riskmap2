@@ -182,6 +182,19 @@ export class AppController {
   /* ----------------------------- Init ------------------------------- */
 
   async initialize(containerId) {
+    if (typeof window !== 'undefined') {
+      const frameElement = window.frameElement;
+      if (frameElement) {
+        frameElement.scrolling = 'no';
+        frameElement.style.overflow = 'hidden';
+      }
+
+      if (window.parent && window.parent !== window && typeof document !== 'undefined') {
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+      }
+    }
+
     try {
       this.containerElement = document.getElementById(containerId);
       if (!this.containerElement) {
@@ -197,7 +210,7 @@ export class AppController {
       this.state.apiHealthy = true;
       this.state.countries = Array.isArray(countries) ? countries : [];
 
-       // Restore any prior state (if present)
+      // Restore any prior state (if present)
       this.loadSavedState();
 
       // Compute initial risks
@@ -219,25 +232,9 @@ export class AppController {
         setTimeout(() => this.initialize(containerId), this.retryDelay);
       } else {
         this.render();
-      }
+       }
     }
   }
-
-async initialize(containerId) {
-  // ... existing initialize code ...
-  
-  // Force iframe to not scroll
-  if (window.frameElement) {
-    window.frameElement.scrolling = 'no';
-    window.frameElement.style.overflow = 'hidden';
-  }
-  
-  // Prevent parent window scrolling when inside iframe
-  if (window.parent !== window) {
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-  }
-}
 
   /* --------------------------- Calculations ------------------------- */
 
