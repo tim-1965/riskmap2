@@ -128,11 +128,6 @@ export class AppController {
   /* --------------------------- Normalizers --------------------------- */
 
   normalizeTransparencyEffectiveness(arr) {
-    // Expect 0..100 sliders in UI; riskEngine expects 0..1
-    return Array.isArray(arr) ? arr.map(v => this.clamp01((parseFloat(v) || 0) / 100)) : [0.9, 0.45, 0.25, 0.15, 0.12, 0.05];
-  }
-
-  normalizeTransparencyEffectiveness(arr) {
     if (!Array.isArray(arr)) {
       return [90, 45, 25, 15, 12, 5];
     }
@@ -450,7 +445,7 @@ async initialize(containerId) {
     }
   }
 
-   updateUI() {
+  updateUI() {
     // Fast re-render for panels that depend on managed/baseline numbers
     if (!this.containerElement) return;
 
@@ -498,735 +493,238 @@ async initialize(containerId) {
     }
   }
 
-// In AppController.js, modify the render() method
-// Replace the existing header and main sections with this updated version:
-
-// In AppController.js, replace the render() method with this updated version:
-
-// In AppController.js - Complete replacement for render() method only:
-
-render() {
-  if (!this.containerElement) return;
-
-  const panelTitles = {
-    1: 'Global Risks',
-    2: 'Baseline Risk',
-    3: 'HRDD Strategy',
-    4: 'Response Strategy',
-    5: 'Managed Risk'
-  };
-
-  // Create a fixed-height container that will have its own scrollbar
-  this.containerElement.innerHTML = `
-    <!-- App Container with fixed height to enable internal scrolling -->
-    <div id="hrddAppContainer" style="position:relative;width:100%;height:100vh;overflow:hidden;background-color:#f8fafc;">
-      
-      <!-- Fixed Header within app container -->
-      <header style="position:absolute;top:0;left:0;right:0;z-index:1000;background:rgba(248,250,252,0.98);padding:20px 20px 12px;box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);backdrop-filter:blur(10px);">
-        <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);">
-          <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-            <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
-            <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
-          </div>
-
-          <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
-            ${[1,2,3,4,5].map(panel => `
-              <button onclick="window.hrddApp.setCurrentPanel(${panel})"
-                      style="padding:6px 12px;border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
-                             background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
-                             color:${this.state.currentPanel===panel?'white':'#475569'};
-                             border-radius:9999px;cursor:pointer;font-weight:600;transition:all .2s;font-size:12px;box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};">
-                ${panel}. ${panelTitles[panel]}
-              </button>
-            `).join('')}
-          </div>
-
-          <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
-              <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
-            </div>
-            <div style="opacity:.5;">•</div>
-            <div><span>${this.state.countries.length}</span> Countries</div>
-            <div style="opacity:.5;">•</div>
-            <div><span>${this.state.selectedCountries.length}</span> Selected</div>
-            ${this.state.lastUpdate ? `
-              <div style="opacity:.5;">•</div>
-              <div>Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}</div>
-            ` : ''}
-          </div>
-        </div>
-      </header>
-
-      <!-- Scrollable Content Area -->
-      <main id="hrddMainContent" style="position:absolute;top:180px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;background-color:#f8fafc;box-sizing:border-box;">
-        <div style="width:100%;max-width:1600px;margin:0 auto;padding:20px 20px 60px;box-sizing:border-box;">
-          <div id="panelContent">
-            ${this.renderCurrentPanel()}
-          </div>
-          
-          <!-- Extra padding at bottom to ensure last content is visible -->
-          <div style="height:40px;"></div>
-        </div>
-      </main>
-    </div>
-
-    <style>
-      /* Reset any conflicting styles */
-      html, body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden; /* Prevent outer scrolling */
-        height: 100%;
-      }
-      
-      /* Ensure the container fills the viewport */
-      #${this.containerElement.id} {
-        width: 100%;
-        height: 100vh;
-        overflow: hidden;
-        position: relative;
-      }
-      
-      /* Custom scrollbar for the main content */
-      #hrddMainContent::-webkit-scrollbar {
-        width: 10px;
-      }
-      
-      #hrddMainContent::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 5px;
-      }
-      
-      #hrddMainContent::-webkit-scrollbar-thumb {
-        background: #94a3b8;
-        border-radius: 5px;
-      }
-      
-      #hrddMainContent::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-      }
-      
-      /* Responsive adjustments */
-      @media (max-width: 768px) {
-        #hrddMainContent {
-          top: 200px !important;
-        }
-      }
-      
-      /* High z-index for overlays */
-      .map-tooltip {
-        z-index: 10000 !important;
-      }
-      
-      #pdfLoadingModal {
-        z-index: 10001 !important;
-      }
-      
-      /* Ensure buttons and interactive elements work */
-      button {
-        -webkit-appearance: none;
-        appearance: none;
-      }
-      
-      /* Fix for iOS momentum scrolling */
-      #hrddMainContent {
-        -webkit-overflow-scrolling: touch;
-      }
-    </style>
-  `;
-  
-  // After rendering, ensure the scroll position resets to top when changing panels
-  const mainContent = document.getElementById('hrddMainContent');
-  if (mainContent) {
-    mainContent.scrollTop = 0;
-  }
-}
-
-// Keep your existing renderCurrentPanel() method as is, but ensure each panel returns content with sufficient height:
-renderCurrentPanel() {
-  const panel = this.state.currentPanel;
-
-  if (this.state.loading) {
-    return `
-      <div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 220px);padding:20px;">
-        <div style="padding:16px 20px;border:1px solid #e5e7eb;border-radius:10px;background:white;box-shadow:0 8px 20px rgba(2,6,23,.08);">
-          Loading data…
-        </div>
-      </div>
-    `;
-  }
-  
   render() {
-  if (!this.containerElement) return;
+    if (!this.containerElement) return;
 
-  const panelTitles = {
-    1: 'Global Risks',
-    2: 'Baseline Risk',
-    3: 'HRDD Strategy',
-    4: 'Response Strategy',
-    5: 'Managed Risk'
-  };
+    const panelTitles = {
+      1: 'Global Risks',
+      2: 'Baseline Risk',
+      3: 'HRDD Strategy',
+      4: 'Response Strategy',
+      5: 'Managed Risk'
+    };
 
-  // Detect mobile device
-  const isMobile = window.innerWidth <= 768 || 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasWindow = typeof window !== 'undefined';
+    const userAgent = typeof navigator !== 'undefined' && navigator && navigator.userAgent
+      ? navigator.userAgent
+      : '';
+    const isMobile = hasWindow
+      ? window.innerWidth <= 768 ||
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+      : false;
 
-  // Mobile-optimized header height
-  const headerHeight = isMobile ? '120px' : '180px';
+    const headerHeight = isMobile ? 120 : 180;
 
-  // Create a fixed-height container that will have its own scrollbar
-  this.containerElement.innerHTML = `
-    <!-- App Container with fixed height to enable internal scrolling -->
-    <div id="hrddAppContainer" style="position:relative;width:100%;height:100vh;height:100dvh;overflow:hidden;background-color:#f8fafc;">
-      
-      <!-- Fixed Header within app container -->
-      <header id="hrddHeader" style="position:absolute;top:0;left:0;right:0;z-index:1000;background:rgba(248,250,252,0.98);padding:${isMobile ? '12px 12px 8px' : '20px 20px 12px'};box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);backdrop-filter:blur(10px);">
-        <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:${isMobile ? '8px' : '12px'};text-align:center;padding:${isMobile ? '8px 12px' : '12px 20px'};background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:${isMobile ? '8px' : '12px'};box-shadow:0 6px 18px rgba(15,23,42,0.08);">
-          
-          ${isMobile ? `
-            <!-- Mobile Header -->
-            <div style="display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;">
-              <h1 style="font-size:18px;font-weight:700;color:#1f2937;margin:0;line-height:1.2;">HRDD Risk Assessment</h1>
-              <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#475569;">
-                <span style="color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};">●</span>
-                <span>${this.state.countries.length} Countries</span>
-                <span>•</span>
-                <span>${this.state.selectedCountries.length} Selected</span>
-              </div>
-            </div>
-          ` : `
-            <!-- Desktop Header -->
-            <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-              <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
-              <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
-            </div>
-          `}
+    let formattedLastUpdate = '';
+    if (this.state.lastUpdate) {
+      try {
+        formattedLastUpdate = new Date(this.state.lastUpdate).toLocaleTimeString();
+      } catch (error) {
+        formattedLastUpdate = '';
+      }
+    }
 
-          <!-- Panel Navigation -->
-          <div style="display:flex;justify-content:center;gap:${isMobile ? '4px' : '6px'};flex-wrap:wrap;width:100%;">
-            ${[1,2,3,4,5].map(panel => `
+    const navButtons = [1, 2, 3, 4, 5]
+      .map(panel => `
               <button onclick="window.hrddApp.setCurrentPanel(${panel})"
                       style="padding:${isMobile ? '8px 10px' : '6px 12px'};
-                             border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
-                             background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
-                             color:${this.state.currentPanel===panel?'white':'#475569'};
-                             border-radius:9999px;cursor:pointer;font-weight:600;
-                             transition:all .2s;font-size:${isMobile ? '11px' : '12px'};
-                             box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};
+                             border:1px solid ${this.state.currentPanel === panel ? '#2563eb' : '#d1d5db'};
+                             background:${this.state.currentPanel === panel ? '#2563eb' : 'rgba(255,255,255,0.9)'};
+                             color:${this.state.currentPanel === panel ? 'white' : '#475569'};
+                             border-radius:9999px;
+                             cursor:pointer;
+                             font-weight:600;
+                             transition:all .2s;
+                             font-size:${isMobile ? '11px' : '12px'};
+                             box-shadow:${this.state.currentPanel === panel ? '0 8px 18px rgba(37,99,235,.25)' : '0 3px 8px rgba(15,23,42,.08)'};
                              min-width:${isMobile ? '44px' : 'auto'};
                              min-height:${isMobile ? '36px' : 'auto'};
                              flex:${isMobile ? '1' : 'initial'};
                              max-width:${isMobile ? '80px' : 'none'};">
                 ${isMobile ? panel : `${panel}. ${panelTitles[panel]}`}
               </button>
-            `).join('')}
-          </div>
+            `)
+      .join('');
 
-          ${!isMobile ? `
-            <!-- Desktop Status Bar -->
-            <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
-              <div style="display:flex;align-items:center;gap:6px;">
-                <div style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
-                <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
+    const statusBar = `
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:${isMobile ? '11px' : '12px'};color:#475569;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="hrddApiIndicator" style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></span>
+          <span id="hrddApiStatus">API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
+        </div>
+        <div style="opacity:.5;">•</div>
+        <div><span id="hrddCountryCount">${this.state.countries.length}</span> Countries</div>
+        <div style="opacity:.5;">•</div>
+        <div><span id="hrddSelectedCount">${this.state.selectedCountries.length}</span> Selected</div>
+        <div id="hrddLastUpdatedGroup" style="display:${formattedLastUpdate ? 'flex' : 'none'};align-items:center;gap:6px;">
+          <div style="opacity:.5;">•</div>
+          <span id="hrddLastUpdated">${formattedLastUpdate ? `Updated: ${formattedLastUpdate}` : ''}</span>
+        </div>
+      </div>
+    `;
+
+    this.containerElement.innerHTML = `
+      <div id="hrddAppContainer" style="position:relative;width:100%;height:100vh;overflow:hidden;background-color:#f8fafc;">
+        <header id="hrddHeader" style="position:absolute;top:0;left:0;right:0;z-index:1000;background:rgba(248,250,252,0.98);padding:${isMobile ? '12px 12px 8px' : '20px 20px 12px'};box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);backdrop-filter:blur(10px);">
+          <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:${isMobile ? '8px' : '12px'};text-align:center;padding:${isMobile ? '8px 12px' : '12px 20px'};background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:${isMobile ? '8px' : '12px'};box-shadow:0 6px 18px rgba(15,23,42,0.08);">
+            ${isMobile ? `
+              <div style="display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;">
+                <h1 style="font-size:18px;font-weight:700;color:#1f2937;margin:0;line-height:1.2;">HRDD Risk Assessment</h1>
               </div>
-              <div style="opacity:.5;">•</div>
-              <div><span>${this.state.countries.length}</span> Countries</div>
-              <div style="opacity:.5;">•</div>
-              <div><span>${this.state.selectedCountries.length}</span> Selected</div>
-              ${this.state.lastUpdate ? `
-                <div style="opacity:.5;">•</div>
-                <div>Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}</div>
-              ` : ''}
+            ` : `
+              <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
+                <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
+              </div>
+            `}
+            <div style="display:flex;justify-content:center;gap:${isMobile ? '4px' : '6px'};flex-wrap:wrap;width:100%;">
+              ${navButtons}
             </div>
-          ` : ''}
-        </div>
-      </header>
-
-      <!-- Scrollable Content Area -->
-      <main id="hrddMainContent" style="position:absolute;top:${headerHeight};left:0;right:0;bottom:${isMobile ? '60px' : '0'};overflow-y:auto;overflow-x:hidden;background-color:#f8fafc;box-sizing:border-box;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
-        <div style="width:100%;max-width:${isMobile ? '100%' : '1600px'};margin:0 auto;padding:${isMobile ? '12px 12px 80px' : '20px 20px 60px'};box-sizing:border-box;">
-          <div id="panelContent">
-            ${this.renderCurrentPanel()}
+            ${statusBar}
           </div>
-          
-          <!-- Extra padding at bottom to ensure last content is visible -->
-          <div style="height:${isMobile ? '60px' : '40px'};"></div>
-        </div>
-      </main>
+        </header>
+        <main id="hrddMainContent" style="position:absolute;top:${headerHeight}px;left:0;right:0;bottom:${isMobile ? '60px' : '0'};overflow-y:auto;overflow-x:hidden;background-color:#f8fafc;box-sizing:border-box;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+          <div style="width:100%;max-width:${isMobile ? '100%' : '1600px'};margin:0 auto;padding:${isMobile ? '12px 12px 80px' : '20px 20px 60px'};box-sizing:border-box;">
+            <div id="panelContent">
+              ${this.renderCurrentPanel()}
+            </div>
+            <div style="height:${isMobile ? '60px' : '40px'};"></div>
+          </div>
+        </main>
+        ${isMobile ? `
+          <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.98);border-top:1px solid #e5e7eb;padding:8px 12px;z-index:999;display:flex;justify-content:space-around;align-items:center;backdrop-filter:blur(10px);">
+            <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))"
+                    style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
+                    ${this.state.currentPanel === 1 ? 'disabled' : ''}>
+              ← Prev
+            </button>
+            <span style="font-size:12px;color:#4b5563;font-weight:600;">
+              Panel ${this.state.currentPanel} of 5
+            </span>
+            <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))"
+                    style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
+                    ${this.state.currentPanel === 5 ? 'disabled' : ''}>
+              Next →
+            </button>
+          </div>
+        ` : ''}
+      </div>
+      <style>
+        * {
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+        }
+        html, body {
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+          height: 100%;
+          position: fixed;
+          width: 100%;
+        }
+        @supports (height: 100dvh) {
+          #hrddAppContainer {
+            height: 100dvh !important;
+          }
+        }
+        #${this.containerElement.id} {
+          width: 100%;
+          height: 100vh;
+          height: 100dvh;
+          overflow: hidden;
+          position: relative;
+        }
+        #hrddMainContent::-webkit-scrollbar {
+          width: ${isMobile ? '4px' : '10px'};
+        }
+        #hrddMainContent::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 5px;
+        }
+        #hrddMainContent::-webkit-scrollbar-thumb {
+          background: #94a3b8;
+          border-radius: 5px;
+        }
+        #hrddMainContent::-webkit-scrollbar-thumb:hover {
+          background: #64748b;
+        }
+        @media (max-width: 768px) {
+          input[type="range"] {
+            min-height: 44px;
+            padding: 12px 0;
+          }
+          input[type="number"], select {
+            min-height: 44px;
+            font-size: 16px !important;
+          }
+          button {
+            min-height: 44px;
+            min-width: 44px;
+          }
+          div[style*="grid-template-columns: repeat(3"] {
+            grid-template-columns: 1fr !important;
+          }
+          div[style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+          }
+          h1 { font-size: 20px !important; }
+          h2 { font-size: 18px !important; }
+          h3 { font-size: 16px !important; }
+          p { font-size: 14px !important; }
+          #globalMapContainer, #baselineMapContainer {
+            min-height: 300px !important;
+            max-height: 400px !important;
+          }
+          #hrddMainContent {
+            padding-bottom: 80px;
+          }
+        }
+        body {
+          overscroll-behavior-y: none;
+        }
+      </style>
+    `;
 
-      ${isMobile ? `
-        <!-- Mobile Quick Actions Bar -->
-        <div style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.98);border-top:1px solid #e5e7eb;padding:8px 12px;z-index:999;display:flex;justify-content:space-around;align-items:center;backdrop-filter:blur(10px);">
-          <button onclick="window.hrddApp.setCurrentPanel(Math.max(1, window.hrddApp.state.currentPanel - 1))" 
-                  style="padding:8px 16px;background:#6b7280;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 1 ? 'opacity:0.5;' : ''}"
-                  ${this.state.currentPanel === 1 ? 'disabled' : ''}>
-            ← Prev
-          </button>
-          <span style="font-size:12px;color:#4b5563;font-weight:600;">
-            Panel ${this.state.currentPanel} of 5
-          </span>
-          <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))" 
-                  style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:12px;font-weight:500;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
-                  ${this.state.currentPanel === 5 ? 'disabled' : ''}>
-            Next →
-          </button>
-        </div>
-      ` : ''}
-    </div>
+    const mainContent = document.getElementById('hrddMainContent');
+    if (mainContent) {
+      mainContent.scrollTop = 0;
+    }
 
-    <style>
-      /* Mobile-specific resets */
-      * {
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
-      }
-      
-      /* Reset any conflicting styles */
-      html, body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden; /* Prevent outer scrolling */
-        height: 100%;
-        position: fixed;
-        width: 100%;
-      }
-      
-      /* Use dvh units for better mobile viewport handling */
-      @supports (height: 100dvh) {
-        #hrddAppContainer {
-          height: 100dvh !important;
-        }
-      }
-      
-      /* Ensure the container fills the viewport */
-      #${this.containerElement.id} {
-        width: 100%;
-        height: 100vh;
-        height: 100dvh;
-        overflow: hidden;
-        position: relative;
-      }
-      
-      /* Custom scrollbar for the main content */
-      #hrddMainContent::-webkit-scrollbar {
-        width: ${isMobile ? '4px' : '10px'};
-      }
-      
-      #hrddMainContent::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 5px;
-      }
-      
-      #hrddMainContent::-webkit-scrollbar-thumb {
-        background: #94a3b8;
-        border-radius: 5px;
-      }
-      
-      #hrddMainContent::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-      }
-      
-      /* Mobile-optimized form controls */
-      @media (max-width: 768px) {
-        input[type="range"] {
-          min-height: 44px;
-          padding: 12px 0;
-        }
-        
-        input[type="number"], select {
-          min-height: 44px;
-          font-size: 16px !important; /* Prevents zoom on iOS */
-        }
-        
-        button {
-          min-height: 44px;
-          min-width: 44px;
-        }
-        
-        /* Stack grid layouts on mobile */
-        div[style*="grid-template-columns: repeat(3"] {
-          grid-template-columns: 1fr !important;
-        }
-        
-        div[style*="grid-template-columns: 1fr 1fr"] {
-          grid-template-columns: 1fr !important;
-        }
-        
-        /* Responsive text sizes */
-        h1 { font-size: 20px !important; }
-        h2 { font-size: 18px !important; }
-        h3 { font-size: 16px !important; }
-        p { font-size: 14px !important; }
-        
-        /* Mobile map container */
-        #globalMapContainer, #baselineMapContainer {
-          min-height: 300px !important;
-          max-height: 400px !important;
-        }
-        
-        /* Adjust main content for mobile bottom nav */
-        #hrddMainContent {
-          top: 120px !important;
-        }
-        
-        /* Hide verbose descriptions on mobile */
-        .desktop-only {
-          display: none !important;
-        }
-      }
-      
-      /* Touch-friendly hover states */
-      @media (hover: none) {
-        button:hover {
-          background-color: inherit !important;
-        }
-      }
-      
-      /* Landscape orientation adjustments */
-      @media (max-height: 500px) and (orientation: landscape) {
-        #hrddHeader {
-          padding: 8px !important;
-        }
-        
-        #hrddMainContent {
-          top: 80px !important;
-        }
-      }
-      
-      /* High z-index for overlays */
-      .map-tooltip {
-        z-index: 10000 !important;
-        font-size: ${isMobile ? '11px' : '12px'} !important;
-      }
-      
-      #pdfLoadingModal {
-        z-index: 10001 !important;
-      }
-      
-      /* Ensure buttons and interactive elements work */
-      button {
-        -webkit-appearance: none;
-        appearance: none;
-        -webkit-user-select: none;
-        user-select: none;
-      }
-      
-      /* Ensure interactive elements are touch-friendly */
-      input, button, select, textarea {
-        -webkit-appearance: none;
-        appearance: none;
-        border-radius: 6px;
-      }
-      
-      /* Fix for iOS momentum scrolling */
-      #hrddMainContent {
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: contain;
-      }
-      
-      /* Prevent pull-to-refresh on Chrome mobile */
-      body {
-        overscroll-behavior-y: none;
-      }
-    </style>
-  `;
-  
-  // After rendering, ensure the scroll position resets to top when changing panels
-  const mainContent = document.getElementById('hrddMainContent');
-  if (mainContent) {
-    mainContent.scrollTop = 0;
+    if (isMobile && typeof this.addMobileGestures === 'function') {
+      this.addMobileGestures();
+    }
   }
-  
-  // Add swipe gestures for mobile panel navigation if on mobile
-  if (isMobile && typeof this.addMobileGestures === 'function') {
-    this.addMobileGestures();
-  }
-}
-
-  // For panels 1-4, ensure minimum height to guarantee scrollability
-  const ensureMinHeight = (content) => `
-    <div style="min-height:calc(100vh - 200px);padding-bottom:40px;">
-      ${content}
-    </div>
-  `;
-
-  if (panel === 1) {
-    // Global Risks (overview map + weightings)
-    const html = ensureMinHeight(`
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        ${renderPanelDescription(panel)}
-        <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-          <div id="globalMapContainer" style="min-height:500px;"></div>
-          <div id="weightingsPanel" style="min-height:400px;"></div>
-        </div>
-      </div>
-    `);
-
-     queueMicrotask(() => {
-      UIComponents.createGlobalRiskMap('globalMapContainer', {
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        title: 'Global Risk Overview',
-        height: 500,
-        width: 1200
-      });
-
-      UIComponents.createWeightingsPanel('weightingsPanel', {
-        weights: this.state.weights,
-        onWeightsChange: this.onWeightsChange
-      });
-    });
-    return html;
-  }
-
-  if (panel === 2) {
-    // Baseline Risk (selection map + country list + summary)
-    const html = ensureMinHeight(`
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        ${renderPanelDescription(panel)}
-        <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-          <div id="baselineMapContainer" style="min-height:500px;"></div>
-          <div id="countrySelectionPanel" style="min-height:300px;"></div>
-          <div id="resultsPanel" style="min-height:400px;"></div>
-        </div>
-      </div>
-    `);
-
-     queueMicrotask(() => {
-      const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
-        ? this.state.baselineRisk.toFixed(1)
-        : 'N/A';
-      const baselineMapTitle = `Click on countries to select them: current baseline risk = ${baselineRiskValue}`;
-
-      UIComponents.createWorldMap('baselineMapContainer', {
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        selectedCountries: this.state.selectedCountries,
-        onCountrySelect: this.onCountrySelect,
-        title: baselineMapTitle,
-        height: 500,
-        width: 1200
-      });
-
-      UIComponents.createCountrySelectionPanel('countrySelectionPanel', {
-        countries: this.state.countries,
-        selectedCountries: this.state.selectedCountries,
-        countryVolumes: this.state.countryVolumes,
-        onCountrySelect: this.onCountrySelect,
-        onVolumeChange: this.onVolumeChange
-      });
-
-      UIComponents.createResultsPanel('resultsPanel', {
-        selectedCountries: this.state.selectedCountries,
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        baselineRisk: this.state.baselineRisk
-      });
-    });
-    return html;
-  }
-
-  if (panel === 3) {
-    // HRDD Strategy (coverage + transparency + focus + summary)
-    const html = ensureMinHeight(`
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        ${renderPanelDescription(panel)}
-        <div id="strategyRiskSummary" style="min-height:300px;"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel3Grid">
-          <div id="hrddStrategyPanel" style="min-height:600px;"></div>
-          <div id="transparencyPanel" style="min-height:600px;"></div>
-        </div>
-        <div id="focusPanel" style="min-height:400px;"></div>
-      </div>
-    `);
-
-    queueMicrotask(() => {
-      UIComponents.createRiskComparisonPanel('strategyRiskSummary', {
-        baselineRisk: this.state.baselineRisk,
-        managedRisk: this.state.managedRisk,
-        selectedCountries: this.state.selectedCountries,
-        focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
-      });
-
-      UIComponents.createHRDDStrategyPanel('hrddStrategyPanel', {
-        strategy: this.state.hrddStrategy,
-        onStrategyChange: this.onHRDDStrategyChange,
-        onFocusChange: this.onFocusChange
-      });
-
-      UIComponents.createTransparencyPanel('transparencyPanel', {
-        transparency: this.state.transparencyEffectiveness,
-        onTransparencyChange: this.onTransparencyChange
-      });
-
-      UIComponents.createFocusPanel('focusPanel', {
-        focus: this.state.focus,
-        onFocusChange: this.onFocusChange,
-        focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
-      });
-    });
-    return html;
-  }
-
-  if (panel === 4) {
-    // Response Strategy (mix + effectiveness + risk summary)
-    const html = ensureMinHeight(`
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        ${renderPanelDescription(panel)}
-        <div id="responseRiskSummary" style="min-height:300px;"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel4Grid">
-          <div id="responsivenessPanel" style="min-height:600px;"></div>
-          <div id="responsivenessEffectivenessPanel" style="min-height:600px;"></div>
-        </div>
-      </div>
-    `);
-
-    queueMicrotask(() => {
-      UIComponents.createResponsivenessPanel('responsivenessPanel', {
-        responsiveness: this.state.responsivenessStrategy,
-        onResponsivenessChange: this.onResponsivenessChange
-      });
-
-      UIComponents.createResponsivenessEffectivenessPanel('responsivenessEffectivenessPanel', {
-        effectiveness: this.state.responsivenessEffectiveness,
-        onEffectivenessChange: this.onResponsivenessEffectivenessChange
-      });
-
-      UIComponents.createRiskComparisonPanel('responseRiskSummary', {
-        baselineRisk: this.state.baselineRisk,
-        managedRisk: this.state.managedRisk,
-        selectedCountries: this.state.selectedCountries,
-        focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
-      });
-    });
-    return html;
-  }
-
-  // Panel 5 - Managed Risk (comparison maps + final results + export/report)
-   const html = ensureMinHeight(`
-    <div style="display:flex;flex-direction:column;gap:16px;">
-      ${renderPanelDescription(panel)}
-      <div id="panel5MapsSection" style="display:grid;grid-template-columns:1fr;gap:16px;">
-        <div id="panel5BaselineMapContainer" style="min-height:500px;"></div>
-        <div id="managedComparisonMapContainer" style="min-height:400px;"></div>
-      </div>
-      <div id="panel5ResultsSection">
-        <div id="finalResultsPanel" style="min-height:600px;"></div>
-      </div>
-
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
-        <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
-          ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
-        </button>
-      </div>
-    </div>
-  `);
-
-  queueMicrotask(() => {
-    const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
-      ? this.state.baselineRisk.toFixed(1)
-      : 'N/A';
-    const baselineMapTitle = `Baseline Risk - Selected Countries Only - Overall Risk: ${baselineRiskValue}`;
-
-    UIComponents.createWorldMap('panel5BaselineMapContainer', {
-      countries: this.state.countries,
-      countryRisks: this.state.countryRisks,
-      selectedCountries: this.state.selectedCountries,
-      onCountrySelect: this.onCountrySelect,
-      title: baselineMapTitle,
-      height: 500,
-      width: 1200
-    });
-
-    UIComponents.createComparisonMap('managedComparisonMapContainer', {
-      countries: this.state.countries,
-      countryRisks: this.state.countryRisks,
-      selectedCountries: this.state.selectedCountries,
-      title: 'Managed Risk - Selected Countries Only',
-      mapType: 'managed',
-      managedRisk: this.state.managedRisk,
-      selectedCountryRisks: this.state.countryManagedRisks,
-      baselineRisks: this.state.countryRisks,
-      focus: this.state.focus,
-      focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
-      height: 400,
-      width: 1200
-    });
-
-    UIComponents.createFinalResultsPanel('finalResultsPanel', {
-      baselineRisk: this.state.baselineRisk,
-      managedRisk: this.state.managedRisk,
-      selectedCountries: this.state.selectedCountries,
-      countries: this.state.countries,
-      hrddStrategy: this.state.hrddStrategy,
-      transparencyEffectiveness: this.state.transparencyEffectiveness,
-      responsivenessStrategy: this.state.responsivenessStrategy,
-      responsivenessEffectiveness: this.state.responsivenessEffectiveness,
-      focus: this.state.focus,
-      riskConcentration: this.state.riskConcentration,
-      countryVolumes: this.state.countryVolumes,
-      countryRisks: this.state.countryRisks,
-      focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
-    });
-
-    const btnExport = document.getElementById('btnExportConfig');
-    if (btnExport) btnExport.onclick = this.exportConfiguration;
-
-    const btnPDF = document.getElementById('btnGeneratePDF');
-    if (btnPDF) btnPDF.onclick = this.generatePDFReport;
-  });
-  return html;
-}
 
   renderCurrentPanel() {
-    // Panels are rendered via UIComponents into placeholder containers for flexibility
-    // We return the shell here; UIComponents fill the inner divs with rich controls.
     const panel = this.state.currentPanel;
-    
-    // Add this at the start of renderCurrentPanel() method:
-    function renderPanelDescription(panelNumber) {
-      const description = PANEL_DESCRIPTIONS[panelNumber];
-      if (!description) return '';
-    return `
-      <div style="padding:14px 18px;background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.9);border-radius:12px;box-shadow:0 6px 16px rgba(15,23,42,0.06);">
-      <p style="font-size:15px;color:#4b5563;margin:0;line-height:1.5;">${description}</p>
-      </div>
-      `;
-    }
-    
+
     if (this.state.loading) {
       return `
-        <div style="display:flex;align-items:center;justify-content:center;height:40vh;">
-          <div style="padding:16px 20px;border:1px solid #e5e7eb;border-radius:10px;background:white;box-shadow:0 8px 20px rgba(2,6,23,.08);">
+        <div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 220px);padding:20px;">
+          <div style="padding:16px 20px;border:1px solid #e5e7eb;border-radius:10px;background:white;box-shadow:0 8px 20px rgba(26,23,42,0.08);">
             Loading data…
           </div>
         </div>
       `;
     }
-    if (this.state.error) {
-      return `
-        <div style="padding:16px;border:1px solid #fecaca;border-radius:10px;background:#fef2f2;color:#7f1d1d;">
-          ${this.state.error}
-        </div>
-      `;
-    }
 
-      if (panel === 1) {
-      // Global Risks (overview map + weightings)
-      // Shell:
-      const html = `
+    const ensureMinHeight = content => `
+      <div style="min-height:calc(100vh - 200px);padding-bottom:40px;">
+        ${content}
+      </div>
+    `;
+
+    if (panel === 1) {
+      const html = ensureMinHeight(`
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
           <div style="display:grid;grid-template-columns:1fr;gap:16px;">
             <div id="globalMapContainer" style="min-height:500px;"></div>
-            <div id="weightingsPanel"></div>
+            <div id="weightingsPanel" style="min-height:400px;"></div>
           </div>
         </div>
-      `;
+      `);
 
-      // Defer actual rendering to next microtask so the nodes exist
       queueMicrotask(() => {
         UIComponents.createGlobalRiskMap('globalMapContainer', {
           countries: this.state.countries,
@@ -1241,21 +739,21 @@ renderCurrentPanel() {
           onWeightsChange: this.onWeightsChange
         });
       });
+
       return html;
     }
 
     if (panel === 2) {
-      // Baseline Risk (selection map + country list + summary)
-      const html = `
+      const html = ensureMinHeight(`
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
           <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-            <div id="baselineMapContainer"></div>
-            <div id="countrySelectionPanel"></div>
-            <div id="resultsPanel"></div>
+            <div id="baselineMapContainer" style="min-height:500px;"></div>
+            <div id="countrySelectionPanel" style="min-height:300px;"></div>
+            <div id="resultsPanel" style="min-height:400px;"></div>
           </div>
         </div>
-      `;
+      `);
 
       queueMicrotask(() => {
         const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
@@ -1288,22 +786,22 @@ renderCurrentPanel() {
           baselineRisk: this.state.baselineRisk
         });
       });
+
       return html;
     }
 
-     if (panel === 3) {
-      // HRDD Strategy (coverage + transparency + focus + summary)
-      const html = `
+    if (panel === 3) {
+      const html = ensureMinHeight(`
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
-          <div id="strategyRiskSummary"></div>
+          <div id="strategyRiskSummary" style="min-height:300px;"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel3Grid">
-            <div id="hrddStrategyPanel" style="height:100%;"></div>
-            <div id="transparencyPanel" style="height:100%;"></div>
+            <div id="hrddStrategyPanel" style="min-height:600px;"></div>
+            <div id="transparencyPanel" style="min-height:600px;"></div>
           </div>
-          <div id="focusPanel"></div>
+          <div id="focusPanel" style="min-height:400px;"></div>
         </div>
-      `;
+      `);
 
       queueMicrotask(() => {
         UIComponents.createRiskComparisonPanel('strategyRiskSummary', {
@@ -1330,12 +828,12 @@ renderCurrentPanel() {
           focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
         });
       });
+
       return html;
     }
 
-     if (panel === 4) {
-      // Response Strategy (mix + effectiveness + risk summary)
-      const html = `
+    if (panel === 4) {
+      const html = ensureMinHeight(`
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
           <div id="responseRiskSummary" style="min-height:300px;"></div>
@@ -1344,7 +842,7 @@ renderCurrentPanel() {
             <div id="responsivenessEffectivenessPanel" style="min-height:600px;"></div>
           </div>
         </div>
-      `;
+      `);
 
       queueMicrotask(() => {
         UIComponents.createResponsivenessPanel('responsivenessPanel', {
@@ -1364,99 +862,88 @@ renderCurrentPanel() {
           focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
         });
       });
+
       return html;
     }
 
-    // Panel 5 — Managed Risk (comparison maps + final results + export/report)
-     const html = `
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        ${renderPanelDescription(panel)}
-        <div id="panel5MapsSection" style="display:grid;grid-template-columns:1fr;gap:16px;">
-          <div id="panel5BaselineMapContainer" style="min-height:500px;"></div>
-          <div id="managedComparisonMapContainer" style="min-height:400px;"></div>
+    if (panel === 5) {
+      const html = ensureMinHeight(`
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          ${renderPanelDescription(panel)}
+          <div id="panel5MapsSection" style="display:grid;grid-template-columns:1fr;gap:16px;">
+            <div id="panel5BaselineMapContainer" style="min-height:500px;"></div>
+            <div id="managedComparisonMapContainer" style="min-height:400px;"></div>
+          </div>
+          <div id="panel5ResultsSection">
+            <div id="finalResultsPanel" style="min-height:600px;"></div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
+            <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
+              ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
+            </button>
+          </div>
         </div>
-        <div id="panel5ResultsSection">
-          <div id="finalResultsPanel" style="min-height:600px;"></div>
-        </div>
+      `);
 
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
-          <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
-            ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
-          </button>
-        </div>
-      </div>
-    `;
+      queueMicrotask(() => {
+        const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
+          ? this.state.baselineRisk.toFixed(1)
+          : 'N/A';
+        const baselineMapTitle = `Baseline Risk - Selected Countries Only - Overall Risk: ${baselineRiskValue}`;
 
-    queueMicrotask(() => {
-      const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
-        ? this.state.baselineRisk.toFixed(1)
-        : 'N/A';
-      const baselineMapTitle = `Baseline Risk - Selected Countries Only - Overall Risk: ${baselineRiskValue}`;
+        UIComponents.createWorldMap('panel5BaselineMapContainer', {
+          countries: this.state.countries,
+          countryRisks: this.state.countryRisks,
+          selectedCountries: this.state.selectedCountries,
+          onCountrySelect: this.onCountrySelect,
+          title: baselineMapTitle,
+          height: 500,
+          width: 1200
+        });
 
-      UIComponents.createWorldMap('panel5BaselineMapContainer', {
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        selectedCountries: this.state.selectedCountries,
-        onCountrySelect: this.onCountrySelect,
-        title: baselineMapTitle,
-        height: 500,
-        width: 1200
+        UIComponents.createComparisonMap('managedComparisonMapContainer', {
+          countries: this.state.countries,
+          countryRisks: this.state.countryRisks,
+          selectedCountries: this.state.selectedCountries,
+          title: 'Managed Risk - Selected Countries Only',
+          mapType: 'managed',
+          managedRisk: this.state.managedRisk,
+          selectedCountryRisks: this.state.countryManagedRisks,
+          baselineRisks: this.state.countryRisks,
+          focus: this.state.focus,
+          focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
+          height: 400,
+          width: 1200
+        });
+
+        UIComponents.createFinalResultsPanel('finalResultsPanel', {
+          baselineRisk: this.state.baselineRisk,
+          managedRisk: this.state.managedRisk,
+          selectedCountries: this.state.selectedCountries,
+          countries: this.state.countries,
+          hrddStrategy: this.state.hrddStrategy,
+          transparencyEffectiveness: this.state.transparencyEffectiveness,
+          responsivenessStrategy: this.state.responsivenessStrategy,
+          responsivenessEffectiveness: this.state.responsivenessEffectiveness,
+          focus: this.state.focus,
+          riskConcentration: this.state.riskConcentration,
+          countryVolumes: this.state.countryVolumes,
+          countryRisks: this.state.countryRisks,
+          focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
+        });
+
+        const btnExport = document.getElementById('btnExportConfig');
+        if (btnExport) btnExport.onclick = this.exportConfiguration;
+
+        const btnPDF = document.getElementById('btnGeneratePDF');
+        if (btnPDF) btnPDF.onclick = this.generatePDFReport;
       });
 
-      UIComponents.createComparisonMap('managedComparisonMapContainer', {
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
-        selectedCountries: this.state.selectedCountries,
-        title: 'Managed Risk - Selected Countries Only',
-        mapType: 'managed',
-        managedRisk: this.state.managedRisk,
-        selectedCountryRisks: this.state.countryManagedRisks,
-        baselineRisks: this.state.countryRisks,
-        focus: this.state.focus,
-        focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
-        height: 400,
-        width: 1200
-      });
+      return html;
+    }
 
-      UIComponents.createFinalResultsPanel('finalResultsPanel', {
-        baselineRisk: this.state.baselineRisk,
-        managedRisk: this.state.managedRisk,
-        selectedCountries: this.state.selectedCountries,
-        title: 'Managed Risk - Selected Countries Only',
-        mapType: 'managed',
-        managedRisk: this.state.managedRisk,
-        selectedCountryRisks: this.state.countryManagedRisks,
-        baselineRisks: this.state.countryRisks,
-        focus: this.state.focus,
-        focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
-        height: 400,
-        width: 1200
-      });
-
-      UIComponents.createFinalResultsPanel('finalResultsPanel', {
-        baselineRisk: this.state.baselineRisk,
-        managedRisk: this.state.managedRisk,
-        selectedCountries: this.state.selectedCountries,
-        countries: this.state.countries,
-        hrddStrategy: this.state.hrddStrategy,
-        transparencyEffectiveness: this.state.transparencyEffectiveness,
-        responsivenessStrategy: this.state.responsivenessStrategy,
-        responsivenessEffectiveness: this.state.responsivenessEffectiveness,
-        focus: this.state.focus,
-        riskConcentration: this.state.riskConcentration,
-        countryVolumes: this.state.countryVolumes,
-        countryRisks: this.state.countryRisks,
-        focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
-      });
-
-      const btnExport = document.getElementById('btnExportConfig');
-      if (btnExport) btnExport.onclick = this.exportConfiguration;
-
-      const btnPDF = document.getElementById('btnGeneratePDF');
-      if (btnPDF) btnPDF.onclick = this.generatePDFReport;
-    });
-    return html;
+    return '';
   }
 
   /* ------------------------ Export & Reporting ----------------------- */
