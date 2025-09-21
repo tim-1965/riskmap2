@@ -758,36 +758,39 @@ renderCurrentPanel() {
   }
 
   // Panel 5 - Managed Risk (comparison maps + final results + export/report)
-  const html = ensureMinHeight(`
+   const html = ensureMinHeight(`
     <div style="display:flex;flex-direction:column;gap:16px;">
       ${renderPanelDescription(panel)}
-      <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-        <div id="baselineComparisonMapContainer" style="min-height:400px;"></div>
+      <div id="panel5MapsSection" style="display:grid;grid-template-columns:1fr;gap:16px;">
+        <div id="panel5BaselineMapContainer" style="min-height:500px;"></div>
         <div id="managedComparisonMapContainer" style="min-height:400px;"></div>
+      </div>
+      <div id="panel5ResultsSection">
         <div id="finalResultsPanel" style="min-height:600px;"></div>
+      </div>
 
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
-          <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
-            ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
-          </button>
-        </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
+        <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
+          ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
+        </button>
       </div>
     </div>
   `);
-  
+
   queueMicrotask(() => {
-    UUIComponents.createComparisonMap('baselineComparisonMapContainer', {
+    const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
+      ? this.state.baselineRisk.toFixed(1)
+      : 'N/A';
+    const baselineMapTitle = `Baseline Risk - Selected Countries Only - Overall Risk: ${baselineRiskValue}`;
+
+    UIComponents.createWorldMap('panel5BaselineMapContainer', {
       countries: this.state.countries,
       countryRisks: this.state.countryRisks,
       selectedCountries: this.state.selectedCountries,
-      title: 'Baseline Risk - Selected Countries Only',
-      mapType: 'baseline',
-      baselineRisk: this.state.baselineRisk,
-      baselineRisks: this.state.countryRisks,
-      focus: this.state.focus,
-      focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
-      height: 400,
+      onCountrySelect: this.onCountrySelect,
+      title: baselineMapTitle,
+      height: 500,
       width: 1200
     });
 
@@ -1019,29 +1022,47 @@ renderCurrentPanel() {
      const html = `
       <div style="display:flex;flex-direction:column;gap:16px;">
         ${renderPanelDescription(panel)}
-        <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-          <div id="baselineComparisonMapContainer"></div>
-          <div id="managedComparisonMapContainer"></div>
-          <div id="finalResultsPanel"></div>
+        <div id="panel5MapsSection" style="display:grid;grid-template-columns:1fr;gap:16px;">
+          <div id="panel5BaselineMapContainer" style="min-height:500px;"></div>
+          <div id="managedComparisonMapContainer" style="min-height:400px;"></div>
+        </div>
+        <div id="panel5ResultsSection">
+          <div id="finalResultsPanel" style="min-height:600px;"></div>
+        </div>
 
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
-            <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
-              ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
-            </button>
-          </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
+          <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
+            ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
+          </button>
         </div>
       </div>
     `;
-    
+
     queueMicrotask(() => {
-       UIComponents.createComparisonMap('baselineComparisonMapContainer', {
+      const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
+        ? this.state.baselineRisk.toFixed(1)
+        : 'N/A';
+      const baselineMapTitle = `Baseline Risk - Selected Countries Only - Overall Risk: ${baselineRiskValue}`;
+
+      UIComponents.createWorldMap('panel5BaselineMapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
-        title: 'Baseline Risk - Selected Countries Only',
-        mapType: 'baseline',
-        baselineRisk: this.state.baselineRisk,
+        onCountrySelect: this.onCountrySelect,
+        title: baselineMapTitle,
+        height: 500,
+        width: 1200
+      });
+
+      UIComponents.createComparisonMap('managedComparisonMapContainer', {
+        countries: this.state.countries,
+        countryRisks: this.state.countryRisks,
+        selectedCountries: this.state.selectedCountries,
+        title: 'Managed Risk - Selected Countries Only',
+        mapType: 'managed',
+        managedRisk: this.state.managedRisk,
+        selectedCountryRisks: this.state.countryManagedRisks,
         baselineRisks: this.state.countryRisks,
         focus: this.state.focus,
         focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
@@ -1049,9 +1070,9 @@ renderCurrentPanel() {
         width: 1200
       });
 
-       UIComponents.createComparisonMap('baselineComparisonMapContainer', {
-        countries: this.state.countries,
-        countryRisks: this.state.countryRisks,
+      UIComponents.createFinalResultsPanel('finalResultsPanel', {
+        baselineRisk: this.state.baselineRisk,
+        managedRisk: this.state.managedRisk,
         selectedCountries: this.state.selectedCountries,
         title: 'Managed Risk - Selected Countries Only',
         mapType: 'managed',
