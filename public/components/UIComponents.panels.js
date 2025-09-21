@@ -3,13 +3,7 @@ import { riskEngine } from './RiskEngine.js';
 let panel3ResizeListenerAttached = false;
 let panel4ResizeListenerAttached = false;
 
-// At the top of each create function, detect mobile:
-const isMobile = window.innerWidth <= 768;
-
-// Then adjust styles accordingly:
-style="padding: ${isMobile ? '12px' : '24px'};"
-style="font-size: ${isMobile ? '14px' : '16px'};"
-style="grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'};"
+const isMobileView = () => (typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
 
 function describeFocusLevel(value) {
   if (value >= 0.75) return 'Only high risk suppliers are actively monitored.';
@@ -140,14 +134,17 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  const mobile = isMobileView();
+  const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
+
   const hasSelections = selectedCountries.length > 0;
 
   if (!hasSelections) {
     container.innerHTML = `
-      <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center;">
-        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 16px; color: #1f2937;">Risk Assessment Summary</h2>
-        <div style="color: #6b7280; padding: 20px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">🏭</div>
+      <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center;">
+        <h2 style="font-size: ${responsive('18px', '20px')}; font-weight: bold; margin-bottom: ${responsive('12px', '16px')}; color: #1f2937;">Risk Assessment Summary</h2>
+        <div style="color: #6b7280; padding: ${responsive('12px', '20px')};">
+          <div style="font-size: ${responsive('40px', '48px')}; margin-bottom: ${responsive('12px', '16px')};">🏭</div>
           <p>Select countries in Panel 2 to see your risk assessment summary</p>
         </div>
       </div>
@@ -181,50 +178,50 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
     ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
     : 'Risk level unchanged';
 
-  container.innerHTML = `
-    <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
-      <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; color: #1f2937;">
+ container.innerHTML = `
+    <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
+      <h2 style="font-size: ${responsive('18px', '20px')}; font-weight: bold; margin-bottom: ${responsive('16px', '20px')}; text-align: center; color: #1f2937;">
         Risk Assessment Summary
       </h2>
 
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: stretch; margin-bottom: 20px;">
-        <div style="padding: 24px; border-radius: 12px; border: 3px solid ${baselineColor}; background-color: ${baselineColor}15; text-align: center;">
-          <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
-          <div style="font-size: 48px; font-weight: bold; color: ${baselineColor}; margin-bottom: 8px;">
+      <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(3, minmax(0, 1fr))')}; gap: ${responsive('16px', '24px')}; align-items: stretch; margin-bottom: ${responsive('16px', '20px')};">
+        <div style="padding: ${responsive('18px', '24px')}; border-radius: 12px; border: 3px solid ${baselineColor}; background-color: ${baselineColor}15; text-align: center;">
+          <div style="font-size: ${responsive('11px', '12px')}; font-weight: 500; color: #6b7280; margin-bottom: 8px;">BASELINE RISK</div>
+          <div style="font-size: ${responsive('40px', '48px')}; font-weight: bold; color: ${baselineColor}; margin-bottom: 8px;">
             ${baselineScore.toFixed(1)}
           </div>
-          <div style="font-size: 16px; font-weight: 600; color: ${baselineColor};">
+          <div style="font-size: ${responsive('14px', '16px')}; font-weight: 600; color: ${baselineColor};">
             ${baselineBand}
           </div>
         </div>
 
-        <div style="padding: 24px; border-radius: 12px; border: 3px solid ${changeColor}; background-color: ${changeColor}15; text-align: center;">
-          <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">RISK CHANGE</div>
-          <div style="font-size: 48px; font-weight: bold; color: ${changeColor}; margin-bottom: 8px;">
+        <div style="padding: ${responsive('18px', '24px')}; border-radius: 12px; border: 3px solid ${changeColor}; background-color: ${changeColor}15; text-align: center;">
+          <div style="font-size: ${responsive('11px', '12px')}; font-weight: 500; color: #6b7280; margin-bottom: 8px;">RISK CHANGE</div>
+          <div style="font-size: ${responsive('40px', '48px')}; font-weight: bold; color: ${changeColor}; margin-bottom: 8px;">
             ${changePrefix}${Math.abs(riskReduction).toFixed(1)}%
           </div>
-          <div style="font-size: 16px; font-weight: 600; color: ${changeColor};">
+          <div style="font-size: ${responsive('14px', '16px')}; font-weight: 600; color: ${changeColor};">
             ${changeLabel}
           </div>
-          <div style="font-size: 12px; color: #4b5563; margin-top: 6px;">
+          <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">
             ${changeDetail}
           </div>
         </div>
 
-        <div style="padding: 24px; border-radius: 12px; border: 3px solid ${managedColor}; background-color: ${managedColor}15; text-align: center;">
-          <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
-          <div style="font-size: 48px; font-weight: bold; color: ${managedColor}; margin-bottom: 8px;">
+        <div style="padding: ${responsive('18px', '24px')}; border-radius: 12px; border: 3px solid ${managedColor}; background-color: ${managedColor}15; text-align: center;">
+          <div style="font-size: ${responsive('11px', '12px')}; font-weight: 500; color: #6b7280; margin-bottom: 8px;">MANAGED RISK</div>
+          <div style="font-size: ${responsive('40px', '48px')}; font-weight: bold; color: ${managedColor}; margin-bottom: 8px;">
             ${managedScore.toFixed(1)}
           </div>
-          <div style="font-size: 16px; font-weight: 600; color: ${managedColor};">
+          <div style="font-size: ${responsive('14px', '16px')}; font-weight: 600; color: ${managedColor};">
             ${managedBand}
           </div>
         </div>
       </div>
 
-      <div style="text-align: center; padding: 12px; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
-        <span style="font-size: 14px; color: #0369a1;">
-          Portfolio: ${selectedCountries.length} countries • 
+      <div style="text-align: center; padding: ${responsive('10px', '12px')}; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
+        <span style="font-size: ${responsive('13px', '14px')}; color: #0369a1;">
+          Portfolio: ${selectedCountries.length} countries •
           </span>
       </div>
       
