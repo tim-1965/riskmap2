@@ -506,7 +506,7 @@ render() {
       <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);">
         <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
           <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
-          <p style="font-size:15px;color:#4b5563;margin:0;">Complete 5-Panel Coverage-Based Risk Management and Effectiveness Analysis</p>
+          <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
         </div>
 
         <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">

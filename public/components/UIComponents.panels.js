@@ -1384,7 +1384,7 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
       </div>
 
       <div style="margin-bottom: 20px; padding: 16px; border-radius: 10px; border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);">
-        <h3 style="font-size: 15px; font-weight: 600; color: #1d4ed8; margin: 0 0 12px 0;">Index data sources</h3>
+        <h3 style="font-size: 15px; font-weight: 600; color: #1d4ed8; margin: 0 0 12px 0;">Click below to visit the sources of the index data</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
           ${indexSources.map(source => `
             <a href="${source.url}" target="_blank" rel="noopener noreferrer"
