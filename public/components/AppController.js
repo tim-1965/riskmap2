@@ -9,10 +9,10 @@ import { pdfGenerator } from './PDFGenerator.js';
 
 const PANEL_DESCRIPTIONS = {
   1: 'Calculate the global picture of labour rights risks using publicly-available indices from reputable organisations. The map (and its colouring) shows the risk levels and the user can change the weightings of the different indices below it. Then go to panel 2.',
-  2: 'Click on the map to select which countries are in your supply chain. Below the map, you can optionally change the weighting of each country. You can weight the countries in any way - perhaps by number of suppliers, value of what is sourced, number of workers etc.. Then go to panel 3.',
-  3: 'Sets out your labour rights due diligence progam based on six different industry tools and how effective you think they are. Below these sliders, you can indicate the extent to which efforts are focussed on higher risk countries. Then go to panel 4.',
-  4: 'Sets out how you responds to issues that emerge from your due diligence processes. Responsiveness is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). Set your response strategies and the impact you think they have. Then go to panel 5.',
-  5: 'Here are your results showing your baseline risk level (panel 2) and how well you are managing it. You can see how each component of your strategy impacts your risks. At the bottom of the panel, the user can print out a report capturing the analysis in full.'
+  2: 'Click on the map to select which countries are in your supply chain. Below the map, you can optionally change the weighting of each country. You can weight the countries as you wish (number of suppliers, value of sourcing, number of workers etc..) Then go to panel 3.',
+  3: 'Set out your supply chain due diligence progam across six different industry tools and the effectiveness of each. Set the extent to which your efforts are focussed on higher risk countries. Then go to panel 4.',
+  4: 'Set out how you respond to issues that are found. Responsiveness is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). Then go to panel 5.',
+  5: 'Here are your results showing your baseline risk level (panel 2) and how well you are managing it. You can see how element in you strategy impacts your risks. You can print out a report capturing the analysis in full.'
 };
 
 function renderPanelDescription(panelNumber) {
