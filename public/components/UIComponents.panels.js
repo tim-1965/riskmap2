@@ -1243,31 +1243,31 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
 
   const weightFactors = [
     {
-      label: 'ITUC Rights Rating',
+      label: 'International Trade Union Confederation - Global Rights Index',
       description: 'Measures the overall protection of internationally recognised core labour rights.',
       sourceLabel: 'ITUC Global Rights Index',
       url: 'https://www.ituc-csi.org/global-rights-index'
     },
     {
-      label: 'Corruption Index (TI)',
+      label: 'Transparency International - Corruption Perceptions Index',
       description: 'Uses Transparency International data to capture perceived corruption in public institutions.',
       sourceLabel: 'Transparency International – Corruption Perceptions Index',
       url: 'https://www.transparency.org/en/cpi'
     },
     {
-      label: 'ILO Migrant Worker Prevalence',
+      label: 'ILO - International Labour Migration Statistics, migrant worker prevalence',
       description: 'Highlights migrant worker participation using the ILO’s international labour migration statistics.',
       sourceLabel: 'ILO International Labour Migration Statistics',
       url: 'https://ilostat.ilo.org/methods/concepts-and-definitions/description-international-labour-migration-statistics/'
     },
     {
-      label: 'WJP Index 4.8',
-      description: 'Reflects fundamental rights performance from the World Justice Project Rule of Law Index.',
+      label: 'World Justic Project - Rule of Law Index (using the Fundamental Labour Rights component 4.8)',
+      description: 'Reflects fundamental labour rights performance from the World Justice Project Rule of Law Index.',
       sourceLabel: 'WJP Rule of Law Index – Fundamental Rights',
       url: 'https://worldjusticeproject.org/rule-of-law-index/global/2024/Fundamental%20Rights/'
     },
     {
-      label: 'Walk Free Slavery Index',
+      label: 'Walk Free - Global Slavery Index',
       description: 'Captures vulnerability to modern slavery using Walk Free’s Global Slavery Index.',
       sourceLabel: 'Walk Free Global Slavery Index',
       url: 'https://www.walkfree.org/global-slavery-index/'
@@ -1276,20 +1276,20 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
 
   const indexSources = [
     {
-      name: 'ITUC Global Rights Index',
+      name: 'International Trade Union Confederation - Global Rights Index',
       url: 'https://www.ituc-csi.org/global-rights-index'
     },
     {
-      name: 'ILO International Labour Migration Statistics',
+      name: 'Transparency International - Corruption Perceptions Index',
+      url: 'https://www.transparency.org/en/cpi/2024'
+    },
+    {
+      name: 'ILO - International Labour Migration Statistics',
       url: 'https://ilostat.ilo.org/methods/concepts-and-definitions/description-international-labour-migration-statistics/'
     },
     {
-      name: 'WJP Rule of Law Index – Fundamental Rights',
+      name: 'World Justice Project - Rule of Law Index – Fundamental Rights',
       url: 'https://worldjusticeproject.org/rule-of-law-index/global/2024/Fundamental%20Rights/'
-    },
-    {
-      name: 'Walk Free Global Slavery Index – Prevalence',
-      url: 'https://www.walkfree.org/global-slavery-index/'
     },
     {
       name: 'Walk Free Global Slavery Index – Country Profiles',

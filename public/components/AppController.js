@@ -981,16 +981,16 @@ renderCurrentPanel() {
       return html;
     }
 
-    if (panel === 4) {
+     if (panel === 4) {
       // Response Strategy (mix + effectiveness + risk summary)
       const html = `
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
+          <div id="responseRiskSummary" style="min-height:300px;"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel4Grid">
-            <div id="responsivenessPanel"></div>
-            <div id="responsivenessEffectivenessPanel"></div>
+            <div id="responsivenessPanel" style="min-height:600px;"></div>
+            <div id="responsivenessEffectivenessPanel" style="min-height:600px;"></div>
           </div>
-          <div id="responseRiskSummary"></div>
         </div>
       `;
 
