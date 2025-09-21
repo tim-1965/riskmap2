@@ -482,7 +482,7 @@ export class AppController {
           formatted = '';
         }
         lastUpdatedGroup.style.display = 'flex';
-        lastUpdatedEl.textContent = formatted ? `Updated: ${formatted}` : '';
+        lastUpdatedEl.textContent = formatted ? `Best on larger screens. Updated: ${formatted}` : '';
       } else {
         lastUpdatedGroup.style.display = 'none';
         lastUpdatedEl.textContent = '';
@@ -810,7 +810,7 @@ export class AppController {
            <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:${isMobile ? '8px' : '12px'};text-align:center;padding:${isMobile ? '8px 12px' : '12px 20px'};background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:${isMobile ? '8px' : '12px'};box-shadow:0 6px 18px rgba(15,23,42,0.08);box-sizing:border-box;">
             ${isMobile ? `
               <div style="display:flex;flex-direction:column;gap:6px;align-items:center;width:100%;">
-                <h1 style="font-size:18px;font-weight:700;color:#1f2937;margin:0;line-height:1.2;">HRDD Risk Assessment</h1>
+                <h1 style="font-size:18px;font-weight:700;color:#1f2937;margin:0;line-height:1.2;">Supply chain risks</h1>
               </div>
             ` : `
               <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
@@ -1068,7 +1068,7 @@ export class AppController {
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
           <div id="strategyRiskSummary" style="min-height:300px;"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel3Grid">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:stretch;" id="panel3Grid">
             <div id="hrddStrategyPanel" style="min-height:600px;"></div>
             <div id="transparencyPanel" style="min-height:600px;"></div>
           </div>
@@ -1110,7 +1110,7 @@ export class AppController {
         <div style="display:flex;flex-direction:column;gap:16px;">
           ${renderPanelDescription(panel)}
           <div id="responseRiskSummary" style="min-height:300px;"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel4Grid">
+           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:stretch;" id="panel4Grid">
             <div id="responsivenessPanel" style="min-height:600px;"></div>
             <div id="responsivenessEffectivenessPanel" style="min-height:600px;"></div>
           </div>

@@ -310,6 +310,39 @@ function convertTopologyToFeatureCollection(topology, object) {
   return { type: 'FeatureCollection', features };
 }
 
+function getResponsiveDimensions(wrapper, defaultWidth, defaultHeight) {
+  const MIN_WIDTH = 320;
+  const MIN_HEIGHT = 280;
+
+  const fallbackWidth = Math.max(defaultWidth || 960, MIN_WIDTH);
+  const fallbackHeight = Math.max(defaultHeight || 500, MIN_HEIGHT);
+
+  const rect = wrapper && typeof wrapper.getBoundingClientRect === 'function'
+    ? wrapper.getBoundingClientRect()
+    : null;
+  const availableWidth = rect && rect.width
+    ? rect.width
+    : (wrapper?.clientWidth || wrapper?.offsetWidth || 0);
+
+  const measuredWidth = availableWidth > 0
+    ? availableWidth
+    : (typeof window !== 'undefined' ? window.innerWidth - 40 : fallbackWidth);
+
+  const width = Math.max(
+    Math.min(fallbackWidth, measuredWidth || fallbackWidth),
+    MIN_WIDTH
+  );
+
+  const aspectRatio = fallbackHeight / fallbackWidth;
+  const responsiveHeight = Math.round(width * aspectRatio);
+  const height = Math.max(
+    Math.min(fallbackHeight, responsiveHeight),
+    MIN_HEIGHT
+  );
+
+  return { width, height };
+}
+
 function getCountryId(countryData) {
   if (!countryData) return null;
 
@@ -677,9 +710,10 @@ function renderGlobalD3Map(worldData, { container, countries, countryRisks, widt
     if (!features.length) throw new Error('No geographic features available');
 
     const featureCollection = { type: 'FeatureCollection', features };
+    const { width: responsiveWidth, height: responsiveHeight } = getResponsiveDimensions(wrapper, width, height);
     const svg = d3.select(wrapper)
       .append('svg')
-      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('viewBox', `0 0 ${responsiveWidth} ${responsiveHeight}`)
       .attr('preserveAspectRatio', 'xMidYMid meet')
       .style('width', '100%')
       .style('height', 'auto')
@@ -688,7 +722,7 @@ function renderGlobalD3Map(worldData, { container, countries, countryRisks, widt
       .style('background', '#f8fafc');
 
     const projection = d3.geoNaturalEarth1()
-      .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
+      .fitExtent([[16, 16], [responsiveWidth - 16, responsiveHeight - 16]], featureCollection);
     const path = d3.geoPath(projection);
     const mapGroup = svg.append('g').attr('class', 'map-layer');
 
@@ -782,9 +816,10 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
     }
 
     const featureCollection = { type: 'FeatureCollection', features };
+    const { width: responsiveWidth, height: responsiveHeight } = getResponsiveDimensions(wrapper, width, height);
     const svg = d3.select(wrapper)
       .append('svg')
-      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('viewBox', `0 0 ${responsiveWidth} ${responsiveHeight}`)
       .attr('preserveAspectRatio', 'xMidYMid meet')
       .style('width', '100%')
       .style('height', 'auto')
@@ -793,7 +828,7 @@ function renderComparisonD3Map(worldData, { container, countries, countryRisks, 
       .style('background', '#f8fafc');
 
     const projection = d3.geoNaturalEarth1()
-      .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
+      .fitExtent([[16, 16], [responsiveWidth - 16, responsiveHeight - 16]], featureCollection);
     const path = d3.geoPath(projection);
     const mapGroup = svg.append('g').attr('class', 'map-layer');
 
@@ -932,10 +967,11 @@ function renderD3Map(worldData, { container, countries, countryRisks, selectedCo
     const features = extractWorldFeatures(worldData);
     if (!features.length) throw new Error('No geographic features available');
 
-    const featureCollection = { type: 'FeatureCollection', features };
+   const featureCollection = { type: 'FeatureCollection', features };
+    const { width: responsiveWidth, height: responsiveHeight } = getResponsiveDimensions(wrapper, width, height);
     const svg = d3.select(wrapper)
       .append('svg')
-      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('viewBox', `0 0 ${responsiveWidth} ${responsiveHeight}`)
       .attr('preserveAspectRatio', 'xMidYMid meet')
       .style('width', '100%')
       .style('height', 'auto')
@@ -944,7 +980,7 @@ function renderD3Map(worldData, { container, countries, countryRisks, selectedCo
       .style('background', '#f8fafc');
 
     const projection = d3.geoNaturalEarth1()
-      .fitExtent([[16, 16], [width - 16, height - 16]], featureCollection);
+      .fitExtent([[16, 16], [responsiveWidth - 16, responsiveHeight - 16]], featureCollection);
     const path = d3.geoPath(projection);
     const mapGroup = svg.append('g').attr('class', 'map-layer');
 
