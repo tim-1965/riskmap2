@@ -121,6 +121,7 @@ export class AppController {
     this.containerElement = null;
     this.mainScrollElement = null;
     this._wheelListenerAttached = false;
+    this._wheelListenerTarget = null;
 
     // Expose for onclick handlers in rendered HTML (panel nav etc.)
     if (typeof window !== 'undefined') {
@@ -494,9 +495,10 @@ export class AppController {
   }
 
   handleWheelScroll(event) {
-    if (!this.mainScrollElement) return;
-
-    const main = this.mainScrollElement;
+    const main = this.mainScrollElement || (event && event.currentTarget) || null;
+    if (!this.mainScrollElement && main) {
+      this.mainScrollElement = main;
+    }
     if (!main || main.scrollHeight <= main.clientHeight) {
       return;
     }
@@ -541,11 +543,16 @@ export class AppController {
     const atTop = main.scrollTop <= 0;
     const atBottom = Math.ceil(main.scrollTop + main.clientHeight) >= main.scrollHeight;
 
-    if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
+   if ((deltaY < 0 && atTop) || (deltaY > 0 && atBottom)) {
       return;
     }
 
-    event.preventDefault();
+    if (typeof event?.preventDefault === 'function') {
+      event.preventDefault();
+    }
+    if (typeof event?.stopPropagation === 'function') {
+      event.stopPropagation();
+    }
     if (typeof main.scrollBy === 'function') {
       main.scrollBy({
         top: deltaY,
@@ -748,19 +755,37 @@ export class AppController {
       </style>
     `;
 
-     const mainContent = document.getElementById('hrddMainContent');
-    this.mainScrollElement = mainContent || null;
-    if (mainContent) {
-      mainContent.scrollTop = 0;
+    const mainContent = typeof document !== 'undefined'
+      ? document.getElementById('hrddMainContent')
+      : null;
+
+    if (this._wheelListenerAttached && this._wheelListenerTarget && this._wheelListenerTarget !== mainContent) {
+      try {
+        this._wheelListenerTarget.removeEventListener('wheel', this.handleWheelScroll);
+      } catch (error) {
+        // Ignore removal errors (older browsers)
+      }
+      this._wheelListenerAttached = false;
+      this._wheelListenerTarget = null;
     }
 
-    if (typeof window !== 'undefined' && this.mainScrollElement && !this._wheelListenerAttached) {
-      try {
-        window.addEventListener('wheel', this.handleWheelScroll, { passive: false });
-      } catch (error) {
-        window.addEventListener('wheel', this.handleWheelScroll);
+    this.mainScrollElement = mainContent || null;
+
+    if (this.mainScrollElement) {
+      if (!this._wheelListenerAttached || this._wheelListenerTarget !== this.mainScrollElement) {
+        try {
+          this.mainScrollElement.addEventListener('wheel', this.handleWheelScroll, { passive: false });
+        } catch (error) {
+          this.mainScrollElement.addEventListener('wheel', this.handleWheelScroll);
+        }
+        this._wheelListenerAttached = true;
+        this._wheelListenerTarget = this.mainScrollElement;
       }
-      this._wheelListenerAttached = true;
+
+      this.mainScrollElement.scrollTop = 0;
+    } else {
+      this._wheelListenerAttached = false;
+      this._wheelListenerTarget = null;
     }
 
     if (isMobile && typeof this.addMobileGestures === 'function') {
@@ -1402,9 +1427,14 @@ export class AppController {
     if (this.focusTimeout) clearTimeout(this.focusTimeout);
 
     if (this.state.isDirty) this.saveState();
-    if (this._wheelListenerAttached && typeof window !== 'undefined') {
-      window.removeEventListener('wheel', this.handleWheelScroll);
+    if (this._wheelListenerAttached && this._wheelListenerTarget) {
+      try {
+        this._wheelListenerTarget.removeEventListener('wheel', this.handleWheelScroll);
+      } catch (error) {
+        // ignore if already removed
+      }
       this._wheelListenerAttached = false;
+      this._wheelListenerTarget = null;
     }
     this.mainScrollElement = null;
     console.log('AppController cleaned up');
