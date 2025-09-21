@@ -777,13 +777,14 @@ renderCurrentPanel() {
   `);
   
   queueMicrotask(() => {
-    UIComponents.createComparisonMap('baselineComparisonMapContainer', {
+    UUIComponents.createComparisonMap('baselineComparisonMapContainer', {
       countries: this.state.countries,
       countryRisks: this.state.countryRisks,
       selectedCountries: this.state.selectedCountries,
       title: 'Baseline Risk - Selected Countries Only',
       mapType: 'baseline',
       baselineRisk: this.state.baselineRisk,
+      baselineRisks: this.state.countryRisks,
       focus: this.state.focus,
       focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
       height: 400,
@@ -798,6 +799,7 @@ renderCurrentPanel() {
       mapType: 'managed',
       managedRisk: this.state.managedRisk,
       selectedCountryRisks: this.state.countryManagedRisks,
+      baselineRisks: this.state.countryRisks,
       focus: this.state.focus,
       focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
       height: 400,
@@ -1033,20 +1035,21 @@ renderCurrentPanel() {
     `;
     
     queueMicrotask(() => {
-      UIComponents.createComparisonMap('baselineComparisonMapContainer', {
+       UIComponents.createComparisonMap('baselineComparisonMapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
         title: 'Baseline Risk - Selected Countries Only',
         mapType: 'baseline',
         baselineRisk: this.state.baselineRisk,
+        baselineRisks: this.state.countryRisks,
         focus: this.state.focus,
         focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
         height: 400,
         width: 1200
       });
 
-      UIComponents.createComparisonMap('managedComparisonMapContainer', {
+       UIComponents.createComparisonMap('baselineComparisonMapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
@@ -1054,6 +1057,7 @@ renderCurrentPanel() {
         mapType: 'managed',
         managedRisk: this.state.managedRisk,
         selectedCountryRisks: this.state.countryManagedRisks,
+        baselineRisks: this.state.countryRisks,
         focus: this.state.focus,
         focusEffectivenessMetrics: this.state.focusEffectivenessMetrics,
         height: 400,

@@ -968,72 +968,10 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       `).join('')
     : '<div style="padding: 12px 14px; border: 1px dashed #c4b5fd; border-radius: 8px; background-color: #f5f3ff; color: #5b21b6; font-size: 12px;">Allocate response effort in Panel 4 to translate detections into remediation.</div>';
 
-  // ENHANCED: Focus effectiveness analysis
-  const focusAnalysisHtml = focusEffectivenessMetrics && focusLevel > 0.3 ? `
-    <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px; border-left: 4px solid #3b82f6;">
-      <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1d4ed8;">Focus Targeting Analysis</h3>
-      <p style="font-size: 14px; color: #4b5563; margin-bottom: 20px;">
-        Your ${focusPercent}% focus setting concentrates resources on high-risk countries. Here's how effective this targeting has been:
-      </p>
-      
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
-        <div style="padding: 16px; background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%); border-radius: 8px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 8px;">FOCUS EFFECTIVENESS SCORE</div>
-           <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.focusEffectiveness >= 70 ? '#059669' : focusEffectivenessMetrics.focusEffectiveness >= 40 ? '#f59e0b' : '#dc2626'};">
-            ${Math.abs(focusEffectivenessMetrics.focusEffectiveness).toFixed(0)}%
-          </div>
-          <div style="font-size: 12px; color: #92400e; margin-top: 4px;">targeting success</div>
-        </div>
-        
-        <div style="padding: 16px; background: linear-gradient(135deg, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#dcfce7' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fef3c7' : '#fee2e2'} 0%, ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#a7f3d0' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#fde68a' : '#fecaca'} 100%); border-radius: 8px; text-align: center;">
-           <div style="font-size: 11px; font-weight: 600; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-bottom: 8px;">Reduction Achieved</div>
-          <div style="font-size: 32px; font-weight: bold; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#059669' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#f59e0b' : '#dc2626'};">
-            ${focusEffectivenessMetrics.differentialBenefit.toFixed(1)}%
-          </div>
-          <div style="font-size: 12px; color: ${focusEffectivenessMetrics.differentialBenefit >= 10 ? '#166534' : focusEffectivenessMetrics.differentialBenefit >= 5 ? '#92400e' : '#991b1b'}; margin-top: 4px;">high vs low risk</div>
-        </div>
-        
-        <div style="padding: 16px; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 8px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: #0c4a6e; margin-bottom: 8px;">COUNTRIES BY RISK TIER</div>
-          <div style="display: flex; justify-content: space-around; align-items: center;">
-            <div style="text-align: center;">
-              <div style="font-size: 18px; font-weight: bold; color: #dc2626;">${focusEffectivenessMetrics.highRiskCountries}</div>
-              <div style="font-size: 10px; color: #0c4a6e;">High</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 18px; font-weight: bold; color: #f59e0b;">${focusEffectivenessMetrics.mediumRiskCountries}</div>
-              <div style="font-size: 10px; color: #0c4a6e;">Med</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 18px; font-weight: bold; color: #22c55e;">${focusEffectivenessMetrics.lowRiskCountries}</div>
-              <div style="font-size: 10px; color: #0c4a6e;">Low</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div style="padding: 16px; background: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#f0fdf4' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#fffbeb' : '#fef2f2'}; border-radius: 8px; border: 1px solid ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#bbf7d0' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#fcd34d' : '#fecaca'};">
-        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#166534' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#92400e' : '#991b1b'};">
-          Focus Performance Assessment
-        </h4>
-        <div style="font-size: 13px; color: ${focusEffectivenessMetrics.focusEffectiveness >= 60 ? '#166534' : focusEffectivenessMetrics.focusEffectiveness >= 30 ? '#92400e' : '#991b1b'}; line-height: 1.5;">
-          ${focusEffectivenessMetrics.focusEffectiveness >= 60 
-            ? `✓ <strong>Excellent targeting:</strong> High-risk countries receive ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% average risk reduction vs ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% for low-risk countries. Your focus strategy is working very effectively.`
-            : focusEffectivenessMetrics.focusEffectiveness >= 30
-              ? `⚠ <strong>Moderate targeting:</strong> High-risk countries receive ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% average risk reduction vs ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% for low-risk countries. Consider increasing focus level or adjusting strategy mix.`
-              : `⚠ <strong>Limited targeting:</strong> High-risk countries receive ${focusEffectivenessMetrics.avgReductionHigh.toFixed(1)}% average risk reduction vs ${focusEffectivenessMetrics.avgReductionLow.toFixed(1)}% for low-risk countries. Focus targeting may need significant adjustment.`
-          }
-        </div>
-      </div>
-    </div>
-  ` : '';
-
   container.innerHTML = `
     <div class="final-results-panel">
       <!-- RISK ASSESSMENT SUMMARY -->
       <div id="finalRiskSummary" style="margin-bottom: 32px;"></div>
-
-      ${focusAnalysisHtml}
 
       <!-- RISK TRANSFORMATION EXPLANATION -->
       <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
