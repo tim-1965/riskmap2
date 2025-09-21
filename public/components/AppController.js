@@ -228,6 +228,22 @@ export class AppController {
     }
   }
 
+async initialize(containerId) {
+  // ... existing initialize code ...
+  
+  // Force iframe to not scroll
+  if (window.frameElement) {
+    window.frameElement.scrolling = 'no';
+    window.frameElement.style.overflow = 'hidden';
+  }
+  
+  // Prevent parent window scrolling when inside iframe
+  if (window.parent !== window) {
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  }
+}
+
   /* --------------------------- Calculations ------------------------- */
 
   validateCountryData(country) {
@@ -500,70 +516,101 @@ render() {
     5: 'Managed Risk'
   };
 
+  // Create a fixed-height container that will have its own scrollbar
   this.containerElement.innerHTML = `
-    <!-- Fixed Header -->
-    <header style="position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(248,250,252,0.98);padding:20px 20px 12px;box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);backdrop-filter:blur(10px);">
-      <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);">
-        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-          <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
-          <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
-        </div>
-
-        <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
-          ${[1,2,3,4,5].map(panel => `
-            <button onclick="window.hrddApp.setCurrentPanel(${panel})"
-                    style="padding:6px 12px;border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
-                           background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
-                           color:${this.state.currentPanel===panel?'white':'#475569'};
-                           border-radius:9999px;cursor:pointer;font-weight:600;transition:all .2s;font-size:12px;box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};">
-              ${panel}. ${panelTitles[panel]}
-            </button>
-          `).join('')}
-        </div>
-
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <div style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
-            <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
+    <!-- App Container with fixed height to enable internal scrolling -->
+    <div id="hrddAppContainer" style="position:relative;width:100%;height:100vh;overflow:hidden;background-color:#f8fafc;">
+      
+      <!-- Fixed Header within app container -->
+      <header style="position:absolute;top:0;left:0;right:0;z-index:1000;background:rgba(248,250,252,0.98);padding:20px 20px 12px;box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);backdrop-filter:blur(10px);">
+        <div style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);">
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+            <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
+            <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
           </div>
-          <div style="opacity:.5;">•</div>
-          <div><span>${this.state.countries.length}</span> Countries</div>
-          <div style="opacity:.5;">•</div>
-          <div><span>${this.state.selectedCountries.length}</span> Selected</div>
-          ${this.state.lastUpdate ? `
-            <div style="opacity:.5;">•</div>
-            <div>Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}</div>
-          ` : ''}
-        </div>
-      </div>
-    </header>
 
-    <!-- Content with padding for fixed header -->
-    <main style="padding-top:180px;min-height:100vh;background-color:#f8fafc;box-sizing:border-box;">
-      <div style="width:100%;max-width:1600px;margin:0 auto;padding:0 20px 40px;box-sizing:border-box;">
-        <div id="panelContent">
-          ${this.renderCurrentPanel()}
+          <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
+            ${[1,2,3,4,5].map(panel => `
+              <button onclick="window.hrddApp.setCurrentPanel(${panel})"
+                      style="padding:6px 12px;border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
+                             background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
+                             color:${this.state.currentPanel===panel?'white':'#475569'};
+                             border-radius:9999px;cursor:pointer;font-weight:600;transition:all .2s;font-size:12px;box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};">
+                ${panel}. ${panelTitles[panel]}
+              </button>
+            `).join('')}
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
+              <span>API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
+            </div>
+            <div style="opacity:.5;">•</div>
+            <div><span>${this.state.countries.length}</span> Countries</div>
+            <div style="opacity:.5;">•</div>
+            <div><span>${this.state.selectedCountries.length}</span> Selected</div>
+            ${this.state.lastUpdate ? `
+              <div style="opacity:.5;">•</div>
+              <div>Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}</div>
+            ` : ''}
+          </div>
         </div>
-      </div>
-    </main>
+      </header>
+
+      <!-- Scrollable Content Area -->
+      <main id="hrddMainContent" style="position:absolute;top:180px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;background-color:#f8fafc;box-sizing:border-box;">
+        <div style="width:100%;max-width:1600px;margin:0 auto;padding:20px 20px 60px;box-sizing:border-box;">
+          <div id="panelContent">
+            ${this.renderCurrentPanel()}
+          </div>
+          
+          <!-- Extra padding at bottom to ensure last content is visible -->
+          <div style="height:40px;"></div>
+        </div>
+      </main>
+    </div>
 
     <style>
-      /* Simple reset for consistent scrolling */
-      html {
-        scroll-behavior: smooth;
-      }
-      
-      body {
+      /* Reset any conflicting styles */
+      html, body {
         margin: 0;
         padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        background-color: #f8fafc;
+        overflow: hidden; /* Prevent outer scrolling */
+        height: 100%;
       }
       
-      /* Responsive header */
+      /* Ensure the container fills the viewport */
+      #${this.containerElement.id} {
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      /* Custom scrollbar for the main content */
+      #hrddMainContent::-webkit-scrollbar {
+        width: 10px;
+      }
+      
+      #hrddMainContent::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 5px;
+      }
+      
+      #hrddMainContent::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 5px;
+      }
+      
+      #hrddMainContent::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+      
+      /* Responsive adjustments */
       @media (max-width: 768px) {
-        main {
-          padding-top: 160px !important;
+        #hrddMainContent {
+          top: 200px !important;
         }
       }
       
@@ -575,8 +622,25 @@ render() {
       #pdfLoadingModal {
         z-index: 10001 !important;
       }
+      
+      /* Ensure buttons and interactive elements work */
+      button {
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      
+      /* Fix for iOS momentum scrolling */
+      #hrddMainContent {
+        -webkit-overflow-scrolling: touch;
+      }
     </style>
   `;
+  
+  // After rendering, ensure the scroll position resets to top when changing panels
+  const mainContent = document.getElementById('hrddMainContent');
+  if (mainContent) {
+    mainContent.scrollTop = 0;
+  }
 }
 
 // Keep your existing renderCurrentPanel() method as is, but ensure each panel returns content with sufficient height:
