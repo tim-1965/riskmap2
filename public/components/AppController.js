@@ -485,6 +485,8 @@ export class AppController {
 // In AppController.js, modify the render() method
 // Replace the existing header and main sections with this updated version:
 
+// In AppController.js, replace the render() method with this updated version:
+
 render() {
   if (!this.containerElement) return;
 
@@ -499,7 +501,7 @@ render() {
   // Top-level shell (header + panel nav + status bar)
   this.containerElement.innerHTML = `
     <div style="min-height:100vh;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;">
-      <header id="hrddAppHeader" style="position:fixed;top:0;left:0;width:100%;z-index:200;background:rgba(248,250,252,0.95);padding:20px 20px 12px;box-sizing:border-box;">
+      <header id="hrddAppHeader" style="position:fixed;top:0;left:0;width:100%;z-index:200;background:rgba(248,250,252,0.95);padding:20px 20px 12px;box-sizing:border-box;border-bottom:1px solid rgba(226,232,240,0.5);">
         <div class="hrdd-header-card" style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);backdrop-filter:blur(4px);">
             <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
               <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
@@ -533,25 +535,56 @@ render() {
               </div>
             </div>
           </div>
-
-          <style>
-          @media (max-width: 768px) {
-            #hrddAppHeader { padding: 12px; }
-            #hrddAppHeader .hrdd-header-card { padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
-            #hrddAppHeader h1 { font-size: 22px !important; }
-            #hrddAppHeader p { font-size: 13px !important; }
-            #hrddAppHeader .panel-nav { gap: 4px; }
-            #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
-            #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
-          }
-        </style>
       </header>
 
-      <main style="width:100%;max-width:1600px;margin:0 auto;padding:160px 20px 40px;box-sizing:border-box;">
+      <!-- Header spacer to push content below fixed header -->
+      <div id="headerSpacer" style="height:180px;width:100%;"></div>
+
+      <main style="width:100%;max-width:1600px;margin:0 auto;padding:0 20px 40px;box-sizing:border-box;">
         <div id="panelContent">
           ${this.renderCurrentPanel()}
         </div>
       </main>
+
+      <style>
+        /* Ensure all panel content has proper spacing */
+        #panelContent > div {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+        }
+        
+        /* Fix header height on mobile */
+        @media (max-width: 768px) {
+          #hrddAppHeader { padding: 12px; }
+          #hrddAppHeader .hrdd-header-card { padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
+          #hrddAppHeader h1 { font-size: 22px !important; }
+          #hrddAppHeader p { font-size: 13px !important; }
+          #hrddAppHeader .panel-nav { gap: 4px; }
+          #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
+          #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
+          #headerSpacer { height: 160px !important; }
+        }
+        
+        /* Ensure smooth scrolling and prevent overlap */
+        html {
+          scroll-behavior: smooth;
+        }
+        
+        /* Fix any conflicting margins in panels */
+        .world-map-container,
+        .global-risk-map-container,
+        .comparison-map-container,
+        .country-selection-panel,
+        .results-panel,
+        .hrdd-strategy-panel,
+        .transparency-panel,
+        .focus-panel,
+        .responsiveness-panel,
+        .responsiveness-effectiveness-panel,
+        .final-results-panel {
+          margin-top: 0 !important;
+        }
+      </style>
     </div>
   `;
 }
