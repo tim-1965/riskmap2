@@ -5,12 +5,12 @@ export class RiskEngine {
     this.defaultWeights = [20, 20, 5, 10, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
     // Step 2: HRDD Strategy defaults - representing supplier base coverage percentages
-    this.defaultHRDDStrategy = [5, 15, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, passive approaches common
+    this.defaultHRDDStrategy = [35, 15, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, passive approaches common
     this.defaultTransparencyEffectiveness = [90, 45, 25, 15, 12, 5]; // Research-backed base effectiveness rates
 
     // Step 3: Responsiveness Strategy defaults
-    this.defaultResponsivenessStrategy = [10, 5, 20, 20, 10, 5]; // Portfolio of response levers from weakest to strongest
-    this.defaultResponsivenessEffectiveness = [70, 85, 35, 25, 15, 5]; // Mid-point response effectiveness assumptions in percentages
+    this.defaultResponsivenessStrategy = [35, 5, 20, 20, 10, 5]; // Portfolio of response levers from weakest to strongest
+    this.defaultResponsivenessEffectiveness = [75, 80, 35, 25, 15, 5]; // Mid-point response effectiveness assumptions in percentages
 
     // Focus defaults for directing transparency/response capacity to higher-risk countries
     this.defaultFocus = 0.6;

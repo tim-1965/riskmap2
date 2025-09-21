@@ -1261,7 +1261,7 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
       url: 'https://ilostat.ilo.org/methods/concepts-and-definitions/description-international-labour-migration-statistics/'
     },
     {
-      label: 'World Justic Project - Rule of Law Index (using the Fundamental Labour Rights component 4.8)',
+      label: 'World Justic Project - Rule of Law Index (using 4.8: Fundamental Labour Rights)',
       description: 'Reflects fundamental labour rights performance from the World Justice Project Rule of Law Index.',
       sourceLabel: 'WJP Rule of Law Index – Fundamental Rights',
       url: 'https://worldjusticeproject.org/rule-of-law-index/global/2024/Fundamental%20Rights/'

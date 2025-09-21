@@ -636,12 +636,14 @@ function createSimpleMapGrid(containerId, { countries, countryRisks, selectedCou
   displayCountries.forEach(country => {
     const risk = countryRisks[country.isoCode] || 0;
     const isSelected = selectedCountries.includes(country.isoCode);
+    const numericRisk = Number.isFinite(risk) ? risk : Number.isFinite(Number(risk)) ? Number(risk) : 0;
+    const tileOpacity = mapType === 'global' ? 1 : (numericRisk > 0 ? 0.9 : 0.4);
 
     const countryTile = document.createElement('div');
     countryTile.style.cssText = `
       padding: 12px 8px; border-radius: 4px; border: 2px solid ${isSelected ? '#000' : '#e5e7eb'};
       cursor: ${interactive ? 'pointer' : 'default'}; font-size: 11px; font-weight: 500; color: white; text-align: center;
-      background-color: ${riskEngine.getRiskColor(risk)}; opacity: ${risk > 0 ? 0.9 : 0.4};
+      background-color: ${riskEngine.getRiskColor(numericRisk)}; opacity: ${tileOpacity};
       min-height: 60px; display: flex; flex-direction: column; justify-content: center;
     `;
 
@@ -657,8 +659,8 @@ function createSimpleMapGrid(containerId, { countries, countryRisks, selectedCou
   });
 }
 
-function createFallbackMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, interactive = true }) {
-  createSimpleMapGrid(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, interactive });
+function createFallbackMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, interactive = true, mapType = 'baseline' }) {
+  createSimpleMapGrid(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, interactive, mapType });
 }
 
 function createFallbackComparisonMap(containerId, { countries, countryRisks, selectedCountries, title, mapType }) {
@@ -718,13 +720,16 @@ function renderGlobalD3Map(worldData, { container, countries, countryRisks, widt
       .style('fill', d => {
         const countryId = d.__isoCode;
         const risk = countryRisks[countryId];
-        return risk !== undefined ? riskEngine.getRiskColor(risk) : '#e5e7eb';
+        const numericRisk = Number.isFinite(risk) ? risk : Number.isFinite(Number(risk)) ? Number(risk) : NaN;
+        return riskEngine.getRiskColor(numericRisk);
       })
       .style('stroke', '#ffffff')
       .style('stroke-width', 0.6)
-      .style('opacity', d => {
-        const countryId = d.__isoCode;
-        return countryRisks[countryId] !== undefined ? 0.95 : 0.7;
+      .style('fill-opacity', 1)
+      .style('opacity', 1)
+      .on('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
       })
       .on('mouseover', (event, d) => showMapTooltip(event, d, countryRisks, metadataMap, nameLookup, 'global'))
       .on('mouseout', () => hideMapTooltip());
@@ -740,7 +745,7 @@ function renderGlobalD3Map(worldData, { container, countries, countryRisks, widt
     addZoomControls(svg, zoom);
   } catch (error) {
     console.warn('D3 global map rendering failed, using fallback:', error);
-    createSimpleMapGrid(container, { countries, countryRisks, interactive: false });
+     createSimpleMapGrid(container, { countries, countryRisks, interactive: false, mapType: 'global' });
   }
 }
 
@@ -1085,7 +1090,8 @@ export async function createGlobalRiskMap(containerId, { countries, countryRisks
       countries,
       countryRisks: safeCountryRisks,
       title,
-      interactive: false
+      interactive: false,
+      mapType: 'global'
     });
   }
 }
@@ -1286,14 +1292,15 @@ export async function createWorldMap(containerId, { countries, countryRisks, sel
 
     const loadingElement = document.getElementById('map-loading');
     if (loadingElement) loadingElement.remove();
-  } catch (error) {
+   } catch (error) {
     console.error('Error creating world map:', error);
     createFallbackMap(containerId, {
       countries,
       countryRisks: safeCountryRisks,
       selectedCountries: safeSelectedCountries,
       onCountrySelect,
-      title: displayTitle
+      title: displayTitle,
+      mapType
     });
   }
 }
