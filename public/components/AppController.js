@@ -7,6 +7,24 @@ import { riskEngine } from './RiskEngine.js';
 import { UIComponents } from './UIComponents.js';
 import { pdfGenerator } from './PDFGenerator.js';
 
+const PANEL_DESCRIPTIONS = {
+  1: 'On this panel, we calculate the global picture of labour rights risks using publicly-available indices from reputable organisations. The map (and its colouring) shows the risk levels and the user can change the weightings of the different indices below it. Then go to panel 2.',
+  2: 'On this panel, the user can click on the map to select which countries are in its supply chain. Below the map, the user can optionally change the weighting of each country in its supply chain. The user is free to weight the countries in any way - perhaps by number of suppliers, value of what is sourced, number of workers etc.. Then go to panel 3.',
+  3: 'On this panel, the user sets out its labour rights due diligence progam. We have set up six different tools on the left hand side, move the slider to indicate the percentage of countries covered by each. On the right hand side, users can change how effective each tool is at uncovering labour rights issues. Below these sliders, users can use a slider to indicate the extent to which efforts are focussed on higher risk countries. Then go to panel 4.',
+  4: 'On this panel, the user sets out how it responds to issues that emerge from its due diligence processes. Responsiveness to issues is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). The left hand panel allows users to set their different response strategies and the right hand panel allows users to define the impact of each strategy. Then go to panel 5.',
+  5: 'This is the results panel which shows the user the baseline risk level (panel 2) and how this has been managed as a result of the strategies on panels 3 and 4. Results are broken down so that it possible to see how each component of the strategy impacts risks. At the bottom of the panel, the user can print out a report capturing the analysis in full.'
+};
+
+function renderPanelDescription(panelNumber) {
+  const description = PANEL_DESCRIPTIONS[panelNumber];
+  if (!description) return '';
+  return `
+    <div style="padding:14px 18px;background:rgba(255,255,255,0.9);border:1px solid rgba(226,232,240,0.9);border-radius:12px;box-shadow:0 6px 16px rgba(15,23,42,0.06);">
+      <p style="font-size:15px;color:#4b5563;margin:0;line-height:1.5;">${description}</p>
+    </div>
+  `;
+}
+
 export class AppController {
   constructor() {
     // App state (single source of truth)
@@ -467,7 +485,7 @@ export class AppController {
   render() {
     if (!this.containerElement) return;
 
-    const panelTitles = {
+   const panelTitles = {
       1: 'Global Risks',
       2: 'Baseline Risk',
       3: 'HRDD Strategy',
@@ -557,15 +575,19 @@ export class AppController {
       `;
     }
 
-    if (panel === 1) {
+     if (panel === 1) {
       // Global Risks (overview map + weightings)
       // Shell:
       const html = `
-        <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-          <div id="globalMapContainer"></div>
-          <div id="weightingsPanel"></div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          ${renderPanelDescription(panel)}
+          <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+            <div id="globalMapContainer"></div>
+            <div id="weightingsPanel"></div>
+          </div>
         </div>
       `;
+
       // Defer actual rendering to next microtask so the nodes exist
       queueMicrotask(() => {
         UIComponents.createWorldMap('globalMapContainer', {
@@ -589,12 +611,16 @@ export class AppController {
     if (panel === 2) {
       // Baseline Risk (selection map + country list + summary)
       const html = `
-        <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-          <div id="baselineMapContainer"></div>
-          <div id="countrySelectionPanel"></div>
-          <div id="resultsPanel"></div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          ${renderPanelDescription(panel)}
+          <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+            <div id="baselineMapContainer"></div>
+            <div id="countrySelectionPanel"></div>
+            <div id="resultsPanel"></div>
+          </div>
         </div>
       `;
+
       queueMicrotask(() => {
         UIComponents.createWorldMap('baselineMapContainer', {
           countries: this.state.countries,
@@ -624,10 +650,11 @@ export class AppController {
       return html;
     }
 
-    if (panel === 3) {
+     if (panel === 3) {
       // HRDD Strategy (coverage + transparency + focus + summary)
-       const html = `
-        <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+      const html = `
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          ${renderPanelDescription(panel)}
           <div id="strategyRiskSummary"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel3Grid">
             <div id="hrddStrategyPanel" style="height:100%;"></div>
@@ -636,6 +663,7 @@ export class AppController {
           <div id="focusPanel"></div>
         </div>
       `;
+
       queueMicrotask(() => {
         UIComponents.createRiskComparisonPanel('strategyRiskSummary', {
           baselineRisk: this.state.baselineRisk,
@@ -667,12 +695,16 @@ export class AppController {
     if (panel === 4) {
       // Response Strategy (mix + effectiveness + risk summary)
       const html = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel4Grid">
-          <div id="responsivenessPanel"></div>
-          <div id="responsivenessEffectivenessPanel"></div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          ${renderPanelDescription(panel)}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel4Grid">
+            <div id="responsivenessPanel"></div>
+            <div id="responsivenessEffectivenessPanel"></div>
+          </div>
+          <div id="responseRiskSummary"></div>
         </div>
-        <div style="margin-top:16px;" id="responseRiskSummary"></div>
       `;
+
       queueMicrotask(() => {
         UIComponents.createResponsivenessPanel('responsivenessPanel', {
           responsiveness: this.state.responsivenessStrategy,
@@ -695,20 +727,24 @@ export class AppController {
     }
 
     // Panel 5 — Managed Risk (comparison maps + final results + export/report)
-    const html = `
-      <div style="display:grid;grid-template-columns:1fr;gap:16px;">
-        <div id="baselineComparisonMapContainer"></div>
-        <div id="managedComparisonMapContainer"></div>
-        <div id="finalResultsPanel"></div>
+     const html = `
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        ${renderPanelDescription(panel)}
+        <div style="display:grid;grid-template-columns:1fr;gap:16px;">
+          <div id="baselineComparisonMapContainer"></div>
+          <div id="managedComparisonMapContainer"></div>
+          <div id="finalResultsPanel"></div>
 
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
-          <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
-            ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
-          </button>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
+            <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
+              ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
+            </button>
+          </div>
         </div>
       </div>
     `;
+    
     queueMicrotask(() => {
       UIComponents.createComparisonMap('baselineComparisonMapContainer', {
         countries: this.state.countries,
