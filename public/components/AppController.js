@@ -482,76 +482,79 @@ export class AppController {
     }
   }
 
-  render() {
-    if (!this.containerElement) return;
+// In AppController.js, modify the render() method
+// Replace the existing header and main sections with this updated version:
 
-   const panelTitles = {
-      1: 'Global Risks',
-      2: 'Baseline Risk',
-      3: 'HRDD Strategy',
-      4: 'Response Strategy',
-      5: 'Managed Risk'
-    };
+render() {
+  if (!this.containerElement) return;
 
-    // Top-level shell (header + panel nav + status bar)
-    this.containerElement.innerHTML = `
-      <div style="min-height:100vh;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;">
-        <header id="hrddAppHeader" style="position:sticky;top:0;z-index:200;background:rgba(248,250,252,0.95);padding:20px 20px 12px;box-sizing:border-box;">
-          <div class="hrdd-header-card" style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);backdrop-filter:blur(4px);">
-              <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
-                <p style="font-size:15px;color:#4b5563;margin:0;">Complete 5-Panel Coverage-Based Risk Management and Effectiveness Analysis</p>
-              </div>
+  const panelTitles = {
+    1: 'Global Risks',
+    2: 'Baseline Risk',
+    3: 'HRDD Strategy',
+    4: 'Response Strategy',
+    5: 'Managed Risk'
+  };
 
-              <div class="panel-nav" style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
-                ${[1,2,3,4,5].map(panel => `
-                  <button onclick="window.hrddApp.setCurrentPanel(${panel})"
-                          style="padding:6px 12px;border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
-                                 background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
-                                 color:${this.state.currentPanel===panel?'white':'#475569'};
-                                 border-radius:9999px;cursor:pointer;font-weight:600;transition:transform .2s,box-shadow .2s;font-size:12px;box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};">
-                    ${panel}. ${panelTitles[panel]}
-                  </button>
-                `).join('')}
-              </div>
-
-              <div class="status-bar" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <div id="hrddApiIndicator" style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
-                  <span id="hrddApiStatus">API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
-                </div>
-                <div style="opacity:.5;">•</div>
-                <div><span id="hrddCountryCount">${this.state.countries.length}</span> Countries</div>
-                <div style="opacity:.5;">•</div>
-                <div><span id="hrddSelectedCount">${this.state.selectedCountries.length}</span> Selected</div>
-                <div id="hrddLastUpdatedGroup" style="display:${this.state.lastUpdate ? 'flex' : 'none'};align-items:center;gap:4px;">
-                  <div style="opacity:.5;">•</div>
-                  <div id="hrddLastUpdated">${this.state.lastUpdate ? `Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}` : ''}</div>
-                </div>
-              </div>
+  // Top-level shell (header + panel nav + status bar)
+  this.containerElement.innerHTML = `
+    <div style="min-height:100vh;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif;">
+      <header id="hrddAppHeader" style="position:fixed;top:0;left:0;width:100%;z-index:200;background:rgba(248,250,252,0.95);padding:20px 20px 12px;box-sizing:border-box;">
+        <div class="hrdd-header-card" style="width:100%;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:12px 20px;background:rgba(255,255,255,0.88);border:1px solid rgba(226,232,240,0.8);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.08);backdrop-filter:blur(4px);">
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+              <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
+              <p style="font-size:15px;color:#4b5563;margin:0;">Complete 5-Panel Coverage-Based Risk Management and Effectiveness Analysis</p>
             </div>
 
-            <style>
-            @media (max-width: 768px) {
-              #hrddAppHeader { padding: 12px; }
-              #hrddAppHeader .hrdd-header-card { padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
-              #hrddAppHeader h1 { font-size: 22px !important; }
-              #hrddAppHeader p { font-size: 13px !important; }
-              #hrddAppHeader .panel-nav { gap: 4px; }
-              #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
-              #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
-            }
-          </style>
-        </header>
+            <div class="panel-nav" style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
+              ${[1,2,3,4,5].map(panel => `
+                <button onclick="window.hrddApp.setCurrentPanel(${panel})"
+                        style="padding:6px 12px;border:1px solid ${this.state.currentPanel===panel?'#2563eb':'#d1d5db'};
+                               background:${this.state.currentPanel===panel?'#2563eb':'rgba(255,255,255,0.9)'};
+                               color:${this.state.currentPanel===panel?'white':'#475569'};
+                               border-radius:9999px;cursor:pointer;font-weight:600;transition:transform .2s,box-shadow .2s;font-size:12px;box-shadow:${this.state.currentPanel===panel?'0 8px 18px rgba(37,99,235,.25)':'0 3px 8px rgba(15,23,42,.08)'};">
+                  ${panel}. ${panelTitles[panel]}
+                </button>
+              `).join('')}
+            </div>
 
-        <main style="width:100%;max-width:1600px;margin:16px auto 0;padding:0 20px 40px;box-sizing:border-box;">
-          <div id="panelContent">
-            ${this.renderCurrentPanel()}
+            <div class="status-bar" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#475569;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div id="hrddApiIndicator" style="width:8px;height:8px;border-radius:50%;background-color:${this.state.apiHealthy ? '#22c55e' : '#ef4444'};"></div>
+                <span id="hrddApiStatus">API ${this.state.apiHealthy ? 'Connected' : 'Disconnected'}</span>
+              </div>
+              <div style="opacity:.5;">•</div>
+              <div><span id="hrddCountryCount">${this.state.countries.length}</span> Countries</div>
+              <div style="opacity:.5;">•</div>
+              <div><span id="hrddSelectedCount">${this.state.selectedCountries.length}</span> Selected</div>
+              <div id="hrddLastUpdatedGroup" style="display:${this.state.lastUpdate ? 'flex' : 'none'};align-items:center;gap:4px;">
+                <div style="opacity:.5;">•</div>
+                <div id="hrddLastUpdated">${this.state.lastUpdate ? `Updated: ${new Date(this.state.lastUpdate).toLocaleTimeString()}` : ''}</div>
+              </div>
+            </div>
           </div>
-        </main>
-      </div>
-    `;
-  }
+
+          <style>
+          @media (max-width: 768px) {
+            #hrddAppHeader { padding: 12px; }
+            #hrddAppHeader .hrdd-header-card { padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
+            #hrddAppHeader h1 { font-size: 22px !important; }
+            #hrddAppHeader p { font-size: 13px !important; }
+            #hrddAppHeader .panel-nav { gap: 4px; }
+            #hrddAppHeader .panel-nav button { font-size: 11px !important; padding: 6px 10px !important; }
+            #hrddAppHeader .status-bar { gap: 6px; font-size: 11px !important; }
+          }
+        </style>
+      </header>
+
+      <main style="width:100%;max-width:1600px;margin:0 auto;padding:160px 20px 40px;box-sizing:border-box;">
+        <div id="panelContent">
+          ${this.renderCurrentPanel()}
+        </div>
+      </main>
+    </div>
+  `;
+}
 
   renderCurrentPanel() {
     // Panels are rendered via UIComponents into placeholder containers for flexibility
