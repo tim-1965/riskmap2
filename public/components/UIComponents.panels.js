@@ -1303,15 +1303,66 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const weightLabels = [
-    'ITUC Rights Rating',
-    'Corruption Index (TI)',
-    'ILO Migrant Worker Prevalence',
-    'WJP Index 4.8',
-    'Walk Free Slavery Index'
+  const weightFactors = [
+    {
+      label: 'ITUC Rights Rating',
+      description: 'Measures the overall protection of internationally recognised core labour rights.',
+      sourceLabel: 'ITUC Global Rights Index',
+      url: 'https://www.ituc-csi.org/global-rights-index'
+    },
+    {
+      label: 'Corruption Index (TI)',
+      description: 'Uses Transparency International data to capture perceived corruption in public institutions.',
+      sourceLabel: 'Transparency International – Corruption Perceptions Index',
+      url: 'https://www.transparency.org/en/cpi'
+    },
+    {
+      label: 'ILO Migrant Worker Prevalence',
+      description: 'Highlights migrant worker participation using the ILO’s international labour migration statistics.',
+      sourceLabel: 'ILO International Labour Migration Statistics',
+      url: 'https://ilostat.ilo.org/methods/concepts-and-definitions/description-international-labour-migration-statistics/'
+    },
+    {
+      label: 'WJP Index 4.8',
+      description: 'Reflects fundamental rights performance from the World Justice Project Rule of Law Index.',
+      sourceLabel: 'WJP Rule of Law Index – Fundamental Rights',
+      url: 'https://worldjusticeproject.org/rule-of-law-index/global/2024/Fundamental%20Rights/'
+    },
+    {
+      label: 'Walk Free Slavery Index',
+      description: 'Captures vulnerability to modern slavery using Walk Free’s Global Slavery Index.',
+      sourceLabel: 'Walk Free Global Slavery Index',
+      url: 'https://www.walkfree.org/global-slavery-index/'
+    }
   ];
 
-  let localWeights = [...weights];
+  const indexSources = [
+    {
+      name: 'ITUC Global Rights Index',
+      url: 'https://www.ituc-csi.org/global-rights-index'
+    },
+    {
+      name: 'ILO International Labour Migration Statistics',
+      url: 'https://ilostat.ilo.org/methods/concepts-and-definitions/description-international-labour-migration-statistics/'
+    },
+    {
+      name: 'WJP Rule of Law Index – Fundamental Rights',
+      url: 'https://worldjusticeproject.org/rule-of-law-index/global/2024/Fundamental%20Rights/'
+    },
+    {
+      name: 'Walk Free Global Slavery Index – Prevalence',
+      url: 'https://www.walkfree.org/global-slavery-index/'
+    },
+    {
+      name: 'Walk Free Global Slavery Index – Country Profiles',
+      url: 'https://www.walkfree.org/global-slavery-index/'
+    }
+  ];
+
+  let localWeights = Array.isArray(weights) ? [...weights] : new Array(weightFactors.length).fill(0);
+  if (localWeights.length < weightFactors.length) {
+    localWeights = [...localWeights, ...new Array(weightFactors.length - localWeights.length).fill(0)];
+  }
 
   const updateWeights = () => {
     const total = localWeights.reduce((sum, w) => sum + w, 0);
@@ -1325,11 +1376,24 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
 
   container.innerHTML = `
     <div class="weightings-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">Risk Factor Weightings</h2>
         <button id="resetWeights" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
           Reset to Default
         </button>
+      </div>
+
+      <div style="margin-bottom: 20px; padding: 16px; border-radius: 10px; border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);">
+        <h3 style="font-size: 15px; font-weight: 600; color: #1d4ed8; margin: 0 0 12px 0;">Index data sources</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+          ${indexSources.map(source => `
+            <a href="${source.url}" target="_blank" rel="noopener noreferrer"
+               style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 8px; background-color: rgba(255, 255, 255, 0.92); text-decoration: none; border: 1px solid rgba(59, 130, 246, 0.25); box-shadow: 0 4px 8px rgba(15, 23, 42, 0.08);">
+              <span style="font-size: 13px; font-weight: 600; color: #1d4ed8;">${source.name}</span>
+              <span aria-hidden="true" style="font-size: 14px; color: #1d4ed8;">↗</span>
+            </a>
+          `).join('')}
+        </div>
       </div>
 
       <div id="weightsContainer" style="margin-bottom: 20px;"></div>
@@ -1342,17 +1406,25 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
   `;
 
   const weightsContainer = document.getElementById('weightsContainer');
-  weightLabels.forEach((label, index) => {
+  weightFactors.forEach((factor, index) => {
+    const weightValue = Number.isFinite(Number(localWeights[index])) ? Number(localWeights[index]) : 0;
     const weightControl = document.createElement('div');
     weightControl.style.cssText = 'margin-bottom: 16px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #f9fafb;';
     weightControl.innerHTML = `
-      <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">
-        ${label}
-      </label>
-      <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">Adjust the weighting to reflect portfolio importance.</div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px;">
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #1f2937; margin: 0;">
+          ${factor.label}
+        </label>
+        <a href="${factor.url}" target="_blank" rel="noopener noreferrer"
+           style="font-size: 12px; color: #2563eb; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+          <span>${factor.sourceLabel}</span>
+          <span aria-hidden="true" style="font-size: 14px;">↗</span>
+        </a>
+      </div>
+      <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${factor.description}</div>
       <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="range" min="0" max="100" value="${localWeights[index]}" id="weight_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
-        <input type="number" min="0" max="100" value="${localWeights[index]}" id="weightNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
+        <input type="range" min="0" max="100" value="${weightValue}" id="weight_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+        <input type="number" min="0" max="100" value="${weightValue}" id="weightNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
       </div>
     `;
     weightsContainer.appendChild(weightControl);

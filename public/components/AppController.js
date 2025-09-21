@@ -728,11 +728,11 @@ renderCurrentPanel() {
     const html = ensureMinHeight(`
       <div style="display:flex;flex-direction:column;gap:16px;">
         ${renderPanelDescription(panel)}
+        <div id="responseRiskSummary" style="min-height:300px;"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;" id="panel4Grid">
           <div id="responsivenessPanel" style="min-height:600px;"></div>
           <div id="responsivenessEffectivenessPanel" style="min-height:600px;"></div>
         </div>
-        <div id="responseRiskSummary" style="min-height:300px;"></div>
       </div>
     `);
 
