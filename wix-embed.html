@@ -31,9 +31,9 @@
       }
     }
     
-    @media (max-width: 480px) {
+     @media (max-width: 480px) {
       #appRoot {
-        padding: 10px;
+        padding: 0;
       }
     }
 
@@ -411,8 +411,8 @@
         setState: (newState) => window.hrddApp?.setState(newState),
         exportConfiguration: () => window.exportHRDDConfiguration(),
         switchToStep: (step) => window.hrddApp?.setCurrentStep(step),
-        addCountry: (countryCode) => window.hrddApp?.onCountrySelect(countryCode),
-        removeCountry: (countryCode) => window.hrddApp?.onCountrySelect(countryCode),
+        addCountry: (countryCode, volume) => window.hrddApp?.addCountry(countryCode, volume),
+        removeCountry: (countryCode) => window.hrddApp?.removeCountry(countryCode),
         updateWeights: (weights) => window.hrddApp?.onWeightsChange(weights),
         updateHRDDStrategy: (strategy) => window.hrddApp?.onHRDDStrategyChange(strategy),
         updateResponsiveness: (responsiveness) => window.hrddApp?.onResponsivenessChange(responsiveness)
