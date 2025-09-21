@@ -652,13 +652,18 @@ renderCurrentPanel() {
       </div>
     `);
 
-    queueMicrotask(() => {
+     queueMicrotask(() => {
+      const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
+        ? this.state.baselineRisk.toFixed(1)
+        : 'N/A';
+      const baselineMapTitle = `Click on countries to select them: current baseline risk = ${baselineRiskValue}`;
+
       UIComponents.createWorldMap('baselineMapContainer', {
         countries: this.state.countries,
         countryRisks: this.state.countryRisks,
         selectedCountries: this.state.selectedCountries,
         onCountrySelect: this.onCountrySelect,
-        title: 'Select Countries for Portfolio Risk Assessment',
+        title: baselineMapTitle,
         height: 500,
         width: 1200
       });
@@ -912,12 +917,17 @@ renderCurrentPanel() {
       `;
 
       queueMicrotask(() => {
+        const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
+          ? this.state.baselineRisk.toFixed(1)
+          : 'N/A';
+        const baselineMapTitle = `Click on countries to select them: current baseline risk = ${baselineRiskValue}`;
+
         UIComponents.createWorldMap('baselineMapContainer', {
           countries: this.state.countries,
           countryRisks: this.state.countryRisks,
           selectedCountries: this.state.selectedCountries,
           onCountrySelect: this.onCountrySelect,
-          title: 'Select Countries for Portfolio Risk Assessment',
+          title: baselineMapTitle,
           height: 500,
           width: 1200
         });
