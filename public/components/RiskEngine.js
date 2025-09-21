@@ -1121,23 +1121,65 @@ export class RiskEngine {
     return breakdown;
   }
 
-  getPrimaryResponseMethod(responsivenessStrategy, responsivenessEffectiveness) {
-    let maxWeight = 0;
+   getPrimaryResponseMethod(responsivenessStrategy, responsivenessEffectiveness) {
+    const fallbackStrategy = Array.isArray(this.defaultResponsivenessStrategy)
+      ? this.defaultResponsivenessStrategy
+      : [];
+    const safeStrategy = Array.isArray(responsivenessStrategy) && responsivenessStrategy.length > 0
+      ? responsivenessStrategy
+      : fallbackStrategy;
+
+    const fallbackEffectiveness = Array.isArray(this.defaultResponsivenessEffectiveness)
+      ? this.defaultResponsivenessEffectiveness
+      : [];
+    const safeEffectiveness = Array.isArray(responsivenessEffectiveness) && responsivenessEffectiveness.length > 0
+      ? responsivenessEffectiveness
+      : fallbackEffectiveness;
+
+    if (!Array.isArray(safeStrategy) || safeStrategy.length === 0) {
+      const defaultLabel = Array.isArray(this.responsivenessLabels) && this.responsivenessLabels.length > 0
+        ? this.responsivenessLabels[0]
+        : 'Not specified';
+      const defaultEffectiveness = Number.isFinite(safeEffectiveness[0]) ? safeEffectiveness[0] : 0;
+
+      return {
+        method: defaultLabel,
+        weight: 0,
+        effectiveness: defaultEffectiveness
+      };
+    }
+
+    let maxWeight = -Infinity;
     let primaryIndex = 0;
 
-    for (let i = 0; i < responsivenessStrategy.length; i++) {
-      if (responsivenessStrategy[i] > maxWeight) {
-        maxWeight = responsivenessStrategy[i];
+    for (let i = 0; i < safeStrategy.length; i++) {
+      const weight = Number.isFinite(safeStrategy[i]) ? safeStrategy[i] : 0;
+      if (weight > maxWeight) {
+        maxWeight = weight;
         primaryIndex = i;
       }
     }
 
+    if (!Number.isFinite(maxWeight) || maxWeight < 0) {
+      maxWeight = 0;
+      primaryIndex = 0;
+    }
+
+    const labelIndex = Array.isArray(this.responsivenessLabels) && this.responsivenessLabels.length > 0
+      ? Math.min(primaryIndex, this.responsivenessLabels.length - 1)
+      : 0;
+    const effectivenessIndex = safeEffectiveness.length > 0
+      ? Math.min(primaryIndex, safeEffectiveness.length - 1)
+      : 0;
+
     return {
-      method: this.responsivenessLabels[primaryIndex],
-      weight: maxWeight,
-      effectiveness: responsivenessEffectiveness[primaryIndex]
+      method: this.responsivenessLabels?.[labelIndex] || 'Not specified',
+      weight: Math.max(0, Number.isFinite(maxWeight) ? maxWeight : 0),
+      effectiveness: Number.isFinite(safeEffectiveness?.[effectivenessIndex])
+        ? safeEffectiveness[effectivenessIndex]
+        : 0
     };
-   }
+  }
 
   // Generate risk assessment summary with country-specific data
   generateRiskSummary(
