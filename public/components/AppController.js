@@ -799,7 +799,7 @@ export class AppController {
         <div><span id="hrddSelectedCount">${this.state.selectedCountries.length}</span> Selected</div>
         <div id="hrddLastUpdatedGroup" style="display:${formattedLastUpdate ? 'flex' : 'none'};align-items:center;gap:6px;">
           <div style="opacity:.5;">•</div>
-          <span id="hrddLastUpdated">${formattedLastUpdate ? `Updated: ${formattedLastUpdate}` : ''}</span>
+          <span id="hrddLastUpdated">${formattedLastUpdate ? `Best on larger screens. Updated: ${formattedLastUpdate}` : ''}</span>
         </div>
       </div>
     `;
