@@ -1,4 +1,4 @@
-// RiskEngine.js - Corrected to match mathematical formulation exactly
+// RiskEngine.js - Modified to prevent rank reversals while maintaining focus allocation
 export class RiskEngine {
   constructor() {
     // Step 1: Default weightings for the 5 input columns
@@ -15,12 +15,12 @@ export class RiskEngine {
     // Focus defaults for directing transparency/response capacity to higher-risk countries
     this.defaultFocus = 0.6;
 
-    // CORRECTED: Exact mathematical specification parameters
+    // MODIFIED: Reduced maximum exponent and adjusted parameters for rank preservation
     this.focusBiasSettings = {
       minExponent: 1.0,
-      maxExponent: 3.5,
+      maxExponent: 2.8, // Reduced from 3.5 to 2.8
       minRiskRatio: 0.05,
-      maxRiskRatio: 5.0,
+      maxRiskRatio: 4.0, // Reduced from 5.0 to 4.0
       aggressionThreshold: 0.5
     };
 
@@ -59,19 +59,14 @@ export class RiskEngine {
     };
   }
 
-  // CORRECTED: Exact focus exponent calculation per mathematical specification
+  // MODIFIED: Reduced maximum focus exponent for rank preservation
   getFocusExponent(focus = 0) {
     const safeFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
     const settings = this.focusBiasSettings || {};
     const minExp = Number.isFinite(settings.minExponent) ? settings.minExponent : 1.0;
-    const maxExp = Number.isFinite(settings.maxExponent) ? Math.max(minExp, settings.maxExponent) : 3.5;
+    const maxExp = Number.isFinite(settings.maxExponent) ? Math.max(minExp, Math.min(2.8, settings.maxExponent)) : 2.8; // Capped at 2.8
     
-    // Mathematical specification implementation:
-    // φ = {
-    //   1 + f · (φₘₐₓ - 1) · (f/0.5)                    if f ≤ 0.5
-    //   1 + (φₘₐₓ - 1) · [0.5 + (f-0.5)^1.8 · 0.5]     if f > 0.5
-    // }
-    
+    // Mathematical specification implementation with reduced maximum
     if (safeFocus <= 0.5) {
       return minExp + safeFocus * (maxExp - minExp) * (safeFocus / 0.5);
     } else {
@@ -80,12 +75,12 @@ export class RiskEngine {
     }
   }
 
-  // CORRECTED: Exact biased risk ratio with compression per mathematical specification
+  // MODIFIED: Enhanced compression for extreme cases to prevent rank reversals
   getBiasedRiskRatio(riskRatio, focus = 0, baselineRisk = 0, portfolioBaselineRisk = 0) {
     const settings = this.focusBiasSettings || {};
     const maxRatio = Number.isFinite(settings.maxRiskRatio) && settings.maxRiskRatio > 0
       ? settings.maxRiskRatio
-      : 5.0;
+      : 4.0; // Reduced from 5.0
     const minRatio = Number.isFinite(settings.minRiskRatio) && settings.minRiskRatio >= 0
       ? settings.minRiskRatio
       : 0.05;
@@ -101,18 +96,22 @@ export class RiskEngine {
     // Apply bounds first
     biasedRatio = Math.max(minRatio, Math.min(maxRatio, biasedRatio));
     
-    // CORRECTED: Apply compression as per mathematical specification
-    // If f > 0.6 AND bᵢ/B < 0.8:
-    //   rᵢ' = rᵢ' · [0.3 + 0.7 · (bᵢ/B)²]
+    // Original compression for moderate focus
     if (focus > 0.6 && clampedRatio < 0.8) {
       const compressionFactor = 0.3 + 0.7 * Math.pow(clampedRatio, 2);
       biasedRatio *= compressionFactor;
+    }
+    
+    // NEW: Additional compression for extreme cases to prevent rank reversals
+    if (focus > 0.7 && biasedRatio > 2.0) {
+      const extremeCompressionFactor = 0.6 + 0.4 * Math.pow(2.0 / biasedRatio, 0.5);
+      biasedRatio *= extremeCompressionFactor;
     }
 
     return Math.max(minRatio, biasedRatio);
   }
 
-  // CORRECTED: Calculate portfolio focus multiplier exactly per specification
+  // Calculate portfolio focus multiplier exactly per specification
   calculatePortfolioFocusMultiplier(focus, riskConcentration) {
     const safeFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
     const safeConcentration = Number.isFinite(riskConcentration) && riskConcentration >= 1 
@@ -120,18 +119,18 @@ export class RiskEngine {
       : 1;
     const gamma = this.focusConcentrationWeight;
     
-    // Mathematical specification: Fₚ = (1 - f · γ) + f · γ · C
+    // Mathematical specification: F₀ = (1 - f · γ) + f · γ · C
     return (1 - safeFocus * gamma) + safeFocus * gamma * safeConcentration;
   }
 
-  // CORRECTED: Calculate country-specific focus multiplier per specification
+  // Calculate country-specific focus multiplier per specification
   calculateCountryFocusMultiplier(focus, portfolioFocusMultiplier, biasedRiskRatio, countryRisk) {
     const safeFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
     const gamma = this.focusConcentrationWeight;
     
     // Mathematical specification:
     // If f > 0.6 AND bᵢ ≥ 70:
-    //   Fᵢ = Fₚ · [1 + (f-0.6) · 0.5]
+    //   Fᵢ = F₀ · [1 + (f-0.6) · 0.5]
     // Else:
     //   Fᵢ = (1 - f · γ) + f · γ · rᵢ'
     
@@ -143,7 +142,7 @@ export class RiskEngine {
     }
   }
 
-  // CORRECTED: Calculate resource conservation factor
+  // Calculate resource conservation factor
   calculateResourceConservationFactor(selectedCountries, countryVolumes, countryRisks, hrddStrategy, focus) {
     if (!Array.isArray(selectedCountries) || selectedCountries.length === 0) {
       return {};
@@ -180,10 +179,12 @@ export class RiskEngine {
         // Basic coverage adjustment
         let riskAdjustmentFactor = (1 - focus) + focus * biasedRiskRatio;
         
-        // High-risk boost
-        if (focus > 0.6 && countryRisk >= 60) {
-          const highRiskBoost = 1 + (focus - 0.6) * 0.8;
-          riskAdjustmentFactor *= highRiskBoost;
+        // MODIFIED: Gradual high-risk boost instead of sharp threshold
+        if (focus > 0.3 && countryRisk >= 40) {
+          const riskNormalized = Math.min(1, (countryRisk - 40) / 40); // 0 to 1 for risks 40-80
+          const focusNormalized = Math.min(1, (focus - 0.3) / 0.7); // 0 to 1 for focus 0.3-1.0
+          const boostFactor = 1 + (riskNormalized * focusNormalized * 0.3); // Max 30% boost
+          riskAdjustmentFactor *= boostFactor;
         }
         
         const adjustedCoverage = originalCoverage * riskAdjustmentFactor;
@@ -214,7 +215,7 @@ export class RiskEngine {
     return conservationFactors;
   }
 
-  // CORRECTED: Country-specific coverage calculation per mathematical specification
+  // MODIFIED: Country-specific coverage calculation with gradual boost
   calculateCountrySpecificCoverage(selectedCountries, countryVolumes, countryRisks, hrddStrategy, focus = 0.6) {
     if (!Array.isArray(selectedCountries) || selectedCountries.length === 0) {
       return {};
@@ -257,11 +258,12 @@ export class RiskEngine {
         // Apply base coverage adjustment
         let adjustedValue = toolCoverage * baseCoverageAdjustment;
         
-        // Apply high-risk boost per specification:
-        // If f > 0.6 AND bᵢ ≥ 60: cᵢⱼ = cᵢⱼ · [1 + (f-0.6) · 0.8]
-        if (safeFocus > 0.6 && countryRisk >= 60) {
-          const highRiskBoost = 1 + (safeFocus - 0.6) * 0.8;
-          adjustedValue *= highRiskBoost;
+        // MODIFIED: Apply gradual high-risk boost instead of sharp threshold
+        if (safeFocus > 0.3 && countryRisk >= 40) {
+          const riskNormalized = Math.min(1, (countryRisk - 40) / 40); // 0 to 1 for risks 40-80
+          const focusNormalized = Math.min(1, (safeFocus - 0.3) / 0.7); // 0 to 1 for focus 0.3-1.0
+          const boostFactor = 1 + (riskNormalized * focusNormalized * 0.3); // Max 30% boost (reduced from 80%)
+          adjustedValue *= boostFactor;
         }
         
         // Apply resource conservation factor (ηᵢ)
@@ -281,7 +283,19 @@ export class RiskEngine {
     return countrySpecificCoverage;
   }
 
-  // NEW: Calculate focus effectiveness metrics across risk tiers
+  // NEW: Calculate progressive effectiveness cap based on country risk
+  calculateProgressiveEffectivenessCap(countryRisk) {
+    // Higher risk countries have lower maximum reduction percentages to preserve ranking
+    const baselineNormalized = Math.min(1, Math.max(0, countryRisk / 100)); // 0 to 1
+    
+    // Progressive cap: High-risk countries (80+) max 65% reduction, low-risk countries (20-) max 85% reduction
+    const minCap = 0.65; // 65% max reduction for highest-risk countries
+    const maxCap = 0.85; // 85% max reduction for lowest-risk countries
+    
+    return minCap + (maxCap - minCap) * (1 - baselineNormalized);
+  }
+
+  // Calculate focus effectiveness metrics across risk tiers
   calculateFocusEffectivenessMetrics(selectedCountries, countryRisks, managedRisks, focus = 0) {
     if (!Array.isArray(selectedCountries) || selectedCountries.length === 0) {
       return {
@@ -345,7 +359,7 @@ export class RiskEngine {
     };
   }
 
-  // NEW: Get focus benefit classification for individual countries
+  // Get focus benefit classification for individual countries
   getFocusBenefitLevel(countryRisk, baselineRisk, focus) {
     if (focus < 0.3) return 'standard';
     
@@ -358,7 +372,7 @@ export class RiskEngine {
     return 'standard';
   }
 
-  // CORRECTED: Managed risk calculation using exact mathematical specification
+  // MODIFIED: Managed risk calculation with rank preservation mechanisms
   calculateManagedRiskDetails(
     selectedCountries,
     countryVolumes,
@@ -402,7 +416,7 @@ export class RiskEngine {
     // Calculate overall responsiveness effectiveness
     const overallResponsivenessEffectiveness = this.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
 
-    // CORRECTED: Calculate country-specific managed risks per mathematical specification
+    // MODIFIED: Calculate country-specific managed risks with rank preservation
     const managedRisksByCountry = {};
     const safeCountryRisks = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
     let totalWeightedManagedRisk = 0;
@@ -430,9 +444,19 @@ export class RiskEngine {
         sanitizedFocus, portfolioFocusMultiplier, biasedRiskRatio, countryRisk
       );
       
-      // Mathematical specification: mᵢ = max(0, bᵢ · [1 - Tᵢ · R · Fᵢ])
-      const reductionFactor = countryTransparency * overallResponsivenessEffectiveness * countryFocusMultiplier;
-      const managedValue = Math.max(0, countryRisk * (1 - Math.min(1, reductionFactor)));
+      // Calculate base reduction factor
+      const baseReductionFactor = countryTransparency * overallResponsivenessEffectiveness * countryFocusMultiplier;
+      
+      // NEW: Apply progressive effectiveness cap to preserve ranking
+      const effectivenessCap = this.calculateProgressiveEffectivenessCap(countryRisk);
+      const cappedReductionFactor = Math.min(baseReductionFactor, effectivenessCap);
+      
+      // Calculate managed risk
+      let managedValue = Math.max(0, countryRisk * (1 - cappedReductionFactor));
+      
+      // NEW: Apply risk floor to prevent extreme reductions
+      const riskFloor = countryRisk * 0.12; // Never reduce below 12% of baseline
+      managedValue = Math.max(managedValue, riskFloor);
       
       managedRisksByCountry[countryCode] = managedValue;
       totalWeightedManagedRisk += managedValue * countryVolume;
@@ -860,7 +884,7 @@ export class RiskEngine {
     return totalWeight > 0 ? weightedEffectiveness / totalWeight : 0;
   }
 
-  // CORRECTED: Main managed risk calculation method using new approach
+  // Main managed risk calculation method using new approach
   calculateManagedRisk(
     baselineRisk,
     hrddStrategy,
@@ -1198,7 +1222,7 @@ export class RiskEngine {
     let maxWeight = -Infinity;
     let primaryIndex = 0;
 
-    for (let i = 0; i < safeStrategy.length; i++) {
+    for (let i = 0; i < safeStrategy.length; i += 1) {
       const weight = Number.isFinite(safeStrategy[i]) ? safeStrategy[i] : 0;
       if (weight > maxWeight) {
         maxWeight = weight;
@@ -1341,8 +1365,8 @@ export class RiskEngine {
     return {
       metadata: {
         exportDate: new Date().toISOString(),
-        version: '6.0',
-        toolName: 'HRDD Risk Assessment Tool - Corrected Mathematical Implementation'
+        version: '6.1',
+        toolName: 'HRDD Risk Assessment Tool - Rank Preservation Enhanced'
       },
       portfolio: {
         selectedCountries: state.selectedCountries,
@@ -1361,7 +1385,7 @@ export class RiskEngine {
         focus: focusValue,
         riskConcentration,
         portfolioFocusMultiplier,
-        methodology: 'Corrected mathematical implementation with exact specification compliance'
+        methodology: 'Enhanced with rank preservation mechanisms'
       },
       step3: {
         responsivenessStrategy: state.responsivenessStrategy,
