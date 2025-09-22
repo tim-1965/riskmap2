@@ -8,8 +8,8 @@ import { UIComponents } from './UIComponents.js';
 import { pdfGenerator } from './PDFGenerator.js';
 
 const PANEL_DESCRIPTIONS = {
-  1: 'Measure your reputational, legal and compliance risks linked to the treatement of workers in your supply chains. Step 1: calculate a global picture of labour rights risks using publicly-available indices from reputable organisations. Then go to panel 2.',
-  2: 'Click on the map to select which countries are in your supply chain. Below the map, you can optionally change the weighting of each country. You can weight the countries as you wish (number of suppliers, value of sourcing, number of workers etc..). Then go to panel 3.',
+  1: 'Measure your reputational, legal and compliance risks linked to the treatement of workers in your supply chains. Calculate a global picture of labour rights risks using publicly-available indices from reputable organisations. Then go to panel 2.',
+  2: 'Click on the map to select which countries are in your supply chain. You can also pick countries in the list area below the map and optionally change their weighting (eg: by number of suppliers or workers, value of sourcing etc..). Then go to panel 3.',
   3: 'Set out your supply chain due diligence progam across six different industry tools and the effectiveness of each. Set the extent to which your efforts are focussed on higher risk countries. Then go to panel 4.',
   4: 'Set out how you respond to issues that are found. Responsiveness is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). Then go to panel 5.',
   5: 'Here are your results showing your baseline risk level (panel 2) and how well you are managing it. You can see how each element in your strategy impacts your risks. You can print out a report capturing the analysis in full.'
