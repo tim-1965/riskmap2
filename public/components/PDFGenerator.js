@@ -526,7 +526,9 @@ export class PDFGenerator {
     const pageHeight = 297; // A4 height in mm␊
     const margin = 20;
     const contentWidth = pageWidth - 2 * margin;
-    const headerHeight = 22;
+    const baseHeaderHeight = 22;
+    const hasSectionTitle = Boolean(sectionTitle);
+    const headerHeight = hasSectionTitle ? baseHeaderHeight + 6 : baseHeaderHeight;
     const headerSpacing = 6;
     const imageTop = margin + headerHeight + headerSpacing;
     const maxContentHeight = pageHeight - imageTop - margin;
@@ -565,8 +567,15 @@ export class PDFGenerator {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
 
-    const sectionLabel = sectionTitle ? ` - ${sectionTitle}` : '';
-    pdf.text(`Panel ${panelNumber}: ${panelTitle}${sectionLabel}`, margin, margin + 8);
+   pdf.text(`Panel ${panelNumber}: ${panelTitle}`, margin, margin + 8);
+
+    if (hasSectionTitle) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(sectionTitle, margin, margin + 16);
+      pdf.setTextColor(30, 41, 59);
+    }
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
