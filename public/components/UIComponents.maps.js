@@ -1272,17 +1272,20 @@ export async function createComparisonMap(containerId, { countries, countryRisks
   }
 }
 
-export async function createWorldMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, mapType = 'baseline', managedRisk = null, height = 500, width = 960 }) {
+export async function createWorldMap(containerId, { countries, countryRisks, selectedCountries, onCountrySelect, title, subtitle = null, mapType = 'baseline', managedRisk = null, height = 500, width = 960 }) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const displayTitle = mapType === 'managed' ?
   `${title} - Managed Risk (Coverage-Based): ${managedRisk ? managedRisk.toFixed(1) : 'N/A'}` :
   title;
-  
+  const titleMarginBottom = subtitle ? '8px' : '16px';
+  const subtitleHtml = subtitle ? `<div style="font-size: 14px; color: #4b5563; margin-bottom: 16px;">${subtitle}</div>` : '';
+
   container.innerHTML = `
     <div class="world-map-container" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); text-align: center;">
-      <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">${displayTitle}</h3>
+      <h3 style="font-size: 18px; font-weight: 600; margin-bottom: ${titleMarginBottom};">${displayTitle}</h3>
+      ${subtitleHtml}
       <div id="map-loading" style="padding: 40px; color: #6b7280;">
         <div>Loading interactive coverage-based risk map...</div>
         <div style="font-size: 14px; margin-top: 8px;">Click on countries to select them for your portfolio risk assessment.</div>

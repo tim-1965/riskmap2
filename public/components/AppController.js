@@ -1034,10 +1034,14 @@ const statusBar = `
       `);
 
       queueMicrotask(() => {
-        const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
+         const baselineRiskValue = Number.isFinite(this.state.baselineRisk)
           ? this.state.baselineRisk.toFixed(1)
           : 'N/A';
+        const managedRiskValue = Number.isFinite(this.state.managedRisk)
+          ? this.state.managedRisk.toFixed(1)
+          : 'N/A';
         const baselineMapTitle = `Click on countries to select them: current baseline risk = ${baselineRiskValue}`;
+        const baselineMapSubtitle = `Based on the assumptions, current managed risk = ${managedRiskValue}`;
 
         UIComponents.createWorldMap('baselineMapContainer', {
           countries: this.state.countries,
@@ -1045,6 +1049,7 @@ const statusBar = `
           selectedCountries: this.state.selectedCountries,
           onCountrySelect: this.onCountrySelect,
           title: baselineMapTitle,
+          subtitle: baselineMapSubtitle,
           height: 500,
           width: 1200
         });
