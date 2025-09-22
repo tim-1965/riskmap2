@@ -120,6 +120,25 @@ export class PDFGenerator {
     }
   }
 
+  hideElements(elements = []) {
+    const hiddenStates = [];
+    elements.forEach(element => {
+      if (element && element.style) {
+        hiddenStates.push({ element, display: element.style.display });
+        element.style.display = 'none';
+      }
+    });
+    return hiddenStates;
+  }
+
+  restoreElements(hiddenStates = []) {
+    hiddenStates.forEach(state => {
+      if (state && state.element && state.element.style) {
+        state.element.style.display = state.display ?? '';
+      }
+    });
+  }
+
   async captureElement(element, options = {}) {
     if (!element) return null;
 
@@ -202,8 +221,17 @@ export class PDFGenerator {
 
       return canvas;
     } catch (error) {
-      console.error('Error capturing element:', error);
+ console.error('Error capturing element:', error);
       return null;
+    }
+  }
+
+  async captureWithHiddenElements(targetElement, elementsToHide = []) {
+    const hiddenStates = this.hideElements(elementsToHide);
+    try {
+      return await this.captureElement(targetElement);
+    } finally {
+      this.restoreElements(hiddenStates);
     }
   }
 
@@ -220,6 +248,67 @@ export class PDFGenerator {
         return [];
       }
 
+           if (panelNumber === 2) {
+        const sections = [];
+        const resultsPanel = document.getElementById('resultsPanel');
+        const baselineMap = document.getElementById('baselineMapContainer');
+        const countrySelection = document.getElementById('countrySelectionPanel');
+
+        const countrySelectionCanvas = await this.captureWithHiddenElements(panelContent, [resultsPanel]);
+        if (countrySelectionCanvas) {
+          sections.push({ canvas: countrySelectionCanvas, sectionTitle: 'Country Selection' });
+        }
+
+        const portfolioCanvas = await this.captureWithHiddenElements(panelContent, [baselineMap, countrySelection]);
+        if (portfolioCanvas) {
+          sections.push({ canvas: portfolioCanvas, sectionTitle: 'Portfolio Risk Assessment' });
+        }
+
+        if (sections.length > 0) {
+          return sections;
+        }
+
+        const fallbackCanvas = await this.captureElement(panelContent);
+        return fallbackCanvas ? [{ canvas: fallbackCanvas }] : [];
+      }
+
+      if (panelNumber === 3) {
+        const sections = [];
+        const strategyInfo = panelContent.querySelector('[data-panel3-info="strategy"]');
+        const transparencyInfo = panelContent.querySelector('[data-panel3-info="transparency"]');
+        const focusPanel = document.getElementById('focusPanel');
+
+        const strategyCanvas = await this.captureWithHiddenElements(panelContent, [strategyInfo, transparencyInfo, focusPanel]);
+        if (strategyCanvas) {
+          sections.push({ canvas: strategyCanvas, sectionTitle: 'HRDD Strategy Configuration' });
+        }
+
+        const strategyPanel = document.getElementById('hrddStrategyPanel');
+        const transparencyPanel = document.getElementById('transparencyPanel');
+        const strategyContainer = document.getElementById('strategyContainer');
+        const transparencyContainer = document.getElementById('transparencyContainer');
+        const riskSummary = document.getElementById('strategyRiskSummary');
+
+        const guidanceCanvas = await this.captureWithHiddenElements(panelContent, [
+          riskSummary,
+          strategyPanel ? strategyPanel.firstElementChild : null,
+          strategyContainer,
+          transparencyPanel ? transparencyPanel.firstElementChild : null,
+          transparencyContainer
+        ]);
+
+        if (guidanceCanvas) {
+          sections.push({ canvas: guidanceCanvas, sectionTitle: 'Guidance & Focus Settings' });
+        }
+
+        if (sections.length > 0) {
+          return sections;
+        }
+
+        const fallbackCanvas = await this.captureElement(panelContent);
+        return fallbackCanvas ? [{ canvas: fallbackCanvas }] : [];
+      }
+
       if (panelNumber === 5) {
         const sectionCanvases = [];
 
@@ -231,11 +320,49 @@ export class PDFGenerator {
           }
         }
 
-        const resultsSection = document.getElementById('panel5ResultsSection') || document.getElementById('finalResultsPanel');
-        if (resultsSection) {
-          const resultsCanvas = await this.captureElement(resultsSection);
-          if (resultsCanvas) {
-            sectionCanvases.push({ canvas: resultsCanvas, sectionTitle: 'Strategy Summary' });
+        const finalResultsPanel = document.getElementById('finalResultsPanel');
+        let resultsCaptured = false;
+
+        if (finalResultsPanel) {
+          const coverageBreakdown = document.getElementById('coverageResponseBreakdownSection');
+          const actionsSection = document.getElementById('finalResultsActions');
+
+          const strategyCanvas = await this.captureWithHiddenElements(finalResultsPanel, [coverageBreakdown, actionsSection]);
+          if (strategyCanvas) {
+            sectionCanvases.push({
+              canvas: strategyCanvas,
+              sectionTitle: 'How Your Enhanced HRDD Strategy Reduces Risk'
+            });
+            resultsCaptured = true;
+          }
+
+          const riskSummary = document.getElementById('finalRiskSummary');
+          const strategyTransformation = document.getElementById('strategyTransformationSection');
+
+          const breakdownCanvas = await this.captureWithHiddenElements(finalResultsPanel, [riskSummary, strategyTransformation]);
+          if (breakdownCanvas) {
+            sectionCanvases.push({
+              canvas: breakdownCanvas,
+              sectionTitle: 'How Coverage & Response Choices Reduce Risk'
+            });
+            resultsCaptured = true;
+          }
+
+          if (!resultsCaptured) {
+            const fallbackResults = await this.captureElement(finalResultsPanel);
+            if (fallbackResults) {
+              sectionCanvases.push({ canvas: fallbackResults, sectionTitle: 'Strategy Summary' });
+              resultsCaptured = true;
+            }
+          }
+        } else {
+          const resultsSection = document.getElementById('panel5ResultsSection') || document.getElementById('finalResultsPanel');
+          if (resultsSection) {
+            const resultsCanvas = await this.captureElement(resultsSection);
+            if (resultsCanvas) {
+              sectionCanvases.push({ canvas: resultsCanvas, sectionTitle: 'Strategy Summary' });
+              resultsCaptured = true;
+            }
           }
         }
 

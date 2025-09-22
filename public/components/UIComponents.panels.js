@@ -979,7 +979,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
       <div id="finalRiskSummary" style="margin-bottom: 32px;"></div>
 
       <!-- RISK TRANSFORMATION EXPLANATION -->
-      <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
+      <div id="strategyTransformationSection" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
         <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">How Your Enhanced HRDD Strategy Reduces Risk</h3>
         
         <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 20px;">
