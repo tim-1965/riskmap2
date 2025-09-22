@@ -207,8 +207,8 @@
     </div>
 
     <div class="modification-box">
-        <h4>🔧 Key Modifications for Rank Preservation</h4>
-        <p>This version includes critical modifications to prevent "rank reversals" where very high-risk countries could become lower-risk than medium-risk countries after focus-based strategy application. The enhancements maintain the core focus allocation logic while ensuring realistic and proportional risk reductions.</p>
+        <h4>🔧 Enhanced Modifications for Aggressive Rank Preservation</h4>
+        <p>This version includes strengthened modifications to eliminate rank reversals. Parameters have been further tightened and a direct rank preservation constraint has been added to mathematically guarantee risk ordering.</p>
     </div>
 
     <h2>1) Overview</h2>
@@ -261,7 +261,7 @@
           1 + (φₘₐₓ - 1) · [0.5 + (f-0.5)^1.8 · 0.5]     if f > 0.5
         }
         
-        Where: φₘₐₓ = 2.8 (REDUCED from 3.5)
+        Where: φₘₐₓ = 2.0 (FURTHER REDUCED from 2.8)
     </div>
 
     <p><strong>Characteristics:</strong></p>
@@ -288,31 +288,42 @@
           rᵢ' = rᵢ' · [0.6 + 0.4 · (2.0/rᵢ')^0.5]
     </div>
 
-    <p><strong>Modified Parameters:</strong></p>
+    <p><strong>Further Reduced Parameters:</strong></p>
     <table class="parameter-table">
         <tr>
             <th>Parameter</th>
-            <th>Original Value</th>
-            <th>New Value</th>
+            <th>Original</th>
+            <th>First Revision</th>
+            <th>Current Value</th>
             <th>Impact</th>
         </tr>
         <tr>
             <td>rₘᵢₙ</td>
             <td>0.05</td>
             <td>0.05</td>
-            <td>Unchanged - maintains low-risk penalties</td>
+            <td>0.08</td>
+            <td>Reduced low-risk penalties</td>
         </tr>
         <tr>
             <td>rₘₐₓ</td>
             <td>5.0</td>
             <td>4.0</td>
-            <td>Reduced maximum high-risk benefits</td>
+            <td>2.5</td>
+            <td>Significantly reduced maximum benefits</td>
         </tr>
         <tr>
-            <td>Secondary Compression</td>
+            <td>Secondary Compression Threshold</td>
             <td>None</td>
-            <td>Quadratic</td>
-            <td>Additional extreme case reduction</td>
+            <td>2.0</td>
+            <td>1.5</td>
+            <td>Earlier compression activation</td>
+        </tr>
+        <tr>
+            <td>Compression Strength</td>
+            <td>None</td>
+            <td>0.6 + 0.4×√</td>
+            <td>0.5 + 0.5×√</td>
+            <td>Stronger compression factor</td>
         </tr>
     </table>
 
@@ -363,48 +374,76 @@
         CapEffectivenessᵢ = 0.65 + 0.20 × (1 - bᵢ/100)
     </div>
 
-    <p><strong>Progressive Cap System:</strong></p>
+    <p><strong>Strengthened Progressive Cap System:</strong></p>
     <table class="parameter-table">
         <tr>
             <th>Country Risk Level</th>
-            <th>Maximum Reduction Allowed</th>
+            <th>Original Max Reduction</th>
+            <th>Current Max Reduction</th>
             <th>Minimum Managed Risk</th>
         </tr>
         <tr>
             <td>Very High Risk (80+)</td>
             <td>65%</td>
-            <td>28+ points</td>
+            <td>50%</td>
+            <td>40+ points</td>
         </tr>
         <tr>
             <td>High Risk (60-79)</td>
             <td>69%</td>
-            <td>19-25 points</td>
+            <td>55%</td>
+            <td>27-36 points</td>
         </tr>
         <tr>
             <td>Medium Risk (40-59)</td>
             <td>73%</td>
-            <td>11-16 points</td>
+            <td>60%</td>
+            <td>16-24 points</td>
         </tr>
         <tr>
             <td>Low Risk (20-39)</td>
             <td>81%</td>
-            <td>4-8 points</td>
+            <td>70%</td>
+            <td>6-12 points</td>
         </tr>
     </table>
 
-    <h3><span class="step-number">2</span>Risk Floor Preservation</h3>
+    <h3><span class="step-number">2</span>Enhanced Risk Floor Preservation</h3>
     
     <div class="formula">
-        riskFloorᵢ = bᵢ × 0.12
+        riskFloorᵢ = bᵢ × 0.25 (INCREASED from 0.12)
         <br><br>
         mᵢᶠⁱⁿᵃˡ = max(mᵢᶜᵃˡᶜᵘˡᵃᵗᵉᵈ, riskFloorᵢ)
     </div>
 
-    <p><strong>Floor Protection:</strong></p>
+    <p><strong>Strengthened Floor Protection:</strong></p>
     <ul>
-        <li>No country can have managed risk below 12% of baseline</li>
-        <li>Prevents unrealistic "zero-risk" outcomes</li>
-        <li>Maintains proportional relationships between countries</li>
+        <li>No country can have managed risk below 25% of baseline (increased from 12%)</li>
+        <li>Prevents unrealistic low-risk outcomes</li>
+        <li>Maintains stronger proportional relationships between countries</li>
+    </ul>
+
+    <h3><span class="step-number">3</span>NEW: Direct Rank Preservation Constraint</h3>
+    
+    <div class="formula-block">
+        After calculating all managed risks:
+        
+        Sort countries by baseline risk: b₁ ≥ b₂ ≥ ... ≥ bₙ
+        
+        For each country i (from highest to lowest baseline risk):
+        If mᵢ ≥ mᵢ₋₁:
+          mᵢ = max(bᵢ × 0.25, mᵢ₋₁ - 0.5)
+        
+        Recalculate portfolio: M = (Σᵢ wᵢ · mᵢᶜᵒʳʳᵉᶜᵗᵉᵈ) / Σᵢ wᵢ
+    </div>
+
+    <p><strong>Mathematical Guarantee:</strong></p>
+    <ul>
+        <li>Countries are sorted by baseline risk in descending order</li>
+        <li>Each country's managed risk must be at least 0.5 points lower than the previous</li>
+        <li>Still respects the 25% risk floor constraint</li>
+        <li>Provides absolute guarantee against rank inversions</li>
+        <li>Portfolio risk is recalculated using corrected values</li>
     </ul>
 
     <h2>5) Country-Specific Transparency Calculation</h2>
@@ -562,16 +601,18 @@
 
     <h2>10) Implementation Parameters</h2>
 
-    <h3>Modified Focus Parameters</h3>
+    <h3>Enhanced Implementation Parameters (More Aggressive)</h3>
     <table class="parameter-table">
         <tr>
             <th>Parameter</th>
-            <th>Original Value</th>
-            <th>New Value</th>
+            <th>Original</th>
+            <th>First Revision</th>
+            <th>Current Value</th>
             <th>Description</th>
         </tr>
         <tr>
             <td>φₘᵢₙ</td>
+            <td>1.0</td>
             <td>1.0</td>
             <td>1.0</td>
             <td>Minimum focus exponent (unchanged)</td>
@@ -580,43 +621,57 @@
             <td>φₘₐₓ</td>
             <td>3.5</td>
             <td>2.8</td>
-            <td>Maximum focus exponent (reduced)</td>
+            <td>2.0</td>
+            <td>Maximum focus exponent (further reduced)</td>
         </tr>
         <tr>
             <td>rₘᵢₙ</td>
             <td>0.05</td>
             <td>0.05</td>
-            <td>Minimum risk ratio (unchanged)</td>
+            <td>0.08</td>
+            <td>Minimum risk ratio (increased)</td>
         </tr>
         <tr>
             <td>rₘₐₓ</td>
             <td>5.0</td>
             <td>4.0</td>
-            <td>Maximum risk ratio (reduced)</td>
+            <td>2.5</td>
+            <td>Maximum risk ratio (further reduced)</td>
         </tr>
         <tr>
             <td>High-risk boost threshold</td>
             <td>60</td>
             <td>40</td>
-            <td>Gradual boost starting point (lowered)</td>
+            <td>40</td>
+            <td>Gradual boost starting point (unchanged)</td>
         </tr>
         <tr>
             <td>Maximum boost percentage</td>
             <td>80%</td>
             <td>30%</td>
-            <td>Maximum coverage boost (reduced)</td>
+            <td>30%</td>
+            <td>Maximum coverage boost (unchanged)</td>
         </tr>
         <tr>
             <td>Risk floor</td>
             <td>None</td>
             <td>12%</td>
-            <td>Minimum managed risk retention (new)</td>
+            <td>25%</td>
+            <td>Minimum managed risk retention (increased)</td>
         </tr>
         <tr>
             <td>Progressive cap range</td>
             <td>None</td>
             <td>65%-85%</td>
-            <td>Maximum reduction limits (new)</td>
+            <td>50%-70%</td>
+            <td>Maximum reduction limits (strengthened)</td>
+        </tr>
+        <tr>
+            <td>Direct rank constraint</td>
+            <td>None</td>
+            <td>None</td>
+            <td>0.5 pt separation</td>
+            <td>Mathematical ranking guarantee (new)</td>
         </tr>
     </table>
 

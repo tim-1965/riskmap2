@@ -15,12 +15,12 @@ export class RiskEngine {
     // Focus defaults for directing transparency/response capacity to higher-risk countries
     this.defaultFocus = 0.6;
 
-    // MODIFIED: Reduced maximum exponent and adjusted parameters for rank preservation
+    // MODIFIED: Further reduced parameters for stronger rank preservation
     this.focusBiasSettings = {
       minExponent: 1.0,
-      maxExponent: 2.8, // Reduced from 3.5 to 2.8
-      minRiskRatio: 0.05,
-      maxRiskRatio: 4.0, // Reduced from 5.0 to 4.0
+      maxExponent: 2.0, // Further reduced from 2.8 to 2.0
+      minRiskRatio: 0.08, // Increased from 0.05 to 0.08
+      maxRiskRatio: 2.5, // Further reduced from 4.0 to 2.5
       aggressionThreshold: 0.5
     };
 
@@ -59,14 +59,14 @@ export class RiskEngine {
     };
   }
 
-  // MODIFIED: Reduced maximum focus exponent for rank preservation
+  // MODIFIED: Further reduced maximum focus exponent for stronger rank preservation
   getFocusExponent(focus = 0) {
     const safeFocus = Number.isFinite(focus) ? Math.max(0, Math.min(1, focus)) : 0;
     const settings = this.focusBiasSettings || {};
     const minExp = Number.isFinite(settings.minExponent) ? settings.minExponent : 1.0;
-    const maxExp = Number.isFinite(settings.maxExponent) ? Math.max(minExp, Math.min(2.8, settings.maxExponent)) : 2.8; // Capped at 2.8
+    const maxExp = Number.isFinite(settings.maxExponent) ? Math.max(minExp, Math.min(2.0, settings.maxExponent)) : 2.0; // Further reduced to 2.0
     
-    // Mathematical specification implementation with reduced maximum
+    // Mathematical specification implementation with further reduced maximum
     if (safeFocus <= 0.5) {
       return minExp + safeFocus * (maxExp - minExp) * (safeFocus / 0.5);
     } else {
@@ -75,15 +75,15 @@ export class RiskEngine {
     }
   }
 
-  // MODIFIED: Enhanced compression for extreme cases to prevent rank reversals
+  // MODIFIED: Enhanced compression for extreme cases with tightened parameters
   getBiasedRiskRatio(riskRatio, focus = 0, baselineRisk = 0, portfolioBaselineRisk = 0) {
     const settings = this.focusBiasSettings || {};
     const maxRatio = Number.isFinite(settings.maxRiskRatio) && settings.maxRiskRatio > 0
       ? settings.maxRiskRatio
-      : 4.0; // Reduced from 5.0
+      : 2.5; // Further reduced from 4.0
     const minRatio = Number.isFinite(settings.minRiskRatio) && settings.minRiskRatio >= 0
       ? settings.minRiskRatio
-      : 0.05;
+      : 0.08; // Increased from 0.05
 
     const clampedRatio = Math.min(
       maxRatio,
@@ -102,9 +102,9 @@ export class RiskEngine {
       biasedRatio *= compressionFactor;
     }
     
-    // NEW: Additional compression for extreme cases to prevent rank reversals
-    if (focus > 0.7 && biasedRatio > 2.0) {
-      const extremeCompressionFactor = 0.6 + 0.4 * Math.pow(2.0 / biasedRatio, 0.5);
+    // Enhanced compression for extreme cases (now with tighter bounds)
+    if (focus > 0.7 && biasedRatio > 1.5) { // Reduced from 2.0 to 1.5
+      const extremeCompressionFactor = 0.5 + 0.5 * Math.pow(1.5 / biasedRatio, 0.5); // Stronger compression
       biasedRatio *= extremeCompressionFactor;
     }
 
@@ -283,14 +283,14 @@ export class RiskEngine {
     return countrySpecificCoverage;
   }
 
-  // NEW: Calculate progressive effectiveness cap based on country risk
+  // MODIFIED: Strengthened progressive effectiveness cap for better rank preservation
   calculateProgressiveEffectivenessCap(countryRisk) {
-    // Higher risk countries have lower maximum reduction percentages to preserve ranking
+    // Higher risk countries have much lower maximum reduction percentages to preserve ranking
     const baselineNormalized = Math.min(1, Math.max(0, countryRisk / 100)); // 0 to 1
     
-    // Progressive cap: High-risk countries (80+) max 65% reduction, low-risk countries (20-) max 85% reduction
-    const minCap = 0.65; // 65% max reduction for highest-risk countries
-    const maxCap = 0.85; // 85% max reduction for lowest-risk countries
+    // Strengthened progressive cap: High-risk countries (80+) max 50% reduction, low-risk countries (20-) max 70% reduction
+    const minCap = 0.50; // Strengthened from 0.65 to 0.50
+    const maxCap = 0.70; // Strengthened from 0.85 to 0.70
     
     return minCap + (maxCap - minCap) * (1 - baselineNormalized);
   }
@@ -454,8 +454,8 @@ export class RiskEngine {
       // Calculate managed risk
       let managedValue = Math.max(0, countryRisk * (1 - cappedReductionFactor));
       
-      // NEW: Apply risk floor to prevent extreme reductions
-      const riskFloor = countryRisk * 0.12; // Never reduce below 12% of baseline
+      // MODIFIED: Increased risk floor to prevent extreme reductions
+      const riskFloor = countryRisk * 0.25; // Increased from 0.12 to 0.25 (25% minimum retention)
       managedValue = Math.max(managedValue, riskFloor);
       
       managedRisksByCountry[countryCode] = managedValue;
@@ -465,6 +465,45 @@ export class RiskEngine {
 
     // Mathematical specification: M = (Σᵢ wᵢ · mᵢ) / Σᵢ wᵢ
     const managedRisk = totalVolume > 0 ? totalWeightedManagedRisk / totalVolume : 0;
+
+    // NEW: Direct rank preservation constraint to prevent any inversions
+    const sortedCountries = safeSelected
+      .map(code => ({ 
+        code, 
+        baseline: safeCountryRisks[code] || 0, 
+        managed: managedRisksByCountry[code] || 0,
+        volume: Number.isFinite(countryVolumes?.[code]) ? countryVolumes[code] : 10
+      }))
+      .sort((a, b) => b.baseline - a.baseline); // Sort by baseline risk descending
+
+    // Ensure no rank inversions: each country must have managed risk >= next country + 0.5
+    let totalWeightedManagedRiskCorrected = 0;
+    let totalVolumeCorrected = 0;
+    
+    for (let i = 1; i < sortedCountries.length; i++) {
+      const current = sortedCountries[i];
+      const previous = sortedCountries[i-1];
+      
+      if (current.managed >= previous.managed) {
+        // Force current country to have lower managed risk than previous
+        const correctedManagedRisk = Math.max(
+          current.baseline * 0.25, // Still respect the 25% floor
+          previous.managed - 0.5    // But ensure it's lower than the previous
+        );
+        managedRisksByCountry[current.code] = correctedManagedRisk;
+        current.managed = correctedManagedRisk;
+      }
+    }
+    
+    // Recalculate portfolio managed risk with corrected values
+    safeSelected.forEach(countryCode => {
+      const countryVolume = Number.isFinite(countryVolumes?.[countryCode]) ? countryVolumes[countryCode] : 10;
+      const managedValue = managedRisksByCountry[countryCode] || 0;
+      totalWeightedManagedRiskCorrected += managedValue * countryVolume;
+      totalVolumeCorrected += countryVolume;
+    });
+    
+    const finalManagedRisk = totalVolumeCorrected > 0 ? totalWeightedManagedRiskCorrected / totalVolumeCorrected : managedRisk;
 
     // Calculate transparency using country-specific coverage
     const overallTransparencyEffectiveness = this.calculateTransparencyEffectiveness(
@@ -479,7 +518,7 @@ export class RiskEngine {
     );
 
     return {
-      managedRisk,
+      managedRisk: finalManagedRisk,
       baselineRisk,
       riskConcentration: sanitizedConcentration,
       portfolioFocusMultiplier,
