@@ -271,8 +271,31 @@
       // Performance tracking
       window.hrddPerformance.mark('script-start');
       
-      // Import the updated components
-      const { AppController } = await import('https://riskmap2-production.up.railway.app/components/AppController.js');
+   // Import the updated components (preferring local assets, falling back to production)
+      const loadAppControllerModule = async () => {
+        const candidateUrls = Array.from(new Set([
+          new URL('./components/AppController.js', window.location.href).href,
+          `${window.location.origin}/components/AppController.js`,
+          '/components/AppController.js',
+          'https://riskmap2-production.up.railway.app/components/AppController.js'
+        ]));
+
+        let lastError = null;
+        for (const url of candidateUrls) {
+          try {
+            const module = await import(url);
+            console.log('Loaded AppController from', url);
+            return module;
+          } catch (error) {
+            lastError = error;
+            console.warn('Failed to load AppController from', url, error);
+          }
+        }
+
+        throw lastError || new Error('Unable to load AppController module from any candidate URL');
+      };
+
+      const { AppController } = await loadAppControllerModule();
       
       window.hrddPerformance.mark('components-loaded');
       
