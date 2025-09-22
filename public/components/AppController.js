@@ -914,10 +914,24 @@ const statusBar = `
           div[style*="grid-template-columns: 1fr 1fr"] {
             grid-template-columns: 1fr !important;
           }
-          h1 { font-size: 20px !important; }
+             h1 { font-size: 20px !important; }
           h2 { font-size: 18px !important; }
           h3 { font-size: 16px !important; }
           p { font-size: 14px !important; }
+          /* Reduce common inline font sizes for smaller screens */
+          #hrddAppContainer [style*="font-size: 56px"] { font-size: 48px !important; }
+          #hrddAppContainer [style*="font-size: 48px"] { font-size: 40px !important; }
+          #hrddAppContainer [style*="font-size: 40px"] { font-size: 34px !important; }
+          #hrddAppContainer [style*="font-size: 32px"] { font-size: 28px !important; }
+          #hrddAppContainer [style*="font-size: 28px"] { font-size: 24px !important; }
+          #hrddAppContainer [style*="font-size: 24px"] { font-size: 20px !important; }
+          #hrddAppContainer [style*="font-size: 20px"] { font-size: 18px !important; }
+          #hrddAppContainer [style*="font-size: 18px"] { font-size: 16px !important; }
+          #hrddAppContainer [style*="font-size: 16px"] { font-size: 14px !important; }
+          #hrddAppContainer [style*="font-size: 14px"] { font-size: 13px !important; }
+          #hrddAppContainer [style*="font-size: 13px"] { font-size: 12px !important; }
+          #hrddAppContainer [style*="font-size: 12px"] { font-size: 11px !important; }
+          #hrddAppContainer [style*="font-size: 11px"] { font-size: 10px !important; }
           #globalMapContainer, #baselineMapContainer {
             min-height: 300px !important;
             max-height: 400px !important;
