@@ -8,7 +8,7 @@ import { UIComponents } from './UIComponents.js';
 import { pdfGenerator } from './PDFGenerator.js';
 
 const PANEL_DESCRIPTIONS = {
-  1: 'A significant part of your CSR and reputational risks are from how workers are treated in your supply chains. This is step 1 in a 5 step process to see how effective your strategies are in managing those risks. Here you calculate a global picture of labour rights risks using publicly-available indices from reputable organisations. The map and its colouring show the risk levels and you can change the weight you give to the different indices below it. Then go to panel 2.',
+  1: 'Measure your reputational, legal and compliance risks linked to the treatement of workers in your supply chains. Step 1: calculate a global picture of labour rights risks using publicly-available indices from reputable organisations. Then go to panel 2.',
   2: 'Click on the map to select which countries are in your supply chain. Below the map, you can optionally change the weighting of each country. You can weight the countries as you wish (number of suppliers, value of sourcing, number of workers etc..). Then go to panel 3.',
   3: 'Set out your supply chain due diligence progam across six different industry tools and the effectiveness of each. Set the extent to which your efforts are focussed on higher risk countries. Then go to panel 4.',
   4: 'Set out how you respond to issues that are found. Responsiveness is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). Then go to panel 5.',
@@ -834,7 +834,7 @@ const statusBar = `
               </div>
             ` : `
               <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">How effective is your risk management strategy for worker risks in international supply chains?</h1>
+                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Measure legal, compliance and reputational risks linked to workers in your international supply chains?</h1>
                 <p style="font-size:15px;color:#4b5563;margin:0;">Start with panel 1 and work across to see the results on panel 5.</p>
               </div>
             `}
