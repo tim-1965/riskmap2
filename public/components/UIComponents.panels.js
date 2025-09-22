@@ -1118,18 +1118,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
         </div>
       </div>
 
-      <div style="display: flex; gap: 12px; justify-content: center; padding-top: 20px; border-top: 1px solid #e5e7eb; flex-wrap: wrap;">
-        <button onclick="window.hrddApp.generatePDFReport()" style="padding: 12px 24px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-          Generate Report
-        </button>
-        <button onclick="window.hrddApp.saveState()" style="padding: 12px 24px; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-          Save Configuration
-        </button>
-        <button onclick="window.hrddApp.setCurrentPanel(1)" style="padding: 12px 24px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-          Modify Settings
-        </button>
       </div>
-    </div>
   `;
 
  createRiskComparisonPanel('finalRiskSummary', {

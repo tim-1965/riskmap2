@@ -1155,9 +1155,8 @@ const statusBar = `
           <div id="panel5ResultsSection">
             <div id="finalResultsPanel" style="min-height:600px;"></div>
           </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <button id="btnExportConfig" style="padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;background:white;cursor:pointer;">Export Configuration (JSON)</button>
-            <button id="btnGeneratePDF" style="padding:10px 14px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
+          <div style="display:flex;justify-content:center;align-items:center;">
+            <button id="btnGeneratePDF" style="padding:10px 24px;border:1px solid #2563eb;background:#2563eb;color:white;border-radius:8px;cursor:pointer;">
               ${this.state.isGeneratingReport ? 'Generating…' : 'Generate PDF Report'}
             </button>
           </div>
@@ -1210,9 +1209,6 @@ const statusBar = `
           countryRisks: this.state.countryRisks,
           focusEffectivenessMetrics: this.state.focusEffectivenessMetrics
         });
-
-        const btnExport = document.getElementById('btnExportConfig');
-        if (btnExport) btnExport.onclick = this.exportConfiguration;
 
         const btnPDF = document.getElementById('btnGeneratePDF');
         if (btnPDF) btnPDF.onclick = this.generatePDFReport;
