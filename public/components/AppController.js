@@ -8,8 +8,8 @@ import { UIComponents } from './UIComponents.js';
 import { pdfGenerator } from './PDFGenerator.js';
 
 const PANEL_DESCRIPTIONS = {
-  1: 'Calculate the global picture of labour rights risks using publicly-available indices from reputable organisations. The map (and its colouring) shows the risk levels and the user can change the weightings of the different indices below it. Then go to panel 2.',
-  2: 'Click on the map to select which countries are in your supply chain. Below the map, you can optionally change the weighting of each country. You can weight the countries as you wish (number of suppliers, value of sourcing, number of workers etc..) Then go to panel 3.',
+  1: 'A significant part of your CSR and reputational risks are from how workers are treated in your supply chains. This is step 1 in a 5 step process to see how effective your strategies are in managing those risks. Here you calculate a global picture of labour rights risks using publicly-available indices from reputable organisations. The map and its colouring show the risk levels and you can change the weight you give to the different indices below it. Then go to panel 2.',
+  2: 'Click on the map to select which countries are in your supply chain. Below the map, you can optionally change the weighting of each country. You can weight the countries as you wish (number of suppliers, value of sourcing, number of workers etc..). Then go to panel 3.',
   3: 'Set out your supply chain due diligence progam across six different industry tools and the effectiveness of each. Set the extent to which your efforts are focussed on higher risk countries. Then go to panel 4.',
   4: 'Set out how you respond to issues that are found. Responsiveness is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). Then go to panel 5.',
   5: 'Here are your results showing your baseline risk level (panel 2) and how well you are managing it. You can see how each element in your strategy impacts your risks. You can print out a report capturing the analysis in full.'
@@ -834,8 +834,8 @@ const statusBar = `
               </div>
             ` : `
               <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">Labour Rights Due Diligence Risk Assessment</h1>
-                <p style="font-size:15px;color:#4b5563;margin:0;">There are 5 panels. Start with panel 1 and work across to see the results on panel 5.</p>
+                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">How effective is your risk management strategy for worker risks in international supply chains?</h1>
+                <p style="font-size:15px;color:#4b5563;margin:0;">Start with panel 1 and work across to see the results on panel 5.</p>
               </div>
             `}
             <div style="display:flex;justify-content:center;gap:${isMobile ? '4px' : '6px'};flex-wrap:wrap;width:100%;">
