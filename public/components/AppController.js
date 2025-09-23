@@ -43,10 +43,10 @@ export class AppController {
 
       // Panel 6 cost analysis state (only if enabled)
       ...(ENABLE_PANEL_6 ? {
-      supplierCount: 1000, // Default number of suppliers
-      hourlyRate: 20, // Default cost per man hour in USD
-      externalCosts: [100, 100, 100, 100, 100, 100], // Default $100 per tool
-      internalHours: [10, 10, 10, 10, 10, 10], // Default 10 hours per tool
+      supplierCount: 250, // Default number of suppliers
+      hourlyRate: 40, // Default cost per man hour in USD
+      externalCosts: [200, 1000, 1200, 50, 0, 0], // Default per tool
+      internalHours: [12, 4, 8, 1, 2, 1], // Default per tool
       } : {}),
 
       // Selection + volumes
