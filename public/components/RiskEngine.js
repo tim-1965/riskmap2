@@ -1665,11 +1665,11 @@ optimizeBudgetAllocation(
             const stepSizes = toolIndex === 0 ? [10, 5, -5] : [5, -5, 10]; // Favor increases for voice tool
             
             for (const stepSize of stepSizes) {
-              const testAllocation = [...currentAllocation];
-              testAllocation[toolIndex] = Math.max(5, Math.min(95, 
+              let testAllocation = [...currentAllocation];
+              testAllocation[toolIndex] = Math.max(5, Math.min(95,
                 testAllocation[toolIndex] + stepSize
               ));
-              
+
               // Adjust other tools to maintain budget
               testAllocation = this.adjustToTargetBudget(testAllocation, targetBudget, calculateAllocationCost);
               
