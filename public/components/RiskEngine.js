@@ -1548,57 +1548,155 @@ export class RiskEngine {
       responsivenessStrategy, responsivenessEffectiveness, focus
     );
 
-    // Simple optimization: maximize effectiveness per dollar
-    const toolEffectiveness = transparencyEffectiveness.map((effectiveness, index) => {
-      const costPerPercentageCoverage = currentBudget.toolDeployments[index].totalCost / Math.max(1, hrddStrategy[index]);
-      const effectivenessPerDollar = effectiveness / Math.max(1, costPerPercentageCoverage);
-      return {
-        toolIndex: index,
-        effectiveness: effectiveness,
-        costEffectiveness: effectivenessPerDollar,
-        currentCoverage: hrddStrategy[index]
-      };
-    });
+    const targetBudget = currentBudget.totalBudget;
+    
+    // Improved optimization using multiple random restarts and hill climbing
+    let bestAllocation = [...hrddStrategy];
+    let bestManagedRisk = currentDetails.managedRisk;
+    
+    // Helper function to calculate total cost for an allocation
+    const calculateAllocationCost = (allocation) => {
+      let totalCost = 0;
+      allocation.forEach((coverage, index) => {
+        const suppliersUsingTool = Math.ceil(supplierCount * (coverage / 100));
+        const externalCost = suppliersUsingTool * (externalCosts[index] || 0);
+        const internalCost = suppliersUsingTool * (internalHours[index] || 0) * hourlyRate;
+        totalCost += externalCost + internalCost;
+      });
+      return totalCost;
+    };
 
-    // Sort by cost-effectiveness (descending)
-    const sortedTools = [...toolEffectiveness].sort((a, b) => b.costEffectiveness - a.costEffectiveness);
+    // Helper function to evaluate an allocation
+    const evaluateAllocation = (allocation) => {
+      const cost = calculateAllocationCost(allocation);
+      if (Math.abs(cost - targetBudget) > targetBudget * 0.02) { // Allow 2% budget tolerance
+        return { managedRisk: Infinity, cost }; // Penalize budget violations heavily
+      }
+      
+      const details = this.calculateManagedRiskDetails(
+        selectedCountries, countryVolumes, countryRisks,
+        allocation, transparencyEffectiveness,
+        responsivenessStrategy, responsivenessEffectiveness, focus
+      );
+      return { managedRisk: details.managedRisk, cost };
+    };
 
-    // Allocate budget to most cost-effective tools first
-    const optimizedAllocation = new Array(6).fill(0);
-    let remainingBudget = currentBudget.totalBudget;
+    // Try multiple random starting points with hill climbing
+    const numRestarts = 20;
+    const maxIterations = 100;
+    
+    for (let restart = 0; restart < numRestarts; restart++) {
+      // Generate random starting allocation that approximately meets budget
+      let currentAllocation;
+      
+      if (restart === 0) {
+        // First attempt: use current allocation as starting point
+        currentAllocation = [...hrddStrategy];
+      } else {
+        // Generate random allocation
+        currentAllocation = new Array(6);
+        for (let i = 0; i < 6; i++) {
+          currentAllocation[i] = Math.random() * 80 + 10; // 10-90% coverage
+        }
+        
+        // Adjust to approximate target budget using scaling
+        const currentCost = calculateAllocationCost(currentAllocation);
+        if (currentCost > 0) {
+          const scaleFactor = Math.sqrt(targetBudget / currentCost); // Square root for gentler scaling
+          currentAllocation = currentAllocation.map(coverage => 
+            Math.max(5, Math.min(95, coverage * scaleFactor))
+          );
+        }
+      }
 
-    // Start with minimum viable coverage for all tools
-    const minCoverage = 5; // 5% minimum
-    sortedTools.forEach(tool => {
-      optimizedAllocation[tool.toolIndex] = minCoverage;
-      const toolDeployment = currentBudget.toolDeployments[tool.toolIndex];
-      const costForMinCoverage = (toolDeployment.totalCost / Math.max(1, tool.currentCoverage)) * minCoverage;
-      remainingBudget -= costForMinCoverage;
-    });
-
-    // Allocate remaining budget to most cost-effective tools
-    const allocationStep = 5; // Allocate in 5% increments
-    while (remainingBudget > 0) {
-      let allocated = false;
-      for (const tool of sortedTools) {
-        if (optimizedAllocation[tool.toolIndex] < 100) {
-          const toolDeployment = currentBudget.toolDeployments[tool.toolIndex];
-          const costForStep = (toolDeployment.totalCost / Math.max(1, tool.currentCoverage)) * allocationStep;
-
-          if (costForStep <= remainingBudget) {
-            optimizedAllocation[tool.toolIndex] = Math.min(100, optimizedAllocation[tool.toolIndex] + allocationStep);
-            remainingBudget -= costForStep;
-            allocated = true;
+      // Hill climbing from this starting point
+      let improved = true;
+      let iterations = 0;
+      
+      while (improved && iterations < maxIterations) {
+        improved = false;
+        iterations++;
+        
+        const currentResult = evaluateAllocation(currentAllocation);
+        if (currentResult.managedRisk === Infinity) break;
+        
+        // Try small adjustments to each tool
+        for (let toolIndex = 0; toolIndex < 6; toolIndex++) {
+          const stepSizes = [5, -5, 10, -10, 15, -15]; // Try different step sizes
+          
+          for (const stepSize of stepSizes) {
+            const testAllocation = [...currentAllocation];
+            testAllocation[toolIndex] = Math.max(5, Math.min(95, 
+              testAllocation[toolIndex] + stepSize
+            ));
+            
+            const testResult = evaluateAllocation(testAllocation);
+            
+            if (testResult.managedRisk < currentResult.managedRisk) {
+              currentAllocation = testAllocation;
+              improved = true;
+              break; // Found improvement, move to next tool
+            }
+          }
+          
+          if (improved) break; // Found improvement, restart outer loop
+        }
+        
+        // Try pairwise adjustments (move budget between tools)
+        if (!improved) {
+          for (let i = 0; i < 6; i++) {
+            for (let j = i + 1; j < 6; j++) {
+              const transferAmounts = [5, 10, 15];
+              
+              for (const amount of transferAmounts) {
+                // Transfer from tool i to tool j
+                if (currentAllocation[i] >= amount + 5) {
+                  const testAllocation = [...currentAllocation];
+                  testAllocation[i] -= amount;
+                  testAllocation[j] = Math.min(95, testAllocation[j] + amount);
+                  
+                  const testResult = evaluateAllocation(testAllocation);
+                  if (testResult.managedRisk < currentResult.managedRisk) {
+                    currentAllocation = testAllocation;
+                    improved = true;
+                    break;
+                  }
+                }
+                
+                // Transfer from tool j to tool i
+                if (currentAllocation[j] >= amount + 5) {
+                  const testAllocation = [...currentAllocation];
+                  testAllocation[j] -= amount;
+                  testAllocation[i] = Math.min(95, testAllocation[i] + amount);
+                  
+                  const testResult = evaluateAllocation(testAllocation);
+                  if (testResult.managedRisk < currentResult.managedRisk) {
+                    currentAllocation = testAllocation;
+                    improved = true;
+                    break;
+                  }
+                }
+              }
+              
+              if (improved) break;
+            }
+            if (improved) break;
           }
         }
       }
-      if (!allocated) break;
+      
+      // Check if this is the best solution found
+      const finalResult = evaluateAllocation(currentAllocation);
+      if (finalResult.managedRisk < bestManagedRisk && finalResult.managedRisk !== Infinity) {
+        bestManagedRisk = finalResult.managedRisk;
+        bestAllocation = [...currentAllocation];
+      }
     }
 
-    // Calculate optimized managed risk
+    // Calculate optimized managed risk with best allocation
     const optimizedDetails = this.calculateManagedRiskDetails(
       selectedCountries, countryVolumes, countryRisks,
-      optimizedAllocation, transparencyEffectiveness,
+      bestAllocation, transparencyEffectiveness,
       responsivenessStrategy, responsivenessEffectiveness, focus
     );
 
@@ -1609,14 +1707,17 @@ export class RiskEngine {
       ((optimizedDetails.baselineRisk - optimizedDetails.managedRisk) / optimizedDetails.baselineRisk * 100) : 0;
 
     const improvement = optimizedEffectiveness - currentEffectiveness;
+    const finalBudget = calculateAllocationCost(bestAllocation);
+    
     let insight = '';
-
     if (improvement > 5) {
-      insight = `Reallocating your budget could improve risk reduction by ${improvement.toFixed(1)}% without additional cost. Focus more on ${sortedTools[0].toolIndex < 2 ? 'worker voice tools' : sortedTools[0].toolIndex < 4 ? 'audit-based approaches' : 'documentation and assessment tools'}.`;
+      insight = `Reallocating your budget could improve risk reduction by ${improvement.toFixed(1)}% without changing total cost. The optimization found a significantly better tool mix.`;
     } else if (improvement > 1) {
-      insight = `Your current allocation is reasonably efficient, but minor adjustments could yield ${improvement.toFixed(1)}% better results.`;
+      insight = `Your current allocation is reasonably efficient, but reallocation could yield ${improvement.toFixed(1)}% better results.`;
+    } else if (improvement > 0.1) {
+      insight = `Minor improvements possible (${improvement.toFixed(1)}% better risk reduction) through small allocation adjustments.`;
     } else {
-      insight = 'Your current budget allocation is already well-optimized for maximum cost-effectiveness.';
+      insight = 'Your current budget allocation appears to be near-optimal for risk reduction. No significant improvements found within budget constraints.';
     }
 
     return {
@@ -1624,12 +1725,16 @@ export class RiskEngine {
       currentManagedRisk: currentDetails.managedRisk,
       optimizedManagedRisk: optimizedDetails.managedRisk,
       currentAllocation: hrddStrategy,
-      optimizedAllocation,
+      optimizedAllocation: bestAllocation,
       currentEffectiveness,
       optimizedEffectiveness,
       improvement,
       insight,
-      budgetUtilization: (currentBudget.totalBudget - remainingBudget) / currentBudget.totalBudget * 100
+      budgetUtilization: Math.abs(finalBudget - targetBudget) < targetBudget * 0.02 ? 100 : 
+        (finalBudget / targetBudget * 100),
+      budgetConstraintMet: Math.abs(finalBudget - targetBudget) < targetBudget * 0.02,
+      finalBudget,
+      targetBudget
     };
   }
 }
