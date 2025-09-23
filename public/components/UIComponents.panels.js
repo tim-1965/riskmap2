@@ -1680,6 +1680,12 @@ export function createCostAnalysisPanel(containerId, options) {
         </div>
       </div>
 
+      <!-- Detailed Budget Breakdown -->
+      ${renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, hourlyRate, externalCosts, internalHours)}
+
+      <!-- Risk Transformation Comparison -->
+      ${renderRiskTransformationComparison(optimization, budgetData, baselineRisk, managedRisk, selectedCountries, countryVolumes, countryRisks, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus)}
+
     </div>
   `;
 
@@ -1863,6 +1869,325 @@ function setupCostAnalysisEventListeners(handlers) {
       if (resultsContainer && optimization) {
         window.location.reload(); // Trigger re-render to show updated optimization
       }
-    });
+   });
   }
+}
+
+function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, hourlyRate, externalCosts, internalHours) {
+  if (!optimization) return '';
+
+  const mobile = isMobileView();
+  const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
+
+  // Calculate current tool breakdown
+  const currentBreakdown = riskEngine.hrddStrategyLabels.map((label, index) => {
+    const coverage = budgetData.currentAllocation[index] || 0;
+    const suppliersUsingTool = Math.ceil(supplierCount * (coverage / 100));
+    const externalCostPerTool = externalCosts[index] || 0;
+    const hoursPerTool = internalHours[index] || 0;
+    const totalExternalCost = suppliersUsingTool * externalCostPerTool;
+    const totalInternalCost = suppliersUsingTool * hoursPerTool * hourlyRate;
+
+    return {
+      name: label,
+      coverage,
+      suppliersUsingTool,
+      totalExternalCost,
+      totalInternalCost,
+      totalCost: totalExternalCost + totalInternalCost
+    };
+  });
+
+  // Calculate optimized tool breakdown
+  const optimizedBreakdown = riskEngine.hrddStrategyLabels.map((label, index) => {
+    const coverage = optimization.optimizedAllocation[index] || 0;
+    const suppliersUsingTool = Math.ceil(supplierCount * (coverage / 100));
+    const externalCostPerTool = externalCosts[index] || 0;
+    const hoursPerTool = internalHours[index] || 0;
+    const totalExternalCost = suppliersUsingTool * externalCostPerTool;
+    const totalInternalCost = suppliersUsingTool * hoursPerTool * hourlyRate;
+
+    return {
+      name: label,
+      coverage,
+      suppliersUsingTool,
+      totalExternalCost,
+      totalInternalCost,
+      totalCost: totalExternalCost + totalInternalCost
+    };
+  });
+
+  return `
+    <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
+      <h3 style="font-size: ${responsive('16px', '18px')}; font-weight: 600; color: #1f2937; margin-bottom: 20px; text-align: center;">
+        Detailed Budget Breakdown: Current vs Optimized
+      </h3>
+      
+      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px;">
+        
+        <!-- Current Allocation Column -->
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; border: 1px solid #fecaca;">
+          <h4 style="font-size: 16px; font-weight: 600; color: #991b1b; margin: 0 0 16px 0; text-align: center;">
+            Current Strategy Allocation
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${currentBreakdown.map((tool, index) => `
+              <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #f87171;">
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 13px; font-weight: 600; color: #7f1d1d; flex: 1;">${tool.name}</span>
+                  <span style="font-size: 12px; color: #991b1b; background: #fecaca; padding: 2px 8px; border-radius: 12px;">
+                    ${tool.coverage.toFixed(0)}% coverage
+                  </span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 11px; color: #7f1d1d;">
+                  <div>Suppliers: <strong>${tool.suppliersUsingTool}</strong></div>
+                  <div>External: <strong>$${tool.totalExternalCost.toLocaleString()}</strong></div>
+                  <div>Internal: <strong>$${tool.totalInternalCost.toLocaleString()}</strong></div>
+                  <div>Total: <strong>$${tool.totalCost.toLocaleString()}</strong></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #dc2626; margin-top: 12px;">
+            <div style="text-align: center; color: #991b1b;">
+              <div style="font-size: 12px; margin-bottom: 4px;">CURRENT TOTAL BUDGET</div>
+              <div style="font-size: 20px; font-weight: bold;">$${budgetData.totalBudget.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optimized Allocation Column -->
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%); padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0;">
+          <h4 style="font-size: 16px; font-weight: 600; color: #14532d; margin: 0 0 16px 0; text-align: center;">
+            Optimized Strategy Allocation
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${optimizedBreakdown.map((tool, index) => {
+              const currentTool = currentBreakdown[index];
+              const coverageChange = tool.coverage - currentTool.coverage;
+              const costChange = tool.totalCost - currentTool.totalCost;
+              
+              return `
+                <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #22c55e;">
+                  <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 13px; font-weight: 600; color: #14532d; flex: 1;">${tool.name}</span>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 12px; color: #16a34a; background: #dcfce7; padding: 2px 8px; border-radius: 12px;">
+                        ${tool.coverage.toFixed(0)}% coverage
+                      </span>
+                      ${Math.abs(coverageChange) > 0.5 ? `
+                        <span style="font-size: 10px; color: ${coverageChange > 0 ? '#16a34a' : '#dc2626'}; font-weight: bold;">
+                          ${coverageChange > 0 ? '+' : ''}${coverageChange.toFixed(0)}%
+                        </span>
+                      ` : ''}
+                    </div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 11px; color: #14532d;">
+                    <div>Suppliers: <strong>${tool.suppliersUsingTool}</strong></div>
+                    <div>External: <strong>$${tool.totalExternalCost.toLocaleString()}</strong></div>
+                    <div>Internal: <strong>$${tool.totalInternalCost.toLocaleString()}</strong></div>
+                    <div>Total: <strong>$${tool.totalCost.toLocaleString()}</strong></div>
+                  </div>
+                  ${Math.abs(costChange) > 10 ? `
+                    <div style="font-size: 10px; color: ${costChange > 0 ? '#dc2626' : '#16a34a'}; text-align: right; margin-top: 4px;">
+                      Cost change: ${costChange > 0 ? '+' : ''}$${Math.abs(costChange).toLocaleString()}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #16a34a; margin-top: 12px;">
+            <div style="text-align: center; color: #14532d;">
+              <div style="font-size: 12px; margin-bottom: 4px;">OPTIMIZED TOTAL BUDGET</div>
+              <div style="font-size: 20px; font-weight: bold;">$${optimizedBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderRiskTransformationComparison(optimization, budgetData, baselineRisk, managedRisk, selectedCountries, countryVolumes, countryRisks, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus) {
+  if (!optimization) return '';
+
+  const mobile = isMobileView();
+  const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
+
+  // Calculate current risk transformation steps
+  const currentTransformation = calculateRiskTransformationSteps(
+    baselineRisk, managedRisk, hrddStrategy, transparencyEffectiveness, 
+    responsivenessStrategy, responsivenessEffectiveness, focus
+  );
+
+  // Calculate optimized risk transformation steps  
+  const optimizedDetails = riskEngine.calculateManagedRiskDetails(
+    selectedCountries, countryVolumes, countryRisks,
+    optimization.optimizedAllocation, transparencyEffectiveness,
+    responsivenessStrategy, responsivenessEffectiveness, focus
+  );
+
+  const optimizedTransformation = calculateRiskTransformationSteps(
+    optimization.baselineRisk, optimization.optimizedManagedRisk, 
+    optimization.optimizedAllocation, transparencyEffectiveness,
+    responsivenessStrategy, responsivenessEffectiveness, focus
+  );
+
+  return `
+    <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
+      <h3 style="font-size: ${responsive('16px', '18px')}; font-weight: 600; color: #1f2937; margin-bottom: 20px; text-align: center;">
+        Risk Reduction Analysis: Current vs Optimized Strategy
+      </h3>
+      
+      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px;">
+        
+        <!-- Current Strategy Column -->
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; border: 1px solid #fecaca;">
+          <h4 style="font-size: 16px; font-weight: 600; color: #991b1b; margin: 0 0 16px 0; text-align: center;">
+            Current Strategy Impact
+          </h4>
+          ${renderTransformationSteps(currentTransformation, '#991b1b', '#fecaca')}
+          
+          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #dc2626; margin-top: 16px;">
+            <div style="text-align: center;">
+              <div style="font-size: 12px; color: #991b1b; margin-bottom: 4px;">CURRENT RISK REDUCTION</div>
+              <div style="font-size: 20px; font-weight: bold; color: #991b1b;">
+                ${((baselineRisk - managedRisk) / baselineRisk * 100).toFixed(1)}%
+              </div>
+              <div style="font-size: 11px; color: #7f1d1d;">
+                ${(baselineRisk - managedRisk).toFixed(1)} point reduction
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optimized Strategy Column -->
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%); padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0;">
+          <h4 style="font-size: 16px; font-weight: 600; color: #14532d; margin: 0 0 16px 0; text-align: center;">
+            Optimized Strategy Impact
+          </h4>
+          ${renderTransformationSteps(optimizedTransformation, '#14532d', '#bbf7d0')}
+          
+          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #16a34a; margin-top: 16px;">
+            <div style="text-align: center;">
+              <div style="font-size: 12px; color: #14532d; margin-bottom: 4px;">OPTIMIZED RISK REDUCTION</div>
+              <div style="font-size: 20px; font-weight: bold; color: #14532d;">
+                ${((optimization.baselineRisk - optimization.optimizedManagedRisk) / optimization.baselineRisk * 100).toFixed(1)}%
+              </div>
+              <div style="font-size: 11px; color: #166534;">
+                ${(optimization.baselineRisk - optimization.optimizedManagedRisk).toFixed(1)} point reduction
+              </div>
+              <div style="font-size: 11px; color: #16a34a; margin-top: 4px;">
+                Improvement: +${(((optimization.baselineRisk - optimization.optimizedManagedRisk) / optimization.baselineRisk * 100) - ((baselineRisk - managedRisk) / baselineRisk * 100)).toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function calculateRiskTransformationSteps(baselineRisk, managedRisk, strategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus) {
+  // Calculate transparency effectiveness
+  const overallTransparency = riskEngine.calculateOriginalTransparencyEffectiveness(strategy, transparencyEffectiveness);
+  
+  // Calculate responsiveness effectiveness
+  const overallResponsiveness = riskEngine.calculateResponsivenessEffectiveness(responsivenessStrategy, responsivenessEffectiveness);
+  
+  // Calculate focus multiplier (simplified portfolio version)
+  const focusMultiplier = riskEngine.calculatePortfolioFocusMultiplier(focus, 1.2); // Assume some concentration
+  
+  // Calculate intermediate steps
+  const totalReduction = baselineRisk - managedRisk;
+  const baseReduction = focusMultiplier > 0 ? totalReduction / focusMultiplier : 0;
+  const focusStageReduction = totalReduction - baseReduction;
+  
+  const detectionWeight = (overallTransparency + overallResponsiveness) > 0 
+    ? overallTransparency / (overallTransparency + overallResponsiveness) 
+    : 0.5;
+  
+  const detectionStageReduction = baseReduction * detectionWeight;
+  const responseStageReduction = baseReduction - detectionStageReduction;
+  
+  const riskAfterDetection = baselineRisk - detectionStageReduction;
+  const riskAfterResponse = riskAfterDetection - responseStageReduction;
+  
+  return {
+    baseline: baselineRisk,
+    afterDetection: riskAfterDetection,
+    afterResponse: riskAfterResponse,
+    final: managedRisk,
+    detectionReduction: detectionStageReduction,
+    responseReduction: responseStageReduction,
+    focusReduction: focusStageReduction,
+    transparencyPct: (overallTransparency * 100).toFixed(0),
+    responsivenessPct: (overallResponsiveness * 100).toFixed(0),
+    focusMultiplier: focusMultiplier.toFixed(2)
+  };
+}
+
+function renderTransformationSteps(transformation, primaryColor, lightColor) {
+  return `
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      
+      <!-- Step 1: Starting Point -->
+      <div style="display: flex; align-items: center; padding: 12px; border-radius: 8px; background-color: white; border: 1px solid ${lightColor};">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background-color: ${primaryColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; font-size: 12px;">1</div>
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 600; color: ${primaryColor}; margin-bottom: 2px;">Baseline Portfolio Risk</div>
+          <div style="font-size: 18px; font-weight: bold; color: ${primaryColor};">${transformation.baseline.toFixed(1)}</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="text-align: center; color: #6b7280;">
+        <div style="font-size: 16px;">↓</div>
+        <div style="font-size: 10px;">Detection (${transformation.transparencyPct}%)</div>
+      </div>
+
+      <!-- Step 2: After Detection -->
+      <div style="display: flex; align-items: center; padding: 12px; border-radius: 8px; background-color: white; border: 1px solid ${lightColor};">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background-color: ${primaryColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; font-size: 12px;">2</div>
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 600; color: ${primaryColor}; margin-bottom: 2px;">After Detection</div>
+          <div style="font-size: 18px; font-weight: bold; color: ${primaryColor};">${transformation.afterDetection.toFixed(1)}</div>
+          <div style="font-size: 10px; color: ${primaryColor};">-${Math.abs(transformation.detectionReduction).toFixed(1)} pts</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="text-align: center; color: #6b7280;">
+        <div style="font-size: 16px;">↓</div>
+        <div style="font-size: 10px;">Response (${transformation.responsivenessPct}%)</div>
+      </div>
+
+      <!-- Step 3: After Response -->
+      <div style="display: flex; align-items: center; padding: 12px; border-radius: 8px; background-color: white; border: 1px solid ${lightColor};">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background-color: ${primaryColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; font-size: 12px;">3</div>
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 600; color: ${primaryColor}; margin-bottom: 2px;">After Response</div>
+          <div style="font-size: 18px; font-weight: bold; color: ${primaryColor};">${transformation.afterResponse.toFixed(1)}</div>
+          <div style="font-size: 10px; color: ${primaryColor};">-${Math.abs(transformation.responseReduction).toFixed(1)} pts</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="text-align: center; color: #6b7280;">
+        <div style="font-size: 16px;">↓</div>
+        <div style="font-size: 10px;">Focus (${transformation.focusMultiplier}×)</div>
+      </div>
+
+      <!-- Step 4: Final Result -->
+      <div style="display: flex; align-items: center; padding: 12px; border-radius: 8px; background-color: white; border: 2px solid ${primaryColor};">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background-color: ${primaryColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; font-size: 12px;">4</div>
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 600; color: ${primaryColor}; margin-bottom: 2px;">Final Managed Risk</div>
+          <div style="font-size: 18px; font-weight: bold; color: ${primaryColor};">${transformation.final.toFixed(1)}</div>
+          <div style="font-size: 10px; color: ${primaryColor};">-${Math.abs(transformation.focusReduction).toFixed(1)} pts</div>
+        </div>
+      </div>
+    </div>
+  `;
 }
