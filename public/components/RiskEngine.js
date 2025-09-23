@@ -1304,10 +1304,12 @@ export class RiskEngine {
     countryVolumes = null,
     countryRisks = null
   ) {
+    const safeSelectedCountries = Array.isArray(selectedCountries) ? selectedCountries : [];
+
     // Use detailed calculation if data available
-    if (selectedCountries && countryVolumes && countryRisks) {
+    if (safeSelectedCountries && countryVolumes && countryRisks) {
       const details = this.calculateManagedRiskDetails(
-        selectedCountries,
+        safeSelectedCountries,
         countryVolumes,
         countryRisks,
         hrddStrategy,

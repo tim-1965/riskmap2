@@ -130,14 +130,25 @@ function ensurePanel4ResizeListener() {
 }
 
 // ENHANCED: Risk comparison panel with focus effectiveness display
-export function createRiskComparisonPanel(containerId, { baselineRisk, managedRisk, selectedCountries, focusEffectivenessMetrics = null }) {
+export function createRiskComparisonPanel(
+  containerId,
+  options = {}
+) {
+  const {
+    baselineRisk = 0,
+    managedRisk = 0,
+    selectedCountries = [],
+    focusEffectivenessMetrics = null
+  } = options;
+
+  const safeSelectedCountries = Array.isArray(selectedCountries) ? selectedCountries : [];
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const mobile = isMobileView();
   const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
 
-  const hasSelections = selectedCountries.length > 0;
+  const hasSelections = safeSelectedCountries.length > 0;
 
   if (!hasSelections) {
     container.innerHTML = `
@@ -178,7 +189,7 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
     ? `${absoluteReduction > 0 ? 'Risk reduced' : 'Risk increased'} by ${Math.abs(absoluteReduction).toFixed(1)} pts`
     : 'Risk level unchanged';
 
- container.innerHTML = `
+  container.innerHTML = `
     <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border-top: 4px solid #3b82f6;">
       <h2 style="font-size: ${responsive('18px', '20px')}; font-weight: bold; margin-bottom: ${responsive('16px', '20px')}; text-align: center; color: #1f2937;">
         Risk Assessment Summary
@@ -221,7 +232,7 @@ export function createRiskComparisonPanel(containerId, { baselineRisk, managedRi
 
       <div style="text-align: center; padding: ${responsive('10px', '12px')}; background-color: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
         <span style="font-size: ${responsive('13px', '14px')}; color: #0369a1;">
-          Portfolio: ${selectedCountries.length} countries •
+          Portfolio: ${safeSelectedCountries.length} countries •
           </span>
       </div>
       
