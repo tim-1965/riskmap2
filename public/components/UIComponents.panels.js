@@ -273,8 +273,29 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   let localStrategy = [...strategy];
   const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
 
-   const updateStrategy = () => {
-    if (onStrategyChange) onStrategyChange([...localStrategy]);
+  const updateStrategy = (options = {}) => {
+    if (options.notify !== false && onStrategyChange) {
+      onStrategyChange([...localStrategy]);
+    }
+  };
+
+  const applyStrategyValue = (index, value, options = {}) => {
+    if (!Number.isInteger(index) || index < 0 || index >= localStrategy.length) {
+      return null;
+    }
+
+    const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
+    localStrategy[index] = newValue;
+
+    const rangeInput = document.getElementById(`strategy_${index}`);
+    const numberInput = document.getElementById(`strategyNum_${index}`);
+    if (rangeInput) rangeInput.value = newValue;
+    if (numberInput) numberInput.value = newValue;
+
+    updateStrategy({ notify: options.notify !== false });
+    schedulePanel3Alignment();
+
+    return newValue;
   };
 
   container.innerHTML = `
@@ -328,27 +349,60 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
     const rangeInput = document.getElementById(`strategy_${index}`);
     const numberInput = document.getElementById(`strategyNum_${index}`);
-    const updateStrategyValue = (value) => {
-      const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
-      localStrategy[index] = newValue;
-      rangeInput.value = newValue;
-      numberInput.value = newValue;
-      updateStrategy();
+
+    const handleStrategyValueChange = (value, options = {}) => {
+      const sanitizedValue = applyStrategyValue(index, value, options);
+
+      if (index === 0) {
+        const updateResponsivenessUI =
+          typeof window !== 'undefined'
+            ? (window.hrddApp?.updateResponsivenessUI || window.updateResponsivenessUI)
+            : null;
+
+        if (typeof updateResponsivenessUI === 'function') {
+          updateResponsivenessUI(0, sanitizedValue, { notify: false });
+        }
+      }
     };
 
-    rangeInput.addEventListener('input', (e) => updateStrategyValue(e.target.value));
-    numberInput.addEventListener('input', (e) => updateStrategyValue(e.target.value));
+    if (rangeInput) {
+      rangeInput.addEventListener('input', (e) => handleStrategyValueChange(e.target.value));
+    }
+
+    if (numberInput) {
+      numberInput.addEventListener('input', (e) => handleStrategyValueChange(e.target.value));
+    }
   });
+
+  const updateHRDDStrategyUI = (target, value, options = {}) => {
+    if (Array.isArray(target)) {
+      target.forEach((val, idx) => {
+        applyStrategyValue(idx, val, { notify: false });
+      });
+      updateStrategy({ notify: options.notify !== false });
+      return;
+    }
+
+    if (Number.isInteger(target)) {
+      applyStrategyValue(target, value, options);
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    if (window.hrddApp) {
+      window.hrddApp.updateHRDDStrategyUI = updateHRDDStrategyUI;
+    } else {
+      window.updateHRDDStrategyUI = updateHRDDStrategyUI;
+    }
+  }
 
   const resetButton = document.getElementById('resetStrategy');
   resetButton.addEventListener('click', () => {
     localStrategy = [...riskEngine.defaultHRDDStrategy];
     localStrategy.forEach((weight, index) => {
-      document.getElementById(`strategy_${index}`).value = weight;
-      document.getElementById(`strategyNum_${index}`).value = weight;
+      applyStrategyValue(index, weight, { notify: false });
     });
     updateStrategy();
-    schedulePanel3Alignment();
 
     const targetValue = defaultFocusValue;
     if (typeof window !== 'undefined' && window.hrddApp?.updateFocusUI) {
@@ -596,15 +650,35 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
 
   let localResponsiveness = [...responsiveness];
 
-   const updateResponsiveness = () => {
+  const updateResponsiveness = (options = {}) => {
     const total = localResponsiveness.reduce((sum, w) => sum + w, 0);
     const formattedTotal = Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
     const totalElement = document.getElementById('totalResponsiveness');
     if (totalElement) {
       totalElement.textContent = formattedTotal;
     }
-    if (onResponsivenessChange) onResponsivenessChange([...localResponsiveness]);
+    if (options.notify !== false && onResponsivenessChange) {
+      onResponsivenessChange([...localResponsiveness]);
+    }
     schedulePanel4Alignment();
+  };
+
+  const applyResponsivenessValue = (index, value, options = {}) => {
+    if (!Number.isInteger(index) || index < 0 || index >= localResponsiveness.length) {
+      return null;
+    }
+
+    const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
+    localResponsiveness[index] = newValue;
+
+    const rangeInput = document.getElementById(`responsiveness_${index}`);
+    if (rangeInput) {
+      rangeInput.value = newValue;
+    }
+
+    updateResponsiveness({ notify: options.notify !== false });
+
+    return newValue;
   };
 
   container.innerHTML = `
@@ -648,39 +722,56 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
     `;
     responsivenessContainer.appendChild(responsivenessControl);
 
-    const rangeInput = document.getElementById(`responsiveness_${index}`);
-    const updateResponsivenessValue = (value) => {
-      const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
-      localResponsiveness[index] = newValue;
-      rangeInput.value = newValue;
-      updateResponsiveness();
-      
-      // Link realtime response (index 0) with continuous worker voice (Panel 3, index 0)
+   const rangeInput = document.getElementById(`responsiveness_${index}`);
+
+    const handleResponsivenessChange = (value, options = {}) => {
+      const sanitizedValue = applyResponsivenessValue(index, value, options);
+
       if (index === 0) {
-        const strategySlider = document.getElementById('strategy_0');
-        const strategyNumber = document.getElementById('strategyNum_0');
-        if (strategySlider && strategyNumber) {
-          strategySlider.value = newValue;
-          strategyNumber.value = newValue;
-          // Trigger the strategy update if the handler exists
-          if (typeof window !== 'undefined' && window.hrddApp && window.hrddApp.onHRDDStrategyChange) {
-            const currentStrategy = [...(window.hrddApp.state.hrddStrategy || [])];
-            currentStrategy[0] = newValue;
-            window.hrddApp.onHRDDStrategyChange(currentStrategy);
-          }
+        const updateStrategyUI =
+          typeof window !== 'undefined'
+            ? (window.hrddApp?.updateHRDDStrategyUI || window.updateHRDDStrategyUI)
+            : null;
+
+        if (typeof updateStrategyUI === 'function') {
+          updateStrategyUI(0, sanitizedValue, { notify: false });
         }
       }
     };
 
-    rangeInput.addEventListener('input', (e) => updateResponsivenessValue(e.target.value));
-    rangeInput.addEventListener('change', (e) => updateResponsivenessValue(e.target.value));
+    if (rangeInput) {
+      rangeInput.addEventListener('input', (e) => handleResponsivenessChange(e.target.value));
+      rangeInput.addEventListener('change', (e) => handleResponsivenessChange(e.target.value));
+    }
   });
+
+  const updateResponsivenessUI = (target, value, options = {}) => {
+    if (Array.isArray(target)) {
+      target.forEach((val, idx) => {
+        applyResponsivenessValue(idx, val, { notify: false });
+      });
+      updateResponsiveness({ notify: options.notify !== false });
+      return;
+    }
+
+    if (Number.isInteger(target)) {
+      applyResponsivenessValue(target, value, options);
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    if (window.hrddApp) {
+      window.hrddApp.updateResponsivenessUI = updateResponsivenessUI;
+    } else {
+      window.updateResponsivenessUI = updateResponsivenessUI;
+    }
+  }
 
   const resetButton = document.getElementById('resetResponsiveness');
   resetButton.addEventListener('click', () => {
     localResponsiveness = [...riskEngine.defaultResponsivenessStrategy];
     localResponsiveness.forEach((weight, index) => {
-      document.getElementById(`responsiveness_${index}`).value = weight;
+      applyResponsivenessValue(index, weight, { notify: false });
     });
     updateResponsiveness();
   });
@@ -1907,17 +1998,63 @@ function setupCostAnalysisEventListeners(handlers) {
       const resultsContainer = document.getElementById('optimizationResults');
       if (resultsContainer && optimization) {
         // Update just the optimization results without reloading
-        resultsContainer.innerHTML = renderOptimizationResults(optimization, 
-          riskEngine.calculateBudgetAnalysis(
-            // Get current values from the UI instead of defaults
-            parseInt(document.getElementById('supplierCountInput')?.value || '1000'),
-            parseFloat(document.getElementById('hourlyRateInput')?.value || '20'),
-            Array.from({length: 6}, (_, i) => parseFloat(document.getElementById(`externalCostNum_${i}`)?.value || '100')),
-            Array.from({length: 6}, (_, i) => parseFloat(document.getElementById(`internalHoursNum_${i}`)?.value || '10')),
-            optimization.optimizedAllocation, // Use optimized allocation for budget calculation
-            [], [], [], [], [], [], [], 0 // These don't affect budget calculation
-          ),
-          optimization.baselineRisk, 
+        const appState = (typeof window !== 'undefined' && window.hrddApp && window.hrddApp.state)
+          ? window.hrddApp.state
+          : {};
+
+        const toolCount = Array.isArray(riskEngine.hrddStrategyLabels)
+          ? riskEngine.hrddStrategyLabels.length
+          : (Array.isArray(appState.hrddStrategy) ? appState.hrddStrategy.length : 6);
+
+        const parsedSupplierCount = parseInt(document.getElementById('supplierCountInput')?.value ?? '', 10);
+        const parsedHourlyRate = parseFloat(document.getElementById('hourlyRateInput')?.value ?? '');
+
+        const supplierCountValue = Number.isFinite(parsedSupplierCount)
+          ? parsedSupplierCount
+          : (Number.isFinite(appState.supplierCount) ? appState.supplierCount : 250);
+
+        const hourlyRateValue = Number.isFinite(parsedHourlyRate)
+          ? parsedHourlyRate
+          : (Number.isFinite(appState.hourlyRate) ? appState.hourlyRate : 40);
+
+        const externalCostValues = Array.from({ length: toolCount }, (_, i) => {
+          const value = parseFloat(document.getElementById(`externalCostNum_${i}`)?.value ?? '');
+          if (Number.isFinite(value)) return value;
+          const stateValue = Array.isArray(appState.externalCosts) ? appState.externalCosts[i] : undefined;
+          return Number.isFinite(stateValue) ? stateValue : 0;
+        });
+
+        const internalHourValues = Array.from({ length: toolCount }, (_, i) => {
+          const value = parseFloat(document.getElementById(`internalHoursNum_${i}`)?.value ?? '');
+          if (Number.isFinite(value)) return value;
+          const stateValue = Array.isArray(appState.internalHours) ? appState.internalHours[i] : undefined;
+          return Number.isFinite(stateValue) ? stateValue : 0;
+        });
+
+        const strategyLength = toolCount;
+        const currentStrategy = Array.isArray(appState.hrddStrategy) && appState.hrddStrategy.length === strategyLength
+          ? [...appState.hrddStrategy]
+          : Array.from({ length: strategyLength }, (_, i) => optimization.currentAllocation?.[i] ?? 0);
+
+        const currentBudgetData = riskEngine.calculateBudgetAnalysis(
+          supplierCountValue,
+          hourlyRateValue,
+          externalCostValues,
+          internalHourValues,
+          currentStrategy,
+          Array.isArray(appState.transparencyEffectiveness) ? [...appState.transparencyEffectiveness] : [],
+          Array.isArray(appState.responsivenessStrategy) ? [...appState.responsivenessStrategy] : [],
+          Array.isArray(appState.responsivenessEffectiveness) ? [...appState.responsivenessEffectiveness] : [],
+          Array.isArray(appState.selectedCountries) ? [...appState.selectedCountries] : [],
+          appState.countryVolumes || {},
+          appState.countryRisks || {},
+          typeof appState.focus === 'number' ? appState.focus : 0
+        ) || { currentAllocation: Array.isArray(optimization.currentAllocation) ? optimization.currentAllocation : [] };
+
+        resultsContainer.innerHTML = renderOptimizationResults(
+          optimization,
+          currentBudgetData,
+          optimization.baselineRisk,
           optimization.currentManagedRisk
         );
         
@@ -1997,11 +2134,11 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
       <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px;">
         
         <!-- Current Allocation Column -->
-        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; border: 1px solid #fecaca;">
+         <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; border: 1px solid #fecaca; display: flex; flex-direction: column; min-height: 100%;">
           <h4 style="font-size: 16px; font-weight: 600; color: #991b1b; margin: 0 0 16px 0; text-align: center;">
             Current Strategy Allocation
           </h4>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto;">
             ${currentBreakdown.map((tool, index) => `
               <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #f87171;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -2019,7 +2156,7 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
               </div>
             `).join('')}
           </div>
-          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #dc2626; margin-top: 12px;">
+         <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #dc2626; margin-top: auto;">
             <div style="text-align: center; color: #991b1b;">
               <div style="font-size: 12px; margin-bottom: 4px;">CURRENT TOTAL BUDGET</div>
               <div style="font-size: 20px; font-weight: bold;">$${budgetData.totalBudget.toLocaleString()}</div>
@@ -2028,11 +2165,11 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
         </div>
 
         <!-- Optimized Allocation Column -->
-        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%); padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0;">
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%); padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0; display: flex; flex-direction: column; min-height: 100%;">
           <h4 style="font-size: 16px; font-weight: 600; color: #14532d; margin: 0 0 16px 0; text-align: center;">
             Optimized Strategy Allocation
           </h4>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto;">
             ${optimizedBreakdown.map((tool, index) => {
               const currentTool = currentBreakdown[index];
               const coverageChange = tool.coverage - currentTool.coverage;
@@ -2068,7 +2205,7 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
               `;
             }).join('')}
           </div>
-          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #16a34a; margin-top: 12px;">
+          div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #16a34a; margin-top: auto;">
             <div style="text-align: center; color: #14532d;">
               <div style="font-size: 12px; margin-bottom: 4px;">OPTIMIZED TOTAL BUDGET</div>
               <div style="font-size: 20px; font-weight: bold;">$${optimizedBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0).toLocaleString()}</div>

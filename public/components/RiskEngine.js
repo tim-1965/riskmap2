@@ -1544,10 +1544,37 @@ optimizeBudgetAllocation(
 
     if (!currentBudget) return null;
 
+    const responsivenessLength = Array.isArray(this.responsivenessLabels)
+      ? this.responsivenessLabels.length
+      : (Array.isArray(responsivenessStrategy) ? responsivenessStrategy.length : 0);
+
+    const baseResponsiveness = Array.from({ length: responsivenessLength }, (_, index) => {
+      const provided = Array.isArray(responsivenessStrategy) ? responsivenessStrategy[index] : undefined;
+      if (Number.isFinite(provided)) {
+        return provided;
+      }
+      const fallback = Array.isArray(this.defaultResponsivenessStrategy)
+        ? this.defaultResponsivenessStrategy[index]
+        : 0;
+      return Number.isFinite(fallback) ? fallback : 0;
+    });
+
+    if (baseResponsiveness.length > 0) {
+      baseResponsiveness[0] = Number.isFinite(hrddStrategy[0]) ? hrddStrategy[0] : 0;
+    }
+
+    const buildLinkedResponsiveness = (allocation) => {
+      const linked = [...baseResponsiveness];
+      if (linked.length > 0 && Array.isArray(allocation)) {
+        linked[0] = Number.isFinite(allocation[0]) ? allocation[0] : 0;
+      }
+      return linked;
+    };
+
     const currentDetails = this.calculateManagedRiskDetails(
       selectedCountries, countryVolumes, countryRisks,
       hrddStrategy, transparencyEffectiveness,
-      responsivenessStrategy, responsivenessEffectiveness, focus
+      buildLinkedResponsiveness(hrddStrategy), responsivenessEffectiveness, focus
     );
 
     const targetBudget = currentBudget.totalBudget;
@@ -1574,11 +1601,11 @@ optimizeBudgetAllocation(
       if (Math.abs(cost - targetBudget) > targetBudget * 0.03) { // Allow 3% budget tolerance
         return { managedRisk: Infinity, cost }; // Penalize budget violations heavily
       }
-      
+
       const details = this.calculateManagedRiskDetails(
         selectedCountries, countryVolumes, countryRisks,
         allocation, transparencyEffectiveness,
-        responsivenessStrategy, responsivenessEffectiveness, focus
+        buildLinkedResponsiveness(allocation), responsivenessEffectiveness, focus
       );
       return { managedRisk: details.managedRisk, cost };
     };
@@ -1712,7 +1739,7 @@ optimizeBudgetAllocation(
     const optimizedDetails = this.calculateManagedRiskDetails(
       selectedCountries, countryVolumes, countryRisks,
       bestAllocation, transparencyEffectiveness,
-      responsivenessStrategy, responsivenessEffectiveness, focus
+      buildLinkedResponsiveness(bestAllocation), responsivenessEffectiveness, focus
     );
 
     // Generate insight
@@ -1743,6 +1770,7 @@ optimizeBudgetAllocation(
       optimizedManagedRisk: optimizedDetails.managedRisk,
       currentAllocation: hrddStrategy,
       optimizedAllocation: bestAllocation,
+      optimizedResponsivenessStrategy: buildLinkedResponsiveness(bestAllocation),
       currentEffectiveness,
       optimizedEffectiveness,
       improvement,
