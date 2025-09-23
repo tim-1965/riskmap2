@@ -1514,7 +1514,7 @@ export class RiskEngine {
     };
   }
 
-  optimizeBudgetAllocation(
+optimizeBudgetAllocation(
     supplierCount,
     hourlyRate,
     externalCosts,
@@ -1550,7 +1550,7 @@ export class RiskEngine {
 
     const targetBudget = currentBudget.totalBudget;
     
-    // Improved optimization using multiple random restarts and hill climbing
+    // Enhanced optimization favoring continuous worker voice
     let bestAllocation = [...hrddStrategy];
     let bestManagedRisk = currentDetails.managedRisk;
     
@@ -1569,7 +1569,7 @@ export class RiskEngine {
     // Helper function to evaluate an allocation
     const evaluateAllocation = (allocation) => {
       const cost = calculateAllocationCost(allocation);
-      if (Math.abs(cost - targetBudget) > targetBudget * 0.02) { // Allow 2% budget tolerance
+      if (Math.abs(cost - targetBudget) > targetBudget * 0.03) { // Allow 3% budget tolerance
         return { managedRisk: Infinity, cost }; // Penalize budget violations heavily
       }
       
@@ -1581,119 +1581,132 @@ export class RiskEngine {
       return { managedRisk: details.managedRisk, cost };
     };
 
-    // Try multiple random starting points with hill climbing
-    const numRestarts = 20;
-    const maxIterations = 100;
-    
-    for (let restart = 0; restart < numRestarts; restart++) {
-      // Generate random starting allocation that approximately meets budget
-      let currentAllocation;
-      
-      if (restart === 0) {
-        // First attempt: use current allocation as starting point
-        currentAllocation = [...hrddStrategy];
-      } else {
-        // Generate random allocation
-        currentAllocation = new Array(6);
-        for (let i = 0; i < 6; i++) {
-          currentAllocation[i] = Math.random() * 80 + 10; // 10-90% coverage
-        }
-        
-        // Adjust to approximate target budget using scaling
-        const currentCost = calculateAllocationCost(currentAllocation);
-        if (currentCost > 0) {
-          const scaleFactor = Math.sqrt(targetBudget / currentCost); // Square root for gentler scaling
-          currentAllocation = currentAllocation.map(coverage => 
-            Math.max(5, Math.min(95, coverage * scaleFactor))
-          );
+    // Progress tracking
+    const updateProgress = (iteration, total, strategy) => {
+      if (typeof document !== 'undefined') {
+        const progressEl = document.getElementById('optimizationProgress');
+        if (progressEl) {
+          progressEl.textContent = `Testing strategy ${iteration}/${total}: ${strategy}`;
         }
       }
+    };
 
-      // Hill climbing from this starting point
-      let improved = true;
-      let iterations = 0;
-      
-      while (improved && iterations < maxIterations) {
-        improved = false;
-        iterations++;
-        
-        const currentResult = evaluateAllocation(currentAllocation);
-        if (currentResult.managedRisk === Infinity) break;
-        
-        // Try small adjustments to each tool
-        for (let toolIndex = 0; toolIndex < 6; toolIndex++) {
-          const stepSizes = [5, -5, 10, -10, 15, -15]; // Try different step sizes
-          
-          for (const stepSize of stepSizes) {
-            const testAllocation = [...currentAllocation];
-            testAllocation[toolIndex] = Math.max(5, Math.min(95, 
-              testAllocation[toolIndex] + stepSize
-            ));
-            
-            const testResult = evaluateAllocation(testAllocation);
-            
-            if (testResult.managedRisk < currentResult.managedRisk) {
-              currentAllocation = testAllocation;
-              improved = true;
-              break; // Found improvement, move to next tool
-            }
-          }
-          
-          if (improved) break; // Found improvement, restart outer loop
+    // Strategic optimization approaches
+    const strategies = [
+      {
+        name: "Current allocation",
+        generator: () => [...hrddStrategy]
+      },
+      {
+        name: "Voice-heavy approach",
+        generator: () => {
+          const allocation = [60, 30, 15, 40, 70, 85]; // Favor continuous voice + surveys
+          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
         }
+      },
+      {
+        name: "Audit-focused approach", 
+        generator: () => {
+          const allocation = [25, 15, 50, 35, 80, 90]; // Favor unannounced audits
+          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
+        }
+      },
+      {
+        name: "Balanced high-tech",
+        generator: () => {
+          const allocation = [45, 35, 30, 25, 60, 75]; // Balance voice + audits
+          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
+        }
+      },
+      {
+        name: "Extreme voice focus",
+        generator: () => {
+          const allocation = [80, 50, 10, 20, 50, 70]; // Maximum continuous voice
+          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
+        }
+      }
+    ];
+
+    // Test each strategic approach + hill climbing
+    const totalIterations = strategies.length * 15; // 5 strategies × 3 variations × 5 hill climbs each
+    let iterationCount = 0;
+
+    for (const strategy of strategies) {
+      // Test 3 variations of each strategy
+      for (let variation = 0; variation < 3; variation++) {
+        iterationCount++;
+        updateProgress(iterationCount, totalIterations, `${strategy.name} (var ${variation + 1})`);
         
-        // Try pairwise adjustments (move budget between tools)
-        if (!improved) {
-          for (let i = 0; i < 6; i++) {
-            for (let j = i + 1; j < 6; j++) {
-              const transferAmounts = [5, 10, 15];
+        let currentAllocation = strategy.generator();
+        
+        // Add some variation (except for iteration 0 which uses exact strategy)
+        if (variation > 0) {
+          currentAllocation = currentAllocation.map(coverage => {
+            const noise = (Math.random() - 0.5) * 20 * variation; // More variation for later iterations
+            return Math.max(5, Math.min(95, coverage + noise));
+          });
+          currentAllocation = this.adjustToTargetBudget(currentAllocation, targetBudget, calculateAllocationCost);
+        }
+
+        // Hill climbing from this strategic starting point
+        for (let hillClimb = 0; hillClimb < 5; hillClimb++) {
+          iterationCount++;
+          updateProgress(iterationCount, totalIterations, `${strategy.name} hill climb ${hillClimb + 1}`);
+          
+          const currentResult = evaluateAllocation(currentAllocation);
+          if (currentResult.managedRisk === Infinity) break;
+          
+          let improved = false;
+          
+          // Try adjustments favoring continuous worker voice
+          for (let toolIndex = 0; toolIndex < 6; toolIndex++) {
+            const stepSizes = toolIndex === 0 ? [10, 5, -5] : [5, -5, 10]; // Favor increases for voice tool
+            
+            for (const stepSize of stepSizes) {
+              const testAllocation = [...currentAllocation];
+              testAllocation[toolIndex] = Math.max(5, Math.min(95, 
+                testAllocation[toolIndex] + stepSize
+              ));
               
-              for (const amount of transferAmounts) {
-                // Transfer from tool i to tool j
-                if (currentAllocation[i] >= amount + 5) {
-                  const testAllocation = [...currentAllocation];
-                  testAllocation[i] -= amount;
-                  testAllocation[j] = Math.min(95, testAllocation[j] + amount);
-                  
-                  const testResult = evaluateAllocation(testAllocation);
-                  if (testResult.managedRisk < currentResult.managedRisk) {
-                    currentAllocation = testAllocation;
-                    improved = true;
-                    break;
-                  }
-                }
-                
-                // Transfer from tool j to tool i
-                if (currentAllocation[j] >= amount + 5) {
-                  const testAllocation = [...currentAllocation];
-                  testAllocation[j] -= amount;
-                  testAllocation[i] = Math.min(95, testAllocation[i] + amount);
-                  
-                  const testResult = evaluateAllocation(testAllocation);
-                  if (testResult.managedRisk < currentResult.managedRisk) {
-                    currentAllocation = testAllocation;
-                    improved = true;
-                    break;
-                  }
-                }
+              // Adjust other tools to maintain budget
+              testAllocation = this.adjustToTargetBudget(testAllocation, targetBudget, calculateAllocationCost);
+              
+              const testResult = evaluateAllocation(testAllocation);
+              
+              if (testResult.managedRisk < currentResult.managedRisk) {
+                currentAllocation = testAllocation;
+                improved = true;
+                break;
               }
-              
-              if (improved) break;
             }
+            
             if (improved) break;
           }
+          
+          if (!improved) break; // No more improvements found
         }
-      }
-      
-      // Check if this is the best solution found
-      const finalResult = evaluateAllocation(currentAllocation);
-      if (finalResult.managedRisk < bestManagedRisk && finalResult.managedRisk !== Infinity) {
-        bestManagedRisk = finalResult.managedRisk;
-        bestAllocation = [...currentAllocation];
+        
+        // Check if this is the best solution found
+        const finalResult = evaluateAllocation(currentAllocation);
+        if (finalResult.managedRisk < bestManagedRisk && finalResult.managedRisk !== Infinity) {
+          bestManagedRisk = finalResult.managedRisk;
+          bestAllocation = [...currentAllocation];
+        }
       }
     }
 
-    // Calculate optimized managed risk with best allocation
+    // Clear progress indicator
+    if (typeof document !== 'undefined') {
+      const progressEl = document.getElementById('optimizationProgress');
+      if (progressEl) {
+        progressEl.textContent = 'Optimization complete!';
+        setTimeout(() => {
+          if (progressEl.parentNode) progressEl.parentNode.removeChild(progressEl);
+        }, 2000);
+      }
+    }
+
+    // Calculate final results
     const optimizedDetails = this.calculateManagedRiskDetails(
       selectedCountries, countryVolumes, countryRisks,
       bestAllocation, transparencyEffectiveness,
@@ -1710,14 +1723,16 @@ export class RiskEngine {
     const finalBudget = calculateAllocationCost(bestAllocation);
     
     let insight = '';
+    const voiceIncrease = bestAllocation[0] - hrddStrategy[0];
+    
     if (improvement > 5) {
-      insight = `Reallocating your budget could improve risk reduction by ${improvement.toFixed(1)}% without changing total cost. The optimization found a significantly better tool mix.`;
+      insight = `Strategic reallocation could improve risk reduction by ${improvement.toFixed(1)}%. ${voiceIncrease > 5 ? `The optimization recommends increasing continuous worker voice coverage by ${voiceIncrease.toFixed(0)}% for maximum impact.` : 'The optimization found a significantly better tool mix.'} `;
     } else if (improvement > 1) {
-      insight = `Your current allocation is reasonably efficient, but reallocation could yield ${improvement.toFixed(1)}% better results.`;
+      insight = `Modest improvements possible (${improvement.toFixed(1)}% better risk reduction) through strategic reallocation.`;
     } else if (improvement > 0.1) {
-      insight = `Minor improvements possible (${improvement.toFixed(1)}% better risk reduction) through small allocation adjustments.`;
+      insight = `Minor optimization opportunities (${improvement.toFixed(1)}% improvement) identified.`;
     } else {
-      insight = 'Your current budget allocation appears to be near-optimal for risk reduction. No significant improvements found within budget constraints.';
+      insight = 'Your current allocation appears highly optimized. The strategic analysis found no significant improvements within budget constraints.';
     }
 
     return {
@@ -1730,12 +1745,52 @@ export class RiskEngine {
       optimizedEffectiveness,
       improvement,
       insight,
-      budgetUtilization: Math.abs(finalBudget - targetBudget) < targetBudget * 0.02 ? 100 : 
+      budgetUtilization: Math.abs(finalBudget - targetBudget) < targetBudget * 0.03 ? 100 : 
         (finalBudget / targetBudget * 100),
-      budgetConstraintMet: Math.abs(finalBudget - targetBudget) < targetBudget * 0.02,
+      budgetConstraintMet: Math.abs(finalBudget - targetBudget) < targetBudget * 0.03,
       finalBudget,
-      targetBudget
+      targetBudget,
+      iterationsTested: totalIterations
     };
+  }
+
+  // Helper method to adjust allocation to target budget
+  adjustToTargetBudget(allocation, targetBudget, calculateCost) {
+    const maxAdjustments = 20;
+    let adjustments = 0;
+    
+    while (adjustments < maxAdjustments) {
+      const currentCost = calculateCost(allocation);
+      const difference = currentCost - targetBudget;
+      
+      if (Math.abs(difference) < targetBudget * 0.03) break; // Within 3% tolerance
+      
+      if (difference > 0) {
+        // Cost too high, reduce allocation (avoid reducing continuous voice if possible)
+        const nonVoiceTools = [1, 2, 3, 4, 5].filter(i => allocation[i] > 10);
+        if (nonVoiceTools.length > 0) {
+          const toolToReduce = nonVoiceTools[Math.floor(Math.random() * nonVoiceTools.length)];
+          allocation[toolToReduce] = Math.max(5, allocation[toolToReduce] - 5);
+        } else if (allocation[0] > 10) {
+          allocation[0] = Math.max(5, allocation[0] - 5);
+        }
+      } else {
+        // Cost too low, increase allocation (prefer continuous voice)
+        if (allocation[0] < 90) {
+          allocation[0] = Math.min(95, allocation[0] + 5);
+        } else {
+          const toolToIncrease = Math.floor(Math.random() * 6);
+          if (allocation[toolToIncrease] < 90) {
+            allocation[toolToIncrease] = Math.min(95, allocation[toolToIncrease] + 5);
+          }
+        }
+      }
+      
+      adjustments++;
+    }
+    
+    return allocation;
+  
   }
 }
 export const riskEngine = new RiskEngine();

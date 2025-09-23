@@ -637,12 +637,28 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
     `;
     responsivenessContainer.appendChild(responsivenessControl);
 
-     const rangeInput = document.getElementById(`responsiveness_${index}`);
+    const rangeInput = document.getElementById(`responsiveness_${index}`);
     const updateResponsivenessValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       localResponsiveness[index] = newValue;
       rangeInput.value = newValue;
       updateResponsiveness();
+      
+      // Link realtime response (index 0) with continuous worker voice (Panel 3, index 0)
+      if (index === 0) {
+        const strategySlider = document.getElementById('strategy_0');
+        const strategyNumber = document.getElementById('strategyNum_0');
+        if (strategySlider && strategyNumber) {
+          strategySlider.value = newValue;
+          strategyNumber.value = newValue;
+          // Trigger the strategy update if the handler exists
+          if (typeof window !== 'undefined' && window.hrddApp && window.hrddApp.onHRDDStrategyChange) {
+            const currentStrategy = [...(window.hrddApp.state.hrddStrategy || [])];
+            currentStrategy[0] = newValue;
+            window.hrddApp.onHRDDStrategyChange(currentStrategy);
+          }
+        }
+      }
     };
 
     rangeInput.addEventListener('input', (e) => updateResponsivenessValue(e.target.value));
@@ -1860,10 +1876,22 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   }
 
-  // Optimization button
+// Optimization button
   const optimizeBtn = document.getElementById('runOptimization');
   if (optimizeBtn) {
     optimizeBtn.addEventListener('click', () => {
+      // Add progress indicator
+      const progressDiv = document.createElement('div');
+      progressDiv.id = 'optimizationProgress';
+      progressDiv.style.cssText = 'background: #eff6ff; border: 1px solid #3b82f6; color: #1d4ed8; padding: 8px 12px; border-radius: 6px; margin-top: 8px; font-size: 13px; text-align: center;';
+      progressDiv.textContent = 'Starting optimization...';
+      optimizeBtn.parentNode.insertBefore(progressDiv, optimizeBtn.nextSibling);
+      
+      optimizeBtn.disabled = true;
+      optimizeBtn.textContent = 'Optimizing...';
+      
+      // Run optimization with slight delay to allow UI update
+      setTimeout(() => {
       const optimization = optimizeBudgetAllocation();
       const resultsContainer = document.getElementById('optimizationResults');
       if (resultsContainer && optimization) {
@@ -1894,7 +1922,12 @@ function setupCostAnalysisEventListeners(handlers) {
         resultsContainer.appendChild(successMsg);
         
         setTimeout(() => successMsg.remove(), 3000);
+        
+        // Re-enable button
+        optimizeBtn.disabled = false;
+        optimizeBtn.textContent = 'Run Optimization';
       }
+      }, 100); // End of setTimeout for optimization delay
     });
   }
 
