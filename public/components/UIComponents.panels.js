@@ -1746,7 +1746,7 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
             const optimized = optimization.optimizedAllocation[index] || 0;
             const change = optimized - current;
             return `
-              <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 6px; font-size: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
                 <span style="flex: 1; color: #374151;">${label.substring(0, 20)}${label.length > 20 ? '...' : ''}</span>
                 <span style="color: #6b7280; margin: 0 8px;">${current.toFixed(0)}%</span>
                 <span style="color: #16a34a;">→ ${optimized.toFixed(0)}%</span>
@@ -1898,6 +1898,8 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   }
 
+}
+
 function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, hourlyRate, externalCosts, internalHours) {
   if (!optimization) return '';
 
@@ -1958,7 +1960,7 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
           <div style="display: flex; flex-direction: column; gap: 12px;">
             ${currentBreakdown.map((tool, index) => `
               <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #f87171;">
-                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                   <span style="font-size: 13px; font-weight: 600; color: #7f1d1d; flex: 1;">${tool.name}</span>
                   <span style="font-size: 12px; color: #991b1b; background: #fecaca; padding: 2px 8px; border-radius: 12px;">
                     ${tool.coverage.toFixed(0)}% coverage
@@ -1994,7 +1996,7 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
               
               return `
                 <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #22c55e;">
-                  <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 13px; font-weight: 600; color: #14532d; flex: 1;">${tool.name}</span>
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <span style="font-size: 12px; color: #16a34a; background: #dcfce7; padding: 2px 8px; border-radius: 12px;">
