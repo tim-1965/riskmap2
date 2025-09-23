@@ -2,7 +2,7 @@
 export class RiskEngine {
   constructor() {
     // Step 1: Default weightings for the 5 input columns
-    this.defaultWeights = [20, 20, 5, 10, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
+    this.defaultWeights = [30, 30, 10, 20, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
     // Step 2: HRDD Strategy defaults - representing supplier base coverage percentages
     this.defaultHRDDStrategy = [35, 15, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, passive approaches common
