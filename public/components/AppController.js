@@ -2,6 +2,9 @@
 // Implements Codex’s recommendations: class-based controller, state store,
 // debounced updates, clear separation of data/service/UI concerns.
 
+// CONFIGURATION: Set to true to enable Panel 6 (Cost Analysis), false to disable
+const ENABLE_PANEL_6 = true; // Change this to false to disable Panel 6
+
 import { dataService } from './DataService.js';
 import { riskEngine } from './RiskEngine.js';
 import { UIComponents } from './UIComponents.js';
@@ -12,7 +15,10 @@ const PANEL_DESCRIPTIONS = {
   2: 'Click on the map to select which countries are in your supply chain. You can also pick countries in the list area below the map and optionally change their weighting (eg: by number of suppliers or workers, value of sourcing etc..). Then go to panel 3.',
   3: 'Set out your supply chain due diligence progam across six different industry tools and the effectiveness of each. Set the extent to which your efforts are focussed on higher risk countries. Then go to panel 4.',
   4: 'Set out how you respond to issues that are found. Responsiveness is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). Then go to panel 5.',
-  5: 'Here are your results showing your baseline risk level (panel 2) and how well you are managing it. You can see how each element in your strategy impacts your risks. You can print out a report capturing the analysis in full.'
+  5: `Here are your results showing your baseline risk level (panel 2) and how well you are managing it. You can see how each element in your strategy impacts your risks. You can print out a report capturing the analysis in full.${ENABLE_PANEL_6 ? ' Then go to panel 6.' : ''}`,
+  ...(ENABLE_PANEL_6 ? {
+    6: 'Analyze the costs of your HRDD strategy including external tool costs and internal effort. See how your current budget allocation compares to an optimized approach that maximizes risk reduction per dollar spent.'
+  } : {})
 };
 
 function renderPanelDescription(panelNumber) {
@@ -34,6 +40,14 @@ export class AppController {
       weights: Array.isArray(riskEngine?.defaultWeights)
         ? [...riskEngine.defaultWeights]
         : [20, 20, 20, 20, 20],
+
+      // Panel 6 cost analysis state (only if enabled)
+      ...(ENABLE_PANEL_6 ? {
+      supplierCount: 1000, // Default number of suppliers
+      hourlyRate: 20, // Default cost per man hour in USD
+      externalCosts: [100, 100, 100, 100, 100, 100], // Default $100 per tool
+      internalHours: [10, 10, 10, 10, 10, 10], // Default 10 hours per tool
+      } : {}),
 
       // Selection + volumes
       selectedCountries: [],
@@ -117,6 +131,15 @@ export class AppController {
     this.destroy = this.destroy.bind(this);
     this.handleWheelScroll = this.handleWheelScroll.bind(this);
 
+    // Panel 6 handlers (only if enabled)
+    (ENABLE_PANEL_6 ? [
+    this.onSupplierCountChange = this.onSupplierCountChange.bind(this),
+    this.onHourlyRateChange = this.onHourlyRateChange.bind(this),
+    this.onExternalCostChange = this.onExternalCostChange.bind(this),
+    this.onInternalHoursChange = this.onInternalHoursChange.bind(this),
+    this.optimizeBudgetAllocation = this.optimizeBudgetAllocation.bind(this)
+  ] : []),
+
     // Container
     this.containerElement = null;
     this.mainScrollElement = null;
@@ -127,6 +150,11 @@ export class AppController {
     // Expose for onclick handlers in rendered HTML (panel nav etc.)
     if (typeof window !== 'undefined') {
       window.hrddApp = this;
+    }
+  // Expose Panel 6 configuration globally for other components
+  if (typeof window !== 'undefined') {
+  window.hrddApp = this;
+  window.hrddApp.ENABLE_PANEL_6 = ENABLE_PANEL_6;
     }
   }
 
@@ -436,12 +464,67 @@ export class AppController {
       this.state.lastUpdate = new Date().toISOString();
       this.updateUI();
     }, 200);
+  
+    onSupplierCountChange(count) {
+  if (!ENABLE_PANEL_6) return;
+  this.state.supplierCount = Math.max(1, Math.floor(parseFloat(count) || 1));
+  this.state.isDirty = true;
+  this.updateUI();
+}
+
+onHourlyRateChange(rate) {
+  if (!ENABLE_PANEL_6) return;
+  this.state.hourlyRate = Math.max(0, parseFloat(rate) || 0);
+  this.state.isDirty = true;
+  this.updateUI();
+}
+
+onExternalCostChange(toolIndex, cost) {
+  if (!ENABLE_PANEL_6) return;
+  if (toolIndex >= 0 && toolIndex < this.state.externalCosts.length) {
+    this.state.externalCosts[toolIndex] = Math.max(0, parseFloat(cost) || 0);
+    this.state.isDirty = true;
+    this.updateUI();
+  }
+}
+
+onInternalHoursChange(toolIndex, hours) {
+  if (!ENABLE_PANEL_6) return;
+  if (toolIndex >= 0 && toolIndex < this.state.internalHours.length) {
+    this.state.internalHours[toolIndex] = Math.max(0, parseFloat(hours) || 0);
+    this.state.isDirty = true;
+    this.updateUI();
+  }
+}
+
+optimizeBudgetAllocation() {
+  if (!ENABLE_PANEL_6) return null;
+  const optimization = riskEngine.optimizeBudgetAllocation(
+    this.state.supplierCount,
+    this.state.hourlyRate,
+    this.state.externalCosts,
+    this.state.internalHours,
+    this.state.hrddStrategy,
+    this.state.transparencyEffectiveness,
+    this.state.responsivenessStrategy,
+    this.state.responsivenessEffectiveness,
+    this.state.selectedCountries,
+    this.state.countryVolumes,
+    this.state.countryRisks,
+    this.state.focus
+  );
+  
+  return optimization;
+}
+  
+    
   }
 
   /* ------------------------------- UI -------------------------------- */
 
   setCurrentPanel(panel) {
-    if (panel >= 1 && panel <= 5) {
+  const maxPanel = ENABLE_PANEL_6 ? 6 : 5;
+  if (panel >= 1 && panel <= maxPanel) {
       this.state.currentPanel = panel;
       this.render();
     }
@@ -738,12 +821,13 @@ export class AppController {
   render() {
     if (!this.containerElement) return;
     const panelTitles = {
-      1: 'Global Risks',
-      2: 'Baseline Risk',
-      3: 'HRDD Strategy',
-      4: 'Response Strategy',
-      5: 'Managed Risk'
-    };
+  1: 'Global Risks',
+  2: 'Baseline Risk',
+  3: 'HRDD Strategy',
+  4: 'Response Strategy',
+  5: 'Managed Risk',
+  ...(ENABLE_PANEL_6 ? { 6: 'Cost Analysis' } : {})
+  };
 
     const hasWindow = typeof window !== 'undefined';
     const userAgent = typeof navigator !== 'undefined' && navigator && navigator.userAgent
@@ -765,7 +849,8 @@ export class AppController {
       }
     }
 
-    const navButtons = [1, 2, 3, 4, 5]
+    const maxPanels = ENABLE_PANEL_6 ? 6 : 5;
+    const navButtons = Array.from({length: maxPanels}, (_, i) => i + 1)
       .map(panel => `
               <button onclick="window.hrddApp.setCurrentPanel(${panel})"
                       style="padding:${isMobile ? '8px 10px' : '6px 12px'};
@@ -814,9 +899,9 @@ const statusBar = `
           <span style="flex:1;font-size:12px;color:#4b5563;font-weight:600;text-align:center;white-space:nowrap;">
             Panel ${this.state.currentPanel} of 5
           </span>
-          <button onclick="window.hrddApp.setCurrentPanel(Math.min(5, window.hrddApp.state.currentPanel + 1))"
-                  style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === 5 ? 'opacity:0.5;' : ''}"
-                  ${this.state.currentPanel === 5 ? 'disabled' : ''}>
+          <button onclick="window.hrddApp.setCurrentPanel(Math.min(${ENABLE_PANEL_6 ? 6 : 5}, window.hrddApp.state.currentPanel + 1))"
+                  style="padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:9999px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;min-width:72px;${this.state.currentPanel === (ENABLE_PANEL_6 ? 6 : 5) ? 'disabled' : ''}"
+                  Panel ${this.state.currentPanel} of ${ENABLE_PANEL_6 ? 6 : 5}
             Next →
           </button>
         </div>
@@ -1231,6 +1316,40 @@ const statusBar = `
 
         const btnPDF = document.getElementById('btnGeneratePDF');
         if (btnPDF) btnPDF.onclick = this.generatePDFReport;
+      });
+
+      return html;
+    }
+if (ENABLE_PANEL_6 && panel === 6) {
+      const html = ensureMinHeight(`
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          ${renderPanelDescription(panel)}
+          <div id="costAnalysisPanel" style="min-height:800px;"></div>
+        </div>
+      `);
+
+      queueMicrotask(() => {
+        UIComponents.createCostAnalysisPanel('costAnalysisPanel', {
+          supplierCount: this.state.supplierCount,
+          hourlyRate: this.state.hourlyRate,
+          externalCosts: this.state.externalCosts,
+          internalHours: this.state.internalHours,
+          hrddStrategy: this.state.hrddStrategy,
+          transparencyEffectiveness: this.state.transparencyEffectiveness,
+          responsivenessStrategy: this.state.responsivenessStrategy,
+          responsivenessEffectiveness: this.state.responsivenessEffectiveness,
+          selectedCountries: this.state.selectedCountries,
+          countryVolumes: this.state.countryVolumes,
+          countryRisks: this.state.countryRisks,
+          focus: this.state.focus,
+          baselineRisk: this.state.baselineRisk,
+          managedRisk: this.state.managedRisk,
+          onSupplierCountChange: this.onSupplierCountChange,
+          onHourlyRateChange: this.onHourlyRateChange,
+          onExternalCostChange: this.onExternalCostChange,
+          onInternalHoursChange: this.onInternalHoursChange,
+          optimizeBudgetAllocation: this.optimizeBudgetAllocation
+        });
       });
 
       return html;

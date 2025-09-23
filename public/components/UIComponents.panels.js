@@ -1487,3 +1487,382 @@ export function updateRiskBreakdown(selectedCountries, countries, countryRisks) 
     </div>
   `).join('');
 }
+
+// Panel 6 Cost Analysis (only if enabled)
+export function createCostAnalysisPanel(containerId, options) {
+  // Early return if Panel 6 is disabled
+  if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
+    return;
+  }
+
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const {
+    supplierCount,
+    hourlyRate,
+    externalCosts,
+    internalHours,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    selectedCountries,
+    countryVolumes,
+    countryRisks,
+    focus,
+    baselineRisk,
+    managedRisk,
+    onSupplierCountChange,
+    onHourlyRateChange,
+    onExternalCostChange,
+    onInternalHoursChange,
+    optimizeBudgetAllocation
+  } = options;
+
+  const mobile = isMobileView();
+  const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
+
+  // Calculate current budget and effectiveness
+  const budgetData = riskEngine.calculateBudgetAnalysis(
+    supplierCount,
+    hourlyRate,
+    externalCosts,
+    internalHours,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    selectedCountries,
+    countryVolumes,
+    countryRisks,
+    focus
+  );
+
+  const optimization = optimizeBudgetAllocation();
+
+  container.innerHTML = `
+    <div class="cost-analysis-panel" style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+      
+      <!-- Header Section -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="font-size: ${responsive('18px', '20px')}; font-weight: bold; color: #1f2937; margin: 0;">Cost Analysis & Budget Optimization</h2>
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Suppliers to Monitor</label>
+            <input type="number" 
+                   id="supplierCountInput" 
+                   value="${supplierCount}" 
+                   min="1" 
+                   step="1"
+                   style="width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center;">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Cost per Hour (USD)</label>
+            <input type="number" 
+                   id="hourlyRateInput" 
+                   value="${hourlyRate}" 
+                   min="0" 
+                   step="0.01"
+                   style="width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Two Column Cost Configuration -->
+      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px; margin-bottom: 32px;">
+        
+        <!-- External Costs Column -->
+        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">External Tool Costs</h3>
+            <button id="resetExternalCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+              Reset to Default
+            </button>
+          </div>
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Cost per supplier per year (USD)</div>
+          
+          <div id="externalCostControls" style="display: flex; flex-direction: column; gap: 12px;">
+            ${riskEngine.hrddStrategyLabels.map((label, index) => `
+              <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <label style="font-size: 13px; font-weight: 500; color: #374151;">${label}</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input type="range" 
+                         id="externalCost_${index}" 
+                         min="0" 
+                         max="500" 
+                         step="10" 
+                         value="${externalCosts[index]}"
+                         style="flex: 1; height: 6px; border-radius: 3px;">
+                  <input type="number" 
+                         id="externalCostNum_${index}" 
+                         min="0" 
+                         step="10" 
+                         value="${externalCosts[index]}"
+                         style="width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; text-align: center;">
+                  <span style="font-size: 12px; color: #6b7280; min-width: 30px;">USD</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Internal Effort Column -->
+        <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Internal Effort</h3>
+            <button id="resetInternalHours" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+              Reset to Default
+            </button>
+          </div>
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Man hours per supplier per year</div>
+          
+          <div id="internalHoursControls" style="display: flex; flex-direction: column; gap: 12px;">
+            ${riskEngine.hrddStrategyLabels.map((label, index) => `
+              <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <label style="font-size: 13px; font-weight: 500; color: #374151;">${label}</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input type="range" 
+                         id="internalHours_${index}" 
+                         min="0" 
+                         max="100" 
+                         step="1" 
+                         value="${internalHours[index]}"
+                         style="flex: 1; height: 6px; border-radius: 3px;">
+                  <input type="number" 
+                         id="internalHoursNum_${index}" 
+                         min="0" 
+                         step="1" 
+                         value="${internalHours[index]}"
+                         style="width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; text-align: center;">
+                  <span style="font-size: 12px; color: #6b7280; min-width: 30px;">hrs</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget Summary -->
+      <div id="budgetSummary" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 12px; border: 1px solid #bae6fd; margin-bottom: 24px;">
+        <h3 style="font-size: 16px; font-weight: 600; color: #0c4a6e; margin: 0 0 16px 0;">Annual Budget Summary</h3>
+        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(4, 1fr)')}; gap: 16px; text-align: center;">
+          <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
+            <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">EXTERNAL COSTS</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${budgetData.totalExternalCost.toLocaleString()}</div>
+          </div>
+          <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
+            <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">INTERNAL COSTS</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${budgetData.totalInternalCost.toLocaleString()}</div>
+          </div>
+          <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
+            <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">TOTAL BUDGET</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${budgetData.totalBudget.toLocaleString()}</div>
+          </div>
+          <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
+            <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">COST PER SUPPLIER</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${(budgetData.totalBudget / supplierCount).toFixed(0)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optimization Analysis -->
+      <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #14532d; margin: 0;">Budget Optimization Analysis</h3>
+          <button id="runOptimization" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
+            Run Optimization
+          </button>
+        </div>
+        
+        <div id="optimizationResults">
+          ${renderOptimizationResults(optimization, budgetData, baselineRisk, managedRisk)}
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  // Set up event listeners
+  setupCostAnalysisEventListeners({
+    onSupplierCountChange,
+    onHourlyRateChange,
+    onExternalCostChange,
+    onInternalHoursChange,
+    optimizeBudgetAllocation,
+    externalCosts,
+    internalHours
+  });
+}
+
+function renderOptimizationResults(optimization, budgetData, baselineRisk, managedRisk) {
+  if (!optimization) {
+    return `
+      <div style="text-align: center; padding: 20px; color: #6b7280;">
+        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+        <p>Click "Run Optimization" to see how to improve your risk reduction per dollar spent</p>
+      </div>
+    `;
+  }
+
+  const currentEffectiveness = ((baselineRisk - managedRisk) / baselineRisk * 100).toFixed(1);
+  const optimizedEffectiveness = ((optimization.baselineRisk - optimization.optimizedManagedRisk) / optimization.baselineRisk * 100).toFixed(1);
+  const improvementPct = (optimizedEffectiveness - currentEffectiveness).toFixed(1);
+
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+      
+      <!-- Current vs Optimized Comparison -->
+      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
+        <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Effectiveness Comparison</h4>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #374151;">Current Setup:</span>
+          <span style="font-size: 13px; font-weight: 600; color: #6b7280;">${currentEffectiveness}% reduction</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #374151;">Optimized Setup:</span>
+          <span style="font-size: 13px; font-weight: 600; color: #16a34a;">${optimizedEffectiveness}% reduction</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+          <span style="font-size: 13px; font-weight: 600; color: #14532d;">Improvement:</span>
+          <span style="font-size: 13px; font-weight: 600; color: ${improvementPct > 0 ? '#16a34a' : '#dc2626'};">
+            ${improvementPct > 0 ? '+' : ''}${improvementPct}%
+          </span>
+        </div>
+      </div>
+
+      <!-- Tool Allocation Comparison -->
+      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
+        <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Recommended Tool Allocation</h4>
+        <div style="max-height: 200px; overflow-y: auto;">
+          ${riskEngine.hrddStrategyLabels.map((label, index) => {
+            const current = budgetData.currentAllocation[index] || 0;
+            const optimized = optimization.optimizedAllocation[index] || 0;
+            const change = optimized - current;
+            return `
+              <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 6px; font-size: 12px;">
+                <span style="flex: 1; color: #374151;">${label.substring(0, 20)}${label.length > 20 ? '...' : ''}</span>
+                <span style="color: #6b7280; margin: 0 8px;">${current.toFixed(0)}%</span>
+                <span style="color: #16a34a;">→ ${optimized.toFixed(0)}%</span>
+                <span style="color: ${change > 0 ? '#16a34a' : change < 0 ? '#dc2626' : '#6b7280'}; margin-left: 8px; min-width: 40px; text-align: right;">
+                  ${change > 0 ? '+' : ''}${change.toFixed(0)}%
+                </span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+    </div>
+
+    <div style="background: #fef3c7; padding: 12px; border-radius: 6px; border: 1px solid #f59e0b; margin-top: 16px;">
+      <div style="font-size: 13px; color: #92400e;">
+        <strong>Budget Optimization Insight:</strong> 
+        ${optimization.insight || 'The optimization suggests focusing more resources on higher-effectiveness tools while maintaining the same total budget.'}
+      </div>
+    </div>
+  `;
+}
+
+function setupCostAnalysisEventListeners(handlers) {
+  const {
+    onSupplierCountChange,
+    onHourlyRateChange,
+    onExternalCostChange,
+    onInternalHoursChange,
+    optimizeBudgetAllocation,
+    externalCosts,
+    internalHours
+  } = handlers;
+
+  // Supplier count input
+  const supplierInput = document.getElementById('supplierCountInput');
+  if (supplierInput) {
+    supplierInput.addEventListener('input', (e) => {
+      onSupplierCountChange(e.target.value);
+    });
+  }
+
+  // Hourly rate input
+  const rateInput = document.getElementById('hourlyRateInput');
+  if (rateInput) {
+    rateInput.addEventListener('input', (e) => {
+      onHourlyRateChange(e.target.value);
+    });
+  }
+
+  // External cost controls
+  externalCosts.forEach((cost, index) => {
+    const rangeInput = document.getElementById(`externalCost_${index}`);
+    const numberInput = document.getElementById(`externalCostNum_${index}`);
+    
+    if (rangeInput && numberInput) {
+      const updateCost = (value) => {
+        const newValue = Math.max(0, parseFloat(value) || 0);
+        rangeInput.value = newValue;
+        numberInput.value = newValue;
+        onExternalCostChange(index, newValue);
+      };
+
+      rangeInput.addEventListener('input', (e) => updateCost(e.target.value));
+      numberInput.addEventListener('input', (e) => updateCost(e.target.value));
+    }
+  });
+
+  // Internal hours controls
+  internalHours.forEach((hours, index) => {
+    const rangeInput = document.getElementById(`internalHours_${index}`);
+    const numberInput = document.getElementById(`internalHoursNum_${index}`);
+    
+    if (rangeInput && numberInput) {
+      const updateHours = (value) => {
+        const newValue = Math.max(0, parseFloat(value) || 0);
+        rangeInput.value = newValue;
+        numberInput.value = newValue;
+        onInternalHoursChange(index, newValue);
+      };
+
+      rangeInput.addEventListener('input', (e) => updateHours(e.target.value));
+      numberInput.addEventListener('input', (e) => updateHours(e.target.value));
+    }
+  });
+
+  // Reset buttons
+  const resetExternal = document.getElementById('resetExternalCosts');
+  if (resetExternal) {
+    resetExternal.addEventListener('click', () => {
+      [100, 100, 100, 100, 100, 100].forEach((defaultCost, index) => {
+        onExternalCostChange(index, defaultCost);
+        const rangeInput = document.getElementById(`externalCost_${index}`);
+        const numberInput = document.getElementById(`externalCostNum_${index}`);
+        if (rangeInput) rangeInput.value = defaultCost;
+        if (numberInput) numberInput.value = defaultCost;
+      });
+    });
+  }
+
+  const resetInternal = document.getElementById('resetInternalHours');
+  if (resetInternal) {
+    resetInternal.addEventListener('click', () => {
+      [10, 10, 10, 10, 10, 10].forEach((defaultHours, index) => {
+        onInternalHoursChange(index, defaultHours);
+        const rangeInput = document.getElementById(`internalHours_${index}`);
+        const numberInput = document.getElementById(`internalHoursNum_${index}`);
+        if (rangeInput) rangeInput.value = defaultHours;
+        if (numberInput) numberInput.value = defaultHours;
+      });
+    });
+  }
+
+  // Optimization button
+  const optimizeBtn = document.getElementById('runOptimization');
+  if (optimizeBtn) {
+    optimizeBtn.addEventListener('click', () => {
+      const optimization = optimizeBudgetAllocation();
+      const resultsContainer = document.getElementById('optimizationResults');
+      if (resultsContainer && optimization) {
+        window.location.reload(); // Trigger re-render to show updated optimization
+      }
+    });
+  }
+}
