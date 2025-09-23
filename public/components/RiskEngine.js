@@ -1448,188 +1448,189 @@ export class RiskEngine {
     };
   }
 
-}
-// Panel 6 Budget Analysis Methods (conditionally available)
-calculateBudgetAnalysis(
-  supplierCount,
-  hourlyRate,
-  externalCosts,
-  internalHours,
-  hrddStrategy,
-  transparencyEffectiveness,
-  responsivenessStrategy,
-  responsivenessEffectiveness,
-  selectedCountries,
-  countryVolumes,
-  countryRisks,
-  focus
-) {
-  // Check if Panel 6 is enabled (this will be available globally)
-  if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
-    return null;
-  }
 
-  const safeSupplierCount = Math.max(1, Math.floor(supplierCount || 1));
-  const safeHourlyRate = Math.max(0, hourlyRate || 20);
-  const safeExternalCosts = Array.isArray(externalCosts) ? externalCosts : [100, 100, 100, 100, 100, 100];
-  const safeInternalHours = Array.isArray(internalHours) ? internalHours : [10, 10, 10, 10, 10, 10];
-  const safeHrddStrategy = Array.isArray(hrddStrategy) ? hrddStrategy : this.defaultHRDDStrategy;
+  // Panel 6 Budget Analysis Methods (conditionally available)
+  calculateBudgetAnalysis(
+    supplierCount,
+    hourlyRate,
+    externalCosts,
+    internalHours,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    selectedCountries,
+    countryVolumes,
+    countryRisks,
+    focus
+  ) {
+    // Check if Panel 6 is enabled (this will be available globally)
+    if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
+      return null;
+    }
 
-  // Calculate actual deployment per tool based on coverage percentages
-  const toolDeployments = safeHrddStrategy.map((coverage, index) => {
-    const suppliersUsingTool = Math.ceil(safeSupplierCount * (coverage / 100));
-    const externalCostPerTool = safeExternalCosts[index] || 0;
-    const hoursPerTool = safeInternalHours[index] || 0;
-    
-    const totalExternalCost = suppliersUsingTool * externalCostPerTool;
-    const totalInternalCost = suppliersUsingTool * hoursPerTool * safeHourlyRate;
-    const totalCost = totalExternalCost + totalInternalCost;
+    const safeSupplierCount = Math.max(1, Math.floor(supplierCount || 1));
+    const safeHourlyRate = Math.max(0, hourlyRate || 20);
+    const safeExternalCosts = Array.isArray(externalCosts) ? externalCosts : [100, 100, 100, 100, 100, 100];
+    const safeInternalHours = Array.isArray(internalHours) ? internalHours : [10, 10, 10, 10, 10, 10];
+    const safeHrddStrategy = Array.isArray(hrddStrategy) ? hrddStrategy : this.defaultHRDDStrategy;
+
+    // Calculate actual deployment per tool based on coverage percentages
+    const toolDeployments = safeHrddStrategy.map((coverage, index) => {
+      const suppliersUsingTool = Math.ceil(safeSupplierCount * (coverage / 100));
+      const externalCostPerTool = safeExternalCosts[index] || 0;
+      const hoursPerTool = safeInternalHours[index] || 0;
+
+      const totalExternalCost = suppliersUsingTool * externalCostPerTool;
+      const totalInternalCost = suppliersUsingTool * hoursPerTool * safeHourlyRate;
+      const totalCost = totalExternalCost + totalInternalCost;
+
+      return {
+        toolIndex: index,
+        toolName: this.hrddStrategyLabels[index],
+        coverage: coverage,
+        suppliersUsingTool,
+        externalCostPerSupplier: externalCostPerTool,
+        hoursPerSupplier: hoursPerTool,
+        totalExternalCost,
+        totalInternalCost,
+        totalCost
+      };
+    });
+
+    const totalExternalCost = toolDeployments.reduce((sum, tool) => sum + tool.totalExternalCost, 0);
+    const totalInternalCost = toolDeployments.reduce((sum, tool) => sum + tool.totalInternalCost, 0);
+    const totalBudget = totalExternalCost + totalInternalCost;
 
     return {
-      toolIndex: index,
-      toolName: this.hrddStrategyLabels[index],
-      coverage: coverage,
-      suppliersUsingTool,
-      externalCostPerSupplier: externalCostPerTool,
-      hoursPerSupplier: hoursPerTool,
+      supplierCount: safeSupplierCount,
+      hourlyRate: safeHourlyRate,
       totalExternalCost,
       totalInternalCost,
-      totalCost
+      totalBudget,
+      costPerSupplier: totalBudget / safeSupplierCount,
+      toolDeployments,
+      currentAllocation: safeHrddStrategy
     };
-  });
-
-  const totalExternalCost = toolDeployments.reduce((sum, tool) => sum + tool.totalExternalCost, 0);
-  const totalInternalCost = toolDeployments.reduce((sum, tool) => sum + tool.totalInternalCost, 0);
-  const totalBudget = totalExternalCost + totalInternalCost;
-
-  return {
-    supplierCount: safeSupplierCount,
-    hourlyRate: safeHourlyRate,
-    totalExternalCost,
-    totalInternalCost,
-    totalBudget,
-    costPerSupplier: totalBudget / safeSupplierCount,
-    toolDeployments,
-    currentAllocation: safeHrddStrategy
-  };
-}
-
-optimizeBudgetAllocation(
-  supplierCount,
-  hourlyRate,
-  externalCosts,
-  internalHours,
-  hrddStrategy,
-  transparencyEffectiveness,
-  responsivenessStrategy,
-  responsivenessEffectiveness,
-  selectedCountries,
-  countryVolumes,
-  countryRisks,
-  focus
-) {
-  // Check if Panel 6 is enabled
-  if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
-    return null;
   }
 
-  // Calculate current budget and effectiveness
-  const currentBudget = this.calculateBudgetAnalysis(
-    supplierCount, hourlyRate, externalCosts, internalHours,
-    hrddStrategy, transparencyEffectiveness, responsivenessStrategy,
-    responsivenessEffectiveness, selectedCountries, countryVolumes, countryRisks, focus
-  );
+  optimizeBudgetAllocation(
+    supplierCount,
+    hourlyRate,
+    externalCosts,
+    internalHours,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    selectedCountries,
+    countryVolumes,
+    countryRisks,
+    focus
+  ) {
+    // Check if Panel 6 is enabled
+    if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
+      return null;
+    }
 
-  if (!currentBudget) return null;
+    // Calculate current budget and effectiveness
+    const currentBudget = this.calculateBudgetAnalysis(
+      supplierCount, hourlyRate, externalCosts, internalHours,
+      hrddStrategy, transparencyEffectiveness, responsivenessStrategy,
+      responsivenessEffectiveness, selectedCountries, countryVolumes, countryRisks, focus
+    );
 
-  const currentDetails = this.calculateManagedRiskDetails(
-    selectedCountries, countryVolumes, countryRisks,
-    hrddStrategy, transparencyEffectiveness,
-    responsivenessStrategy, responsivenessEffectiveness, focus
-  );
+    if (!currentBudget) return null;
 
-  // Simple optimization: maximize effectiveness per dollar
-  const toolEffectiveness = transparencyEffectiveness.map((effectiveness, index) => {
-    const costPerPercentageCoverage = currentBudget.toolDeployments[index].totalCost / Math.max(1, hrddStrategy[index]);
-    const effectivenessPerDollar = effectiveness / Math.max(1, costPerPercentageCoverage);
-    return {
-      toolIndex: index,
-      effectiveness: effectiveness,
-      costEffectiveness: effectivenessPerDollar,
-      currentCoverage: hrddStrategy[index]
-    };
-  });
+    const currentDetails = this.calculateManagedRiskDetails(
+      selectedCountries, countryVolumes, countryRisks,
+      hrddStrategy, transparencyEffectiveness,
+      responsivenessStrategy, responsivenessEffectiveness, focus
+    );
 
-  // Sort by cost-effectiveness (descending)
-  const sortedTools = [...toolEffectiveness].sort((a, b) => b.costEffectiveness - a.costEffectiveness);
+    // Simple optimization: maximize effectiveness per dollar
+    const toolEffectiveness = transparencyEffectiveness.map((effectiveness, index) => {
+      const costPerPercentageCoverage = currentBudget.toolDeployments[index].totalCost / Math.max(1, hrddStrategy[index]);
+      const effectivenessPerDollar = effectiveness / Math.max(1, costPerPercentageCoverage);
+      return {
+        toolIndex: index,
+        effectiveness: effectiveness,
+        costEffectiveness: effectivenessPerDollar,
+        currentCoverage: hrddStrategy[index]
+      };
+    });
 
-  // Allocate budget to most cost-effective tools first
-  const optimizedAllocation = new Array(6).fill(0);
-  let remainingBudget = currentBudget.totalBudget;
-  
-  // Start with minimum viable coverage for all tools
-  const minCoverage = 5; // 5% minimum
-  sortedTools.forEach(tool => {
-    optimizedAllocation[tool.toolIndex] = minCoverage;
-    const toolDeployment = currentBudget.toolDeployments[tool.toolIndex];
-    const costForMinCoverage = (toolDeployment.totalCost / Math.max(1, tool.currentCoverage)) * minCoverage;
-    remainingBudget -= costForMinCoverage;
-  });
+    // Sort by cost-effectiveness (descending)
+    const sortedTools = [...toolEffectiveness].sort((a, b) => b.costEffectiveness - a.costEffectiveness);
 
-  // Allocate remaining budget to most cost-effective tools
-  const allocationStep = 5; // Allocate in 5% increments
-  while (remainingBudget > 0) {
-    let allocated = false;
-    for (const tool of sortedTools) {
-      if (optimizedAllocation[tool.toolIndex] < 100) {
-        const toolDeployment = currentBudget.toolDeployments[tool.toolIndex];
-        const costForStep = (toolDeployment.totalCost / Math.max(1, tool.currentCoverage)) * allocationStep;
-        
-        if (costForStep <= remainingBudget) {
-          optimizedAllocation[tool.toolIndex] = Math.min(100, optimizedAllocation[tool.toolIndex] + allocationStep);
-          remainingBudget -= costForStep;
-          allocated = true;
+    // Allocate budget to most cost-effective tools first
+    const optimizedAllocation = new Array(6).fill(0);
+    let remainingBudget = currentBudget.totalBudget;
+
+    // Start with minimum viable coverage for all tools
+    const minCoverage = 5; // 5% minimum
+    sortedTools.forEach(tool => {
+      optimizedAllocation[tool.toolIndex] = minCoverage;
+      const toolDeployment = currentBudget.toolDeployments[tool.toolIndex];
+      const costForMinCoverage = (toolDeployment.totalCost / Math.max(1, tool.currentCoverage)) * minCoverage;
+      remainingBudget -= costForMinCoverage;
+    });
+
+    // Allocate remaining budget to most cost-effective tools
+    const allocationStep = 5; // Allocate in 5% increments
+    while (remainingBudget > 0) {
+      let allocated = false;
+      for (const tool of sortedTools) {
+        if (optimizedAllocation[tool.toolIndex] < 100) {
+          const toolDeployment = currentBudget.toolDeployments[tool.toolIndex];
+          const costForStep = (toolDeployment.totalCost / Math.max(1, tool.currentCoverage)) * allocationStep;
+
+          if (costForStep <= remainingBudget) {
+            optimizedAllocation[tool.toolIndex] = Math.min(100, optimizedAllocation[tool.toolIndex] + allocationStep);
+            remainingBudget -= costForStep;
+            allocated = true;
+          }
         }
       }
+      if (!allocated) break;
     }
-    if (!allocated) break;
+
+    // Calculate optimized managed risk
+    const optimizedDetails = this.calculateManagedRiskDetails(
+      selectedCountries, countryVolumes, countryRisks,
+      optimizedAllocation, transparencyEffectiveness,
+      responsivenessStrategy, responsivenessEffectiveness, focus
+    );
+
+    // Generate insight
+    const currentEffectiveness = currentDetails.managedRisk < currentDetails.baselineRisk ?
+      ((currentDetails.baselineRisk - currentDetails.managedRisk) / currentDetails.baselineRisk * 100) : 0;
+    const optimizedEffectiveness = optimizedDetails.managedRisk < optimizedDetails.baselineRisk ?
+      ((optimizedDetails.baselineRisk - optimizedDetails.managedRisk) / optimizedDetails.baselineRisk * 100) : 0;
+
+    const improvement = optimizedEffectiveness - currentEffectiveness;
+    let insight = '';
+
+    if (improvement > 5) {
+      insight = `Reallocating your budget could improve risk reduction by ${improvement.toFixed(1)}% without additional cost. Focus more on ${sortedTools[0].toolIndex < 2 ? 'worker voice tools' : sortedTools[0].toolIndex < 4 ? 'audit-based approaches' : 'documentation and assessment tools'}.`;
+    } else if (improvement > 1) {
+      insight = `Your current allocation is reasonably efficient, but minor adjustments could yield ${improvement.toFixed(1)}% better results.`;
+    } else {
+      insight = 'Your current budget allocation is already well-optimized for maximum cost-effectiveness.';
+    }
+
+    return {
+      baselineRisk: currentDetails.baselineRisk,
+      currentManagedRisk: currentDetails.managedRisk,
+      optimizedManagedRisk: optimizedDetails.managedRisk,
+      currentAllocation: hrddStrategy,
+      optimizedAllocation,
+      currentEffectiveness,
+      optimizedEffectiveness,
+      improvement,
+      insight,
+      budgetUtilization: (currentBudget.totalBudget - remainingBudget) / currentBudget.totalBudget * 100
+    };
   }
-
-  // Calculate optimized managed risk
-  const optimizedDetails = this.calculateManagedRiskDetails(
-    selectedCountries, countryVolumes, countryRisks,
-    optimizedAllocation, transparencyEffectiveness,
-    responsivenessStrategy, responsivenessEffectiveness, focus
-  );
-
-  // Generate insight
-  const currentEffectiveness = currentDetails.managedRisk < currentDetails.baselineRisk ? 
-    ((currentDetails.baselineRisk - currentDetails.managedRisk) / currentDetails.baselineRisk * 100) : 0;
-  const optimizedEffectiveness = optimizedDetails.managedRisk < optimizedDetails.baselineRisk ?
-    ((optimizedDetails.baselineRisk - optimizedDetails.managedRisk) / optimizedDetails.baselineRisk * 100) : 0;
-
-  const improvement = optimizedEffectiveness - currentEffectiveness;
-  let insight = '';
-  
-  if (improvement > 5) {
-    insight = `Reallocating your budget could improve risk reduction by ${improvement.toFixed(1)}% without additional cost. Focus more on ${sortedTools[0].toolIndex < 2 ? 'worker voice tools' : sortedTools[0].toolIndex < 4 ? 'audit-based approaches' : 'documentation and assessment tools'}.`;
-  } else if (improvement > 1) {
-    insight = `Your current allocation is reasonably efficient, but minor adjustments could yield ${improvement.toFixed(1)}% better results.`;
-  } else {
-    insight = 'Your current budget allocation is already well-optimized for maximum cost-effectiveness.';
-  }
-
-  return {
-    baselineRisk: currentDetails.baselineRisk,
-    currentManagedRisk: currentDetails.managedRisk,
-    optimizedManagedRisk: optimizedDetails.managedRisk,
-    currentAllocation: hrddStrategy,
-    optimizedAllocation,
-    currentEffectiveness,
-    optimizedEffectiveness,
-    improvement,
-    insight,
-    budgetUtilization: (currentBudget.totalBudget - remainingBudget) / currentBudget.totalBudget * 100
-  };
 }
 export const riskEngine = new RiskEngine();

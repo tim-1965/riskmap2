@@ -454,7 +454,7 @@ export class AppController {
     }, 300);
   }
 
-  onFocusChange(next) {
+onFocusChange(next) {
     clearTimeout(this.focusTimeout);
     this.state.focus = this.clamp01(next);
     this.state.isDirty = true;
@@ -464,67 +464,65 @@ export class AppController {
       this.state.lastUpdate = new Date().toISOString();
       this.updateUI();
     }, 200);
-  
-    onSupplierCountChange(count) {
-  if (!ENABLE_PANEL_6) return;
-  this.state.supplierCount = Math.max(1, Math.floor(parseFloat(count) || 1));
-  this.state.isDirty = true;
-  this.updateUI();
-}
+  }
 
-onHourlyRateChange(rate) {
-  if (!ENABLE_PANEL_6) return;
-  this.state.hourlyRate = Math.max(0, parseFloat(rate) || 0);
-  this.state.isDirty = true;
-  this.updateUI();
-}
-
-onExternalCostChange(toolIndex, cost) {
-  if (!ENABLE_PANEL_6) return;
-  if (toolIndex >= 0 && toolIndex < this.state.externalCosts.length) {
-    this.state.externalCosts[toolIndex] = Math.max(0, parseFloat(cost) || 0);
+  onSupplierCountChange(count) {
+    if (!ENABLE_PANEL_6) return;
+    this.state.supplierCount = Math.max(1, Math.floor(parseFloat(count) || 1));
     this.state.isDirty = true;
     this.updateUI();
   }
-}
 
-onInternalHoursChange(toolIndex, hours) {
-  if (!ENABLE_PANEL_6) return;
-  if (toolIndex >= 0 && toolIndex < this.state.internalHours.length) {
-    this.state.internalHours[toolIndex] = Math.max(0, parseFloat(hours) || 0);
+  onHourlyRateChange(rate) {
+    if (!ENABLE_PANEL_6) return;
+    this.state.hourlyRate = Math.max(0, parseFloat(rate) || 0);
     this.state.isDirty = true;
     this.updateUI();
   }
-}
 
-optimizeBudgetAllocation() {
-  if (!ENABLE_PANEL_6) return null;
-  const optimization = riskEngine.optimizeBudgetAllocation(
-    this.state.supplierCount,
-    this.state.hourlyRate,
-    this.state.externalCosts,
-    this.state.internalHours,
-    this.state.hrddStrategy,
-    this.state.transparencyEffectiveness,
-    this.state.responsivenessStrategy,
-    this.state.responsivenessEffectiveness,
-    this.state.selectedCountries,
-    this.state.countryVolumes,
-    this.state.countryRisks,
-    this.state.focus
-  );
-  
-  return optimization;
-}
-  
-    
+  onExternalCostChange(toolIndex, cost) {
+    if (!ENABLE_PANEL_6) return;
+    if (toolIndex >= 0 && toolIndex < this.state.externalCosts.length) {
+      this.state.externalCosts[toolIndex] = Math.max(0, parseFloat(cost) || 0);
+      this.state.isDirty = true;
+      this.updateUI();
+    }
+  }
+
+  onInternalHoursChange(toolIndex, hours) {
+    if (!ENABLE_PANEL_6) return;
+    if (toolIndex >= 0 && toolIndex < this.state.internalHours.length) {
+      this.state.internalHours[toolIndex] = Math.max(0, parseFloat(hours) || 0);
+      this.state.isDirty = true;
+      this.updateUI();
+    }
+  }
+
+  optimizeBudgetAllocation() {
+    if (!ENABLE_PANEL_6) return null;
+    const optimization = riskEngine.optimizeBudgetAllocation(
+      this.state.supplierCount,
+      this.state.hourlyRate,
+      this.state.externalCosts,
+      this.state.internalHours,
+      this.state.hrddStrategy,
+      this.state.transparencyEffectiveness,
+      this.state.responsivenessStrategy,
+      this.state.responsivenessEffectiveness,
+      this.state.selectedCountries,
+      this.state.countryVolumes,
+      this.state.countryRisks,
+      this.state.focus
+    );
+
+    return optimization;
   }
 
   /* ------------------------------- UI -------------------------------- */
 
   setCurrentPanel(panel) {
-  const maxPanel = ENABLE_PANEL_6 ? 6 : 5;
-  if (panel >= 1 && panel <= maxPanel) {
+    const maxPanel = ENABLE_PANEL_6 ? 6 : 5;
+    if (panel >= 1 && panel <= maxPanel) {
       this.state.currentPanel = panel;
       this.render();
     }
