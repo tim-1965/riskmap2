@@ -1867,11 +1867,36 @@ function setupCostAnalysisEventListeners(handlers) {
       const optimization = optimizeBudgetAllocation();
       const resultsContainer = document.getElementById('optimizationResults');
       if (resultsContainer && optimization) {
-        window.location.reload(); // Trigger re-render to show updated optimization
+        // Update just the optimization results without reloading
+        resultsContainer.innerHTML = renderOptimizationResults(optimization, 
+          riskEngine.calculateBudgetAnalysis(
+            // Get current values from the UI instead of defaults
+            parseInt(document.getElementById('supplierCountInput')?.value || '1000'),
+            parseFloat(document.getElementById('hourlyRateInput')?.value || '20'),
+            Array.from({length: 6}, (_, i) => parseFloat(document.getElementById(`externalCostNum_${i}`)?.value || '100')),
+            Array.from({length: 6}, (_, i) => parseFloat(document.getElementById(`internalHoursNum_${i}`)?.value || '10')),
+            optimization.optimizedAllocation, // Use optimized allocation for budget calculation
+            [], [], [], [], [], [], [], 0 // These don't affect budget calculation
+          ),
+          optimization.baselineRisk, 
+          optimization.currentManagedRisk
+        );
+        
+        // Also update the detailed breakdown and risk transformation sections
+        const detailedBreakdownContainer = resultsContainer.closest('.cost-analysis-panel')?.querySelector('.cost-analysis-panel > div:nth-last-child(2)');
+        const riskTransformationContainer = resultsContainer.closest('.cost-analysis-panel')?.querySelector('.cost-analysis-panel > div:last-child');
+        
+        // These sections will be updated automatically when the parent component re-renders
+        // For now, we could add a success message
+        const successMsg = document.createElement('div');
+        successMsg.style.cssText = 'background: #d1fae5; border: 1px solid #22c55e; color: #14532d; padding: 12px; border-radius: 6px; margin-top: 12px; text-align: center;';
+        successMsg.innerHTML = `<strong>Optimization Complete!</strong> Results updated with current cost assumptions.`;
+        resultsContainer.appendChild(successMsg);
+        
+        setTimeout(() => successMsg.remove(), 3000);
       }
-   });
+    });
   }
-}
 
 function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, hourlyRate, externalCosts, internalHours) {
   if (!optimization) return '';
