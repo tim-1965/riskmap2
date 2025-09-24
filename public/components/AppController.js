@@ -42,12 +42,18 @@ export class AppController {
         : [20, 20, 20, 20, 20],
 
       // Panel 6 cost analysis state (only if enabled)
-      ...(ENABLE_PANEL_6 ? {
-      supplierCount: 250, // Default number of suppliers
-      hourlyRate: 40, // Default cost per man hour in USD
-      externalCosts: [200, 1000, 1200, 50, 0, 0], // Default per tool
-      internalHours: [12, 4, 8, 1, 2, 1], // Default per tool
-      } : {}),
+        ...(ENABLE_PANEL_6 ? {
+        supplierCount: 250, // Default number of suppliers
+        hourlyRate: 40, // Default cost per man hour in USD
+
+      // Panel 3 Tools - Three cost components each
+        toolAnnualProgrammeCosts: [100, 100, 100, 100, 100, 100], // Annual programme cost for all suppliers
+        toolPerSupplierCosts: [100, 100, 100, 100, 100, 100], // Additional per supplier annual cost
+        toolInternalHours: [100, 100, 100, 100, 100, 100], // Internal work hours per supplier per year
+
+      // Panel 4 Response Methods - Internal hours only
+      responseInternalHours: [100, 100, 100, 100, 100, 100], // Internal work hours per supplier per year for each response method
+        } : {}),
 
       // Selection + volumes
       selectedCountries: [],
@@ -135,10 +141,12 @@ export class AppController {
     (ENABLE_PANEL_6 ? [
     this.onSupplierCountChange = this.onSupplierCountChange.bind(this),
     this.onHourlyRateChange = this.onHourlyRateChange.bind(this),
-    this.onExternalCostChange = this.onExternalCostChange.bind(this),
-    this.onInternalHoursChange = this.onInternalHoursChange.bind(this),
+    this.onToolAnnualProgrammeCostChange = this.onToolAnnualProgrammeCostChange.bind(this),
+    this.onToolPerSupplierCostChange = this.onToolPerSupplierCostChange.bind(this),
+    this.onToolInternalHoursChange = this.onToolInternalHoursChange.bind(this),
+    this.onResponseInternalHoursChange = this.onResponseInternalHoursChange.bind(this),
     this.optimizeBudgetAllocation = this.optimizeBudgetAllocation.bind(this)
-  ] : []),
+    ] : []),
 
     // Container
     this.containerElement = null;
@@ -528,23 +536,41 @@ onFocusChange(next) {
     this.updateUI();
   }
 
-  onExternalCostChange(toolIndex, cost) {
-    if (!ENABLE_PANEL_6) return;
-    if (toolIndex >= 0 && toolIndex < this.state.externalCosts.length) {
-      this.state.externalCosts[toolIndex] = Math.max(0, parseFloat(cost) || 0);
-      this.state.isDirty = true;
-      this.updateUI();
-    }
+  onToolAnnualProgrammeCostChange(toolIndex, cost) {
+  if (!ENABLE_PANEL_6) return;
+  if (toolIndex >= 0 && toolIndex < this.state.toolAnnualProgrammeCosts.length) {
+    this.state.toolAnnualProgrammeCosts[toolIndex] = Math.max(0, parseFloat(cost) || 0);
+    this.state.isDirty = true;
+    this.updateUI();
   }
+}
 
-  onInternalHoursChange(toolIndex, hours) {
-    if (!ENABLE_PANEL_6) return;
-    if (toolIndex >= 0 && toolIndex < this.state.internalHours.length) {
-      this.state.internalHours[toolIndex] = Math.max(0, parseFloat(hours) || 0);
-      this.state.isDirty = true;
-      this.updateUI();
-    }
+onToolPerSupplierCostChange(toolIndex, cost) {
+  if (!ENABLE_PANEL_6) return;
+  if (toolIndex >= 0 && toolIndex < this.state.toolPerSupplierCosts.length) {
+    this.state.toolPerSupplierCosts[toolIndex] = Math.max(0, parseFloat(cost) || 0);
+    this.state.isDirty = true;
+    this.updateUI();
   }
+}
+
+onToolInternalHoursChange(toolIndex, hours) {
+  if (!ENABLE_PANEL_6) return;
+  if (toolIndex >= 0 && toolIndex < this.state.toolInternalHours.length) {
+    this.state.toolInternalHours[toolIndex] = Math.max(0, parseFloat(hours) || 0);
+    this.state.isDirty = true;
+    this.updateUI();
+  }
+}
+
+onResponseInternalHoursChange(responseIndex, hours) {
+  if (!ENABLE_PANEL_6) return;
+  if (responseIndex >= 0 && responseIndex < this.state.responseInternalHours.length) {
+    this.state.responseInternalHours[responseIndex] = Math.max(0, parseFloat(hours) || 0);
+    this.state.isDirty = true;
+    this.updateUI();
+  }
+}
 
   optimizeBudgetAllocation() {
     if (!ENABLE_PANEL_6) return null;

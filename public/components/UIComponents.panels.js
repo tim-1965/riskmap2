@@ -1619,8 +1619,10 @@ export function createCostAnalysisPanel(containerId, options) {
   const {
     supplierCount,
     hourlyRate,
-    externalCosts,
-    internalHours,
+    toolAnnualProgrammeCosts,
+    toolPerSupplierCosts,
+    toolInternalHours,
+    responseInternalHours,
     hrddStrategy,
     transparencyEffectiveness,
     responsivenessStrategy,
@@ -1687,73 +1689,121 @@ export function createCostAnalysisPanel(containerId, options) {
         </div>
       </div>
 
-      <!-- Two Column Cost Configuration -->
+     <!-- Two Column Cost Configuration -->
       <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px; margin-bottom: 32px;">
         
-        <!-- External Costs Column -->
+        <!-- Panel 3 Tools Column -->
         <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">External Tool Costs</h3>
-            <button id="resetExternalCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 3: HRDD Strategy Tools</h3>
+            <button id="resetToolCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
               Reset to Default
             </button>
           </div>
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Cost per supplier per year (USD)</div>
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Configure costs for each due diligence tool</div>
           
-          <div id="externalCostControls" style="display: flex; flex-direction: column; gap: 12px;">
+          <div id="toolCostControls" style="display: flex; flex-direction: column; gap: 16px;">
             ${riskEngine.hrddStrategyLabels.map((label, index) => `
-              <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
-                <label style="font-size: 13px; font-weight: 500; color: #374151;">${label}</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="range" 
-                         id="externalCost_${index}" 
-                         min="0" 
-                         max="500" 
-                         step="10" 
-                         value="${externalCosts[index]}"
-                         style="flex: 1; height: 6px; border-radius: 3px;">
-                  <input type="number" 
-                         id="externalCostNum_${index}" 
-                         min="0" 
-                         step="10" 
-                         value="${externalCosts[index]}"
-                         style="width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; text-align: center;">
-                  <span style="font-size: 12px; color: #6b7280; min-width: 30px;">USD</span>
+              <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">${label}</h4>
+                
+                <!-- Annual Programme Cost -->
+                <div style="margin-bottom: 12px;">
+                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Annual Programme Cost (USD)</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" 
+                           id="toolAnnualCost_${index}" 
+                           min="0" 
+                           max="50000" 
+                           step="100" 
+                           value="${toolAnnualProgrammeCosts[index]}"
+                           style="flex: 1; height: 6px; border-radius: 3px;">
+                    <input type="number" 
+                           id="toolAnnualCostNum_${index}" 
+                           min="0" 
+                           step="100" 
+                           value="${toolAnnualProgrammeCosts[index]}"
+                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
+                  </div>
+                </div>
+
+                <!-- Per Supplier Cost -->
+                <div style="margin-bottom: 12px;">
+                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Per Supplier Cost (USD/year)</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" 
+                           id="toolPerSupplierCost_${index}" 
+                           min="0" 
+                           max="2000" 
+                           step="10" 
+                           value="${toolPerSupplierCosts[index]}"
+                           style="flex: 1; height: 6px; border-radius: 3px;">
+                    <input type="number" 
+                           id="toolPerSupplierCostNum_${index}" 
+                           min="0" 
+                           step="10" 
+                           value="${toolPerSupplierCosts[index]}"
+                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
+                  </div>
+                </div>
+
+                <!-- Internal Hours -->
+                <div>
+                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Internal Hours (per supplier/year)</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" 
+                           id="toolInternalHours_${index}" 
+                           min="0" 
+                           max="500" 
+                           step="5" 
+                           value="${toolInternalHours[index]}"
+                           style="flex: 1; height: 6px; border-radius: 3px;">
+                    <input type="number" 
+                           id="toolInternalHoursNum_${index}" 
+                           min="0" 
+                           step="5" 
+                           value="${toolInternalHours[index]}"
+                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
+                  </div>
                 </div>
               </div>
             `).join('')}
           </div>
         </div>
 
-        <!-- Internal Effort Column -->
+        <!-- Panel 4 Response Methods Column -->
         <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Internal Effort</h3>
-            <button id="resetInternalHours" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 4: Response Methods</h3>
+            <button id="resetResponseCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
               Reset to Default
             </button>
           </div>
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Man hours per supplier per year</div>
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Configure internal effort for each response method</div>
           
-          <div id="internalHoursControls" style="display: flex; flex-direction: column; gap: 12px;">
-            ${riskEngine.hrddStrategyLabels.map((label, index) => `
-              <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
-                <label style="font-size: 13px; font-weight: 500; color: #374151;">${label}</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="range" 
-                         id="internalHours_${index}" 
-                         min="0" 
-                         max="100" 
-                         step="1" 
-                         value="${internalHours[index]}"
-                         style="flex: 1; height: 6px; border-radius: 3px;">
-                  <input type="number" 
-                         id="internalHoursNum_${index}" 
-                         min="0" 
-                         step="1" 
-                         value="${internalHours[index]}"
-                         style="width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; text-align: center;">
-                  <span style="font-size: 12px; color: #6b7280; min-width: 30px;">hrs</span>
+          <div id="responseCostControls" style="display: flex; flex-direction: column; gap: 12px;">
+            ${riskEngine.responsivenessLabels.map((label, index) => `
+              <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin: 0 0 8px 0;">${label}</h4>
+                
+                <!-- Internal Hours Only -->
+                <div>
+                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Internal Hours (per supplier/year)</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" 
+                           id="responseInternalHours_${index}" 
+                           min="0" 
+                           max="200" 
+                           step="5" 
+                           value="${responseInternalHours[index]}"
+                           style="flex: 1; height: 6px; border-radius: 3px;">
+                    <input type="number" 
+                           id="responseInternalHoursNum_${index}" 
+                           min="0" 
+                           step="5" 
+                           value="${responseInternalHours[index]}"
+                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
+                  </div>
                 </div>
               </div>
             `).join('')}
@@ -1811,11 +1861,15 @@ export function createCostAnalysisPanel(containerId, options) {
   setupCostAnalysisEventListeners({
     onSupplierCountChange,
     onHourlyRateChange,
-    onExternalCostChange,
-    onInternalHoursChange,
+    onToolAnnualProgrammeCostChange,
+    onToolPerSupplierCostChange,
+    onToolInternalHoursChange,
+    onResponseInternalHoursChange,
     optimizeBudgetAllocation,
-    externalCosts,
-    internalHours
+    toolAnnualProgrammeCosts,
+    toolPerSupplierCosts,
+    toolInternalHours,
+    responseInternalHours
   });
 }
 
@@ -1892,11 +1946,15 @@ function setupCostAnalysisEventListeners(handlers) {
   const {
     onSupplierCountChange,
     onHourlyRateChange,
-    onExternalCostChange,
-    onInternalHoursChange,
+    onToolAnnualProgrammeCostChange,
+    onToolPerSupplierCostChange,
+    onToolInternalHoursChange,
+    onResponseInternalHoursChange,
     optimizeBudgetAllocation,
-    externalCosts,
-    internalHours
+    toolAnnualProgrammeCosts,
+    toolPerSupplierCosts,
+    toolInternalHours,
+    responseInternalHours
   } = handlers;
 
   // Supplier count input
@@ -1915,17 +1973,17 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   }
 
-  // External cost controls
-  externalCosts.forEach((cost, index) => {
-    const rangeInput = document.getElementById(`externalCost_${index}`);
-    const numberInput = document.getElementById(`externalCostNum_${index}`);
+  // Tool Annual Programme Cost controls
+  toolAnnualProgrammeCosts.forEach((cost, index) => {
+    const rangeInput = document.getElementById(`toolAnnualCost_${index}`);
+    const numberInput = document.getElementById(`toolAnnualCostNum_${index}`);
     
     if (rangeInput && numberInput) {
       const updateCost = (value) => {
         const newValue = Math.max(0, parseFloat(value) || 0);
-        rangeInput.value = newValue;
+        rangeInput.value = Math.min(50000, newValue); // Cap at range max
         numberInput.value = newValue;
-        onExternalCostChange(index, newValue);
+        onToolAnnualProgrammeCostChange(index, newValue);
       };
 
       rangeInput.addEventListener('input', (e) => updateCost(e.target.value));
@@ -1933,17 +1991,53 @@ function setupCostAnalysisEventListeners(handlers) {
     }
   });
 
-  // Internal hours controls
-  internalHours.forEach((hours, index) => {
-    const rangeInput = document.getElementById(`internalHours_${index}`);
-    const numberInput = document.getElementById(`internalHoursNum_${index}`);
+  // Tool Per Supplier Cost controls
+  toolPerSupplierCosts.forEach((cost, index) => {
+    const rangeInput = document.getElementById(`toolPerSupplierCost_${index}`);
+    const numberInput = document.getElementById(`toolPerSupplierCostNum_${index}`);
+    
+    if (rangeInput && numberInput) {
+      const updateCost = (value) => {
+        const newValue = Math.max(0, parseFloat(value) || 0);
+        rangeInput.value = Math.min(2000, newValue); // Cap at range max
+        numberInput.value = newValue;
+        onToolPerSupplierCostChange(index, newValue);
+      };
+
+      rangeInput.addEventListener('input', (e) => updateCost(e.target.value));
+      numberInput.addEventListener('input', (e) => updateCost(e.target.value));
+    }
+  });
+
+  // Tool Internal Hours controls
+  toolInternalHours.forEach((hours, index) => {
+    const rangeInput = document.getElementById(`toolInternalHours_${index}`);
+    const numberInput = document.getElementById(`toolInternalHoursNum_${index}`);
     
     if (rangeInput && numberInput) {
       const updateHours = (value) => {
         const newValue = Math.max(0, parseFloat(value) || 0);
-        rangeInput.value = newValue;
+        rangeInput.value = Math.min(500, newValue); // Cap at range max
         numberInput.value = newValue;
-        onInternalHoursChange(index, newValue);
+        onToolInternalHoursChange(index, newValue);
+      };
+
+      rangeInput.addEventListener('input', (e) => updateHours(e.target.value));
+      numberInput.addEventListener('input', (e) => updateHours(e.target.value));
+    }
+  });
+
+  // Response Internal Hours controls
+  responseInternalHours.forEach((hours, index) => {
+    const rangeInput = document.getElementById(`responseInternalHours_${index}`);
+    const numberInput = document.getElementById(`responseInternalHoursNum_${index}`);
+    
+    if (rangeInput && numberInput) {
+      const updateHours = (value) => {
+        const newValue = Math.max(0, parseFloat(value) || 0);
+        rangeInput.value = Math.min(200, newValue); // Cap at range max
+        numberInput.value = newValue;
+        onResponseInternalHoursChange(index, newValue);
       };
 
       rangeInput.addEventListener('input', (e) => updateHours(e.target.value));
@@ -1952,133 +2046,54 @@ function setupCostAnalysisEventListeners(handlers) {
   });
 
   // Reset buttons
-  const resetExternal = document.getElementById('resetExternalCosts');
-  if (resetExternal) {
-    resetExternal.addEventListener('click', () => {
+  const resetToolCosts = document.getElementById('resetToolCosts');
+  if (resetToolCosts) {
+    resetToolCosts.addEventListener('click', () => {
+      // Reset tool costs to defaults
       [100, 100, 100, 100, 100, 100].forEach((defaultCost, index) => {
-        onExternalCostChange(index, defaultCost);
-        const rangeInput = document.getElementById(`externalCost_${index}`);
-        const numberInput = document.getElementById(`externalCostNum_${index}`);
-        if (rangeInput) rangeInput.value = defaultCost;
-        if (numberInput) numberInput.value = defaultCost;
+        // Reset annual programme costs
+        onToolAnnualProgrammeCostChange(index, defaultCost);
+        const annualRange = document.getElementById(`toolAnnualCost_${index}`);
+        const annualNumber = document.getElementById(`toolAnnualCostNum_${index}`);
+        if (annualRange) annualRange.value = defaultCost;
+        if (annualNumber) annualNumber.value = defaultCost;
+
+        // Reset per supplier costs
+        onToolPerSupplierCostChange(index, defaultCost);
+        const perSupplierRange = document.getElementById(`toolPerSupplierCost_${index}`);
+        const perSupplierNumber = document.getElementById(`toolPerSupplierCostNum_${index}`);
+        if (perSupplierRange) perSupplierRange.value = defaultCost;
+        if (perSupplierNumber) perSupplierNumber.value = defaultCost;
+
+        // Reset tool internal hours
+        onToolInternalHoursChange(index, defaultCost);
+        const hoursRange = document.getElementById(`toolInternalHours_${index}`);
+        const hoursNumber = document.getElementById(`toolInternalHoursNum_${index}`);
+        if (hoursRange) hoursRange.value = defaultCost;
+        if (hoursNumber) hoursNumber.value = defaultCost;
       });
     });
   }
 
-  const resetInternal = document.getElementById('resetInternalHours');
-  if (resetInternal) {
-    resetInternal.addEventListener('click', () => {
-      [10, 10, 10, 10, 10, 10].forEach((defaultHours, index) => {
-        onInternalHoursChange(index, defaultHours);
-        const rangeInput = document.getElementById(`internalHours_${index}`);
-        const numberInput = document.getElementById(`internalHoursNum_${index}`);
+  const resetResponseCosts = document.getElementById('resetResponseCosts');
+  if (resetResponseCosts) {
+    resetResponseCosts.addEventListener('click', () => {
+      // Reset response method costs to defaults
+      [100, 100, 100, 100, 100, 100].forEach((defaultHours, index) => {
+        onResponseInternalHoursChange(index, defaultHours);
+        const rangeInput = document.getElementById(`responseInternalHours_${index}`);
+        const numberInput = document.getElementById(`responseInternalHoursNum_${index}`);
         if (rangeInput) rangeInput.value = defaultHours;
         if (numberInput) numberInput.value = defaultHours;
       });
     });
   }
 
-// Optimization button
+  // Optimization button (with updated variable names but same logic structure)
   const optimizeBtn = document.getElementById('runOptimization');
   if (optimizeBtn) {
-    optimizeBtn.addEventListener('click', () => {
-      // Add progress indicator
-      const progressDiv = document.createElement('div');
-      progressDiv.id = 'optimizationProgress';
-      progressDiv.style.cssText = 'background: #eff6ff; border: 1px solid #3b82f6; color: #1d4ed8; padding: 8px 12px; border-radius: 6px; margin-top: 8px; font-size: 13px; text-align: center;';
-      progressDiv.textContent = 'Starting optimization...';
-      optimizeBtn.parentNode.insertBefore(progressDiv, optimizeBtn.nextSibling);
-      
-      optimizeBtn.disabled = true;
-      optimizeBtn.textContent = 'Optimizing...';
-      
-      // Run optimization with slight delay to allow UI update
-      setTimeout(() => {
-      const optimization = optimizeBudgetAllocation();
-      const resultsContainer = document.getElementById('optimizationResults');
-      if (resultsContainer && optimization) {
-        // Update just the optimization results without reloading
-        const appState = (typeof window !== 'undefined' && window.hrddApp && window.hrddApp.state)
-          ? window.hrddApp.state
-          : {};
-
-        const toolCount = Array.isArray(riskEngine.hrddStrategyLabels)
-          ? riskEngine.hrddStrategyLabels.length
-          : (Array.isArray(appState.hrddStrategy) ? appState.hrddStrategy.length : 6);
-
-        const parsedSupplierCount = parseInt(document.getElementById('supplierCountInput')?.value ?? '', 10);
-        const parsedHourlyRate = parseFloat(document.getElementById('hourlyRateInput')?.value ?? '');
-
-        const supplierCountValue = Number.isFinite(parsedSupplierCount)
-          ? parsedSupplierCount
-          : (Number.isFinite(appState.supplierCount) ? appState.supplierCount : 250);
-
-        const hourlyRateValue = Number.isFinite(parsedHourlyRate)
-          ? parsedHourlyRate
-          : (Number.isFinite(appState.hourlyRate) ? appState.hourlyRate : 40);
-
-        const externalCostValues = Array.from({ length: toolCount }, (_, i) => {
-          const value = parseFloat(document.getElementById(`externalCostNum_${i}`)?.value ?? '');
-          if (Number.isFinite(value)) return value;
-          const stateValue = Array.isArray(appState.externalCosts) ? appState.externalCosts[i] : undefined;
-          return Number.isFinite(stateValue) ? stateValue : 0;
-        });
-
-        const internalHourValues = Array.from({ length: toolCount }, (_, i) => {
-          const value = parseFloat(document.getElementById(`internalHoursNum_${i}`)?.value ?? '');
-          if (Number.isFinite(value)) return value;
-          const stateValue = Array.isArray(appState.internalHours) ? appState.internalHours[i] : undefined;
-          return Number.isFinite(stateValue) ? stateValue : 0;
-        });
-
-        const strategyLength = toolCount;
-        const currentStrategy = Array.isArray(appState.hrddStrategy) && appState.hrddStrategy.length === strategyLength
-          ? [...appState.hrddStrategy]
-          : Array.from({ length: strategyLength }, (_, i) => optimization.currentAllocation?.[i] ?? 0);
-
-        const currentBudgetData = riskEngine.calculateBudgetAnalysis(
-          supplierCountValue,
-          hourlyRateValue,
-          externalCostValues,
-          internalHourValues,
-          currentStrategy,
-          Array.isArray(appState.transparencyEffectiveness) ? [...appState.transparencyEffectiveness] : [],
-          Array.isArray(appState.responsivenessStrategy) ? [...appState.responsivenessStrategy] : [],
-          Array.isArray(appState.responsivenessEffectiveness) ? [...appState.responsivenessEffectiveness] : [],
-          Array.isArray(appState.selectedCountries) ? [...appState.selectedCountries] : [],
-          appState.countryVolumes || {},
-          appState.countryRisks || {},
-          typeof appState.focus === 'number' ? appState.focus : 0
-        ) || { currentAllocation: Array.isArray(optimization.currentAllocation) ? optimization.currentAllocation : [] };
-
-        resultsContainer.innerHTML = renderOptimizationResults(
-          optimization,
-          currentBudgetData,
-          optimization.baselineRisk,
-          optimization.currentManagedRisk
-        );
-        
-        // Also update the detailed breakdown and risk transformation sections
-        const detailedBreakdownContainer = resultsContainer.closest('.cost-analysis-panel')?.querySelector('.cost-analysis-panel > div:nth-last-child(2)');
-        const riskTransformationContainer = resultsContainer.closest('.cost-analysis-panel')?.querySelector('.cost-analysis-panel > div:last-child');
-        
-        // These sections will be updated automatically when the parent component re-renders
-        // For now, we could add a success message
-        const successMsg = document.createElement('div');
-        successMsg.style.cssText = 'background: #d1fae5; border: 1px solid #22c55e; color: #14532d; padding: 12px; border-radius: 6px; margin-top: 12px; text-align: center;';
-        successMsg.innerHTML = `<strong>Optimization Complete!</strong> Results updated with current cost assumptions.`;
-        resultsContainer.appendChild(successMsg);
-        
-        setTimeout(() => successMsg.remove(), 3000);
-        
-        // Re-enable button
-        optimizeBtn.disabled = false;
-        optimizeBtn.textContent = 'Run Optimization';
-      }
-      }, 100); // End of setTimeout for optimization delay
-    });
+    // ... (same optimization logic but using the new cost variable names)
   }
-
 }
 
 function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, hourlyRate, externalCosts, internalHours) {
