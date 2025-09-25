@@ -1795,72 +1795,48 @@ export function createCostAnalysisPanel(containerId, options) {
           </div>
           <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Configure costs for each due diligence tool</div>
           
-          <div id="toolCostControls" style="display: flex; flex-direction: column; gap: 16px;">
-            ${riskEngine.hrddStrategyLabels.map((label, index) => `
-              <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb;">
-                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">${label}</h4>
-                
-                <!-- Annual Programme Cost -->
-                <div style="margin-bottom: 12px;">
-                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Annual Programme Cost (USD)</label>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range"
-                           id="toolAnnualCost_${index}"
-                           min="0"
-                           max="50000"
-                           step="100"
-                           value="${sanitizedToolAnnualProgrammeCosts[index] || 0}"
-                           style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number"
-                           id="toolAnnualCostNum_${index}"
-                           min="0"
-                           step="100"
-                           value="${sanitizedToolAnnualProgrammeCosts[index] || 0}"
-                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
-                  </div>
-                </div>
-
-                <!-- Per Supplier Cost -->
-                <div style="margin-bottom: 12px;">
-                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Per Supplier Cost (USD/year)</label>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range"
-                           id="toolPerSupplierCost_${index}"
-                           min="0"
-                           max="2000"
-                           step="10"
-                           value="${sanitizedToolPerSupplierCosts[index] || 0}"
-                           style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number"
-                           id="toolPerSupplierCostNum_${index}"
-                           min="0"
-                           step="10"
-                           value="${sanitizedToolPerSupplierCosts[index] || 0}"
-                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
-                  </div>
-                </div>
-
-                <!-- Internal Hours -->
-                <div>
-                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Internal Hours (per supplier/year)</label>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range"
-                           id="toolInternalHours_${index}"
-                           min="0"
-                           max="500"
-                           step="5"
-                           value="${sanitizedToolInternalHours[index] || 0}"
-                           style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number"
-                           id="toolInternalHoursNum_${index}"
-                           min="0"
-                           step="5"
-                           value="${sanitizedToolInternalHours[index] || 0}"
-                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
-                  </div>
-                </div>
-              </div>
-            `).join('')}
+         <div id="toolCostControls" style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #374151;">
+              <thead>
+                <tr style="background: #e2e8f0; text-align: left;">
+                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937;">Tool</th>
+                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937; text-align: right;">Annual Programme (USD)</th>
+                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937; text-align: right;">Per Supplier (USD/yr)</th>
+                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937; text-align: right;">Internal Hours (per supplier/yr)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${riskEngine.hrddStrategyLabels.map((label, index) => `
+                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                    <td style="padding: 10px 12px; font-weight: 500;">${label}</td>
+                    <td style="padding: 10px 12px; text-align: right;">
+                      <input type="number"
+                             id="toolAnnualCostNum_${index}"
+                             min="0"
+                             step="100"
+                             value="${sanitizedToolAnnualProgrammeCosts[index] || 0}"
+                             style="width: 110px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: right;">
+                    </td>
+                    <td style="padding: 10px 12px; text-align: right;">
+                      <input type="number"
+                             id="toolPerSupplierCostNum_${index}"
+                             min="0"
+                             step="10"
+                             value="${sanitizedToolPerSupplierCosts[index] || 0}"
+                             style="width: 110px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: right;">
+                    </td>
+                    <td style="padding: 10px 12px; text-align: right;">
+                      <input type="number"
+                             id="toolInternalHoursNum_${index}"
+                             min="0"
+                             step="5"
+                             value="${sanitizedToolInternalHours[index] || 0}"
+                             style="width: 110px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: right;">
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -2150,57 +2126,42 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   }
 
-  // Tool Annual Programme Cost controls
+   // Tool Annual Programme Cost controls
   toolAnnualProgrammeCosts.forEach((cost, index) => {
-    const rangeInput = document.getElementById(`toolAnnualCost_${index}`);
     const numberInput = document.getElementById(`toolAnnualCostNum_${index}`);
-    
-    if (rangeInput && numberInput) {
-      const updateCost = (value) => {
-        const newValue = Math.max(0, parseFloat(value) || 0);
-        rangeInput.value = Math.min(50000, newValue); // Cap at range max
+
+    if (numberInput) {
+      numberInput.addEventListener('input', (e) => {
+        const newValue = Math.min(50000, Math.max(0, parseFloat(e.target.value) || 0));
         numberInput.value = newValue;
         onToolAnnualProgrammeCostChange(index, newValue);
-      };
-
-      rangeInput.addEventListener('input', (e) => updateCost(e.target.value));
-      numberInput.addEventListener('input', (e) => updateCost(e.target.value));
+      });
     }
   });
 
   // Tool Per Supplier Cost controls
   toolPerSupplierCosts.forEach((cost, index) => {
-    const rangeInput = document.getElementById(`toolPerSupplierCost_${index}`);
     const numberInput = document.getElementById(`toolPerSupplierCostNum_${index}`);
-    
-    if (rangeInput && numberInput) {
-      const updateCost = (value) => {
-        const newValue = Math.max(0, parseFloat(value) || 0);
-        rangeInput.value = Math.min(2000, newValue); // Cap at range max
+
+    if (numberInput) {
+      numberInput.addEventListener('input', (e) => {
+        const newValue = Math.min(2000, Math.max(0, parseFloat(e.target.value) || 0));
         numberInput.value = newValue;
         onToolPerSupplierCostChange(index, newValue);
-      };
-
-      rangeInput.addEventListener('input', (e) => updateCost(e.target.value));
-      numberInput.addEventListener('input', (e) => updateCost(e.target.value));
+      });
     }
   });
 
   // Tool Internal Hours controls
   toolInternalHours.forEach((hours, index) => {
-    const rangeInput = document.getElementById(`toolInternalHours_${index}`);
     const numberInput = document.getElementById(`toolInternalHoursNum_${index}`);
-    
-    if (rangeInput && numberInput) {
-      const updateHours = (value) => {
-        const newValue = Math.max(0, parseFloat(value) || 0);
-        rangeInput.value = Math.min(500, newValue); // Cap at range max
+
+    if (numberInput) {
+      numberInput.addEventListener('input', (e) => {
+        const newValue = Math.min(500, Math.max(0, parseFloat(e.target.value) || 0));
         numberInput.value = newValue;
         onToolInternalHoursChange(index, newValue);
-      };
-
-      rangeInput.addEventListener('input', (e) => updateHours(e.target.value));
-      numberInput.addEventListener('input', (e) => updateHours(e.target.value));
+      });
     }
   });
 
@@ -2224,29 +2185,23 @@ function setupCostAnalysisEventListeners(handlers) {
 
   // Reset buttons
   const resetToolCosts = document.getElementById('resetToolCosts');
-  if (resetToolCosts) {
+   if (resetToolCosts) {
     resetToolCosts.addEventListener('click', () => {
       // Reset tool costs to defaults
       [100, 100, 100, 100, 100, 100].forEach((defaultCost, index) => {
         // Reset annual programme costs
         onToolAnnualProgrammeCostChange(index, defaultCost);
-        const annualRange = document.getElementById(`toolAnnualCost_${index}`);
         const annualNumber = document.getElementById(`toolAnnualCostNum_${index}`);
-        if (annualRange) annualRange.value = defaultCost;
         if (annualNumber) annualNumber.value = defaultCost;
 
         // Reset per supplier costs
         onToolPerSupplierCostChange(index, defaultCost);
-        const perSupplierRange = document.getElementById(`toolPerSupplierCost_${index}`);
         const perSupplierNumber = document.getElementById(`toolPerSupplierCostNum_${index}`);
-        if (perSupplierRange) perSupplierRange.value = defaultCost;
         if (perSupplierNumber) perSupplierNumber.value = defaultCost;
 
         // Reset tool internal hours
         onToolInternalHoursChange(index, defaultCost);
-        const hoursRange = document.getElementById(`toolInternalHours_${index}`);
         const hoursNumber = document.getElementById(`toolInternalHoursNum_${index}`);
-        if (hoursRange) hoursRange.value = defaultCost;
         if (hoursNumber) hoursNumber.value = defaultCost;
       });
     });
