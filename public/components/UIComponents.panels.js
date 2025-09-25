@@ -1841,7 +1841,7 @@ export function createCostAnalysisPanel(containerId, options) {
         </div>
 
         <!-- Panel 4 Response Methods Column -->
-        <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b;">
+          <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 4: Response Methods</h3>
             <button id="resetResponseCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
@@ -1849,33 +1849,31 @@ export function createCostAnalysisPanel(containerId, options) {
             </button>
           </div>
           <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Configure internal effort for each response method</div>
-          
-          <div id="responseCostControls" style="display: flex; flex-direction: column; gap: 12px;">
-            ${riskEngine.responsivenessLabels.map((label, index) => `
-              <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
-                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin: 0 0 8px 0;">${label}</h4>
-                
-                <!-- Internal Hours Only -->
-                <div>
-                  <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Internal Hours (per supplier/year)</label>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range"
-                           id="responseInternalHours_${index}"
-                           min="0"
-                           max="200"
-                           step="5"
-                           value="${sanitizedResponseInternalHours[index] || 0}"
-                           style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number"
-                           id="responseInternalHoursNum_${index}"
-                           min="0"
-                           step="5"
-                           value="${sanitizedResponseInternalHours[index] || 0}"
-                           style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
-                  </div>
-                </div>
-              </div>
-            `).join('')}
+
+          <div id="responseCostControls" style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #374151;">
+              <thead>
+                <tr style="background: #fde68a; text-align: left;">
+                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937;">Response Method</th>
+                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937; text-align: right;">Internal Hours (per supplier/yr)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${riskEngine.responsivenessLabels.map((label, index) => `
+                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#fffbeb'};">
+                    <td style="padding: 10px 12px; font-weight: 500;">${label}</td>
+                    <td style="padding: 10px 12px; text-align: right;">
+                      <input type="number"
+                             id="responseInternalHoursNum_${index}"
+                             min="0"
+                             step="5"
+                             value="${sanitizedResponseInternalHours[index] || 0}"
+                             style="width: 110px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: right;">
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -2165,21 +2163,16 @@ function setupCostAnalysisEventListeners(handlers) {
     }
   });
 
-  // Response Internal Hours controls
+  /// Response Internal Hours controls
   responseInternalHours.forEach((hours, index) => {
-    const rangeInput = document.getElementById(`responseInternalHours_${index}`);
     const numberInput = document.getElementById(`responseInternalHoursNum_${index}`);
-    
-    if (rangeInput && numberInput) {
-      const updateHours = (value) => {
-        const newValue = Math.max(0, parseFloat(value) || 0);
-        rangeInput.value = Math.min(200, newValue); // Cap at range max
+
+    if (numberInput) {
+      numberInput.addEventListener('input', (e) => {
+        const newValue = Math.min(200, Math.max(0, parseFloat(e.target.value) || 0));
         numberInput.value = newValue;
         onResponseInternalHoursChange(index, newValue);
-      };
-
-      rangeInput.addEventListener('input', (e) => updateHours(e.target.value));
-      numberInput.addEventListener('input', (e) => updateHours(e.target.value));
+      });
     }
   });
 
@@ -2207,19 +2200,18 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   }
 
-  const resetResponseCosts = document.getElementById('resetResponseCosts');
+   const resetResponseCosts = document.getElementById('resetResponseCosts');
   if (resetResponseCosts) {
     resetResponseCosts.addEventListener('click', () => {
       // Reset response method costs to defaults
       [100, 100, 100, 100, 100, 100].forEach((defaultHours, index) => {
         onResponseInternalHoursChange(index, defaultHours);
-        const rangeInput = document.getElementById(`responseInternalHours_${index}`);
         const numberInput = document.getElementById(`responseInternalHoursNum_${index}`);
-        if (rangeInput) rangeInput.value = defaultHours;
         if (numberInput) numberInput.value = defaultHours;
       });
     });
   }
+
 
   const optimizeBtn = document.getElementById('runOptimization');
   if (optimizeBtn) {
