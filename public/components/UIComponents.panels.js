@@ -1063,7 +1063,8 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
         const coverageDisplay = item.coverageRange ? 
           `Coverage: ${item.coverageRange} (focus-adjusted)` : 
           `Coverage: ${formatNumber(item.coverage, 0)}%`;
-        return `
+        const safeBudgetData = budgetData || {};
+  return `
           <div style="padding: 12px 14px; border: 1px solid ${color}30; border-left: 4px solid ${color}; border-radius: 8px; background-color: white; display: flex; flex-direction: column; gap: 6px;">
             <div style="font-weight: 600; color: #1f2937;">${item.name}</div>
             <div style="font-size: 12px; color: #4b5563;">
@@ -1635,8 +1636,10 @@ export function createCostAnalysisPanel(containerId, options) {
     managedRisk,
     onSupplierCountChange,
     onHourlyRateChange,
-    onExternalCostChange,
-    onInternalHoursChange,
+    onToolAnnualProgrammeCostChange,
+    onToolPerSupplierCostChange,
+    onToolInternalHoursChange,
+    onResponseInternalHoursChange,
     optimizeBudgetAllocation
   } = options;
 
@@ -1647,8 +1650,10 @@ export function createCostAnalysisPanel(containerId, options) {
   const budgetData = riskEngine.calculateBudgetAnalysis(
     supplierCount,
     hourlyRate,
-    externalCosts,
-    internalHours,
+    toolAnnualProgrammeCosts,
+    toolPerSupplierCosts,
+    toolInternalHours,
+    responseInternalHours,
     hrddStrategy,
     transparencyEffectiveness,
     responsivenessStrategy,
@@ -1659,7 +1664,95 @@ export function createCostAnalysisPanel(containerId, options) {
     focus
   );
 
-  const optimization = optimizeBudgetAllocation();
+  const safeBudgetData = budgetData || {
+    supplierCount: Math.max(1, Math.floor(supplierCount || 1)),
+    hourlyRate: Math.max(0, parseFloat(hourlyRate) || 0),
+    totalExternalCost: 0,
+    totalInternalCost: 0,
+    totalToolInternalCost: 0,
+    totalResponseInternalCost: 0,
+    totalBudget: 0,
+    costPerSupplier: 0,
+    currentAllocation: Array.isArray(hrddStrategy) ? [...hrddStrategy] : [],
+    responseAllocation: Array.isArray(responsivenessStrategy) ? [...responsivenessStrategy] : []
+  };
+
+  const strategyCount = Array.isArray(riskEngine?.hrddStrategyLabels)
+    ? riskEngine.hrddStrategyLabels.length
+    : 0;
+  const responseCount = Array.isArray(riskEngine?.responsivenessLabels)
+    ? riskEngine.responsivenessLabels.length
+    : 0;
+
+  const sanitizeArray = (values, length, min = 0, max = Number.POSITIVE_INFINITY) => {
+    const baseArray = Array.isArray(values) ? values : [];
+    const result = Array.from({ length }, (_, index) => {
+      const rawValue = baseArray[index];
+      const numeric = Math.max(min, parseFloat(rawValue) || 0);
+      return Number.isFinite(max) ? Math.min(max, numeric) : numeric;
+    });
+
+    return result;
+  };
+
+  const sanitizedSupplierCount = Math.max(1, Math.floor(safeBudgetData.supplierCount || supplierCount || 1));
+  const sanitizedHourlyRate = Math.max(0, parseFloat(safeBudgetData.hourlyRate || hourlyRate || 0));
+  const sanitizedToolAnnualProgrammeCosts = sanitizeArray(
+    toolAnnualProgrammeCosts,
+    strategyCount,
+    0,
+    50000
+  );
+  const sanitizedToolPerSupplierCosts = sanitizeArray(
+    toolPerSupplierCosts,
+    strategyCount,
+    0,
+    2000
+  );
+  const sanitizedToolInternalHours = sanitizeArray(
+    toolInternalHours,
+    strategyCount,
+    0,
+    500
+  );
+  const sanitizedResponseInternalHours = sanitizeArray(
+    responseInternalHours,
+    responseCount,
+    0,
+    200
+  );
+
+  const normalizedBudgetData = {
+    ...safeBudgetData,
+    supplierCount: sanitizedSupplierCount,
+    hourlyRate: sanitizedHourlyRate,
+    totalExternalCost: Number.isFinite(safeBudgetData.totalExternalCost)
+      ? safeBudgetData.totalExternalCost
+      : 0,
+    totalInternalCost: Number.isFinite(safeBudgetData.totalInternalCost)
+      ? safeBudgetData.totalInternalCost
+      : 0,
+    totalBudget: Number.isFinite(safeBudgetData.totalBudget)
+      ? safeBudgetData.totalBudget
+      : 0,
+    currentAllocation: Array.isArray(safeBudgetData.currentAllocation)
+      ? safeBudgetData.currentAllocation
+      : Array.isArray(hrddStrategy)
+        ? [...hrddStrategy]
+        : [],
+    responseAllocation: Array.isArray(safeBudgetData.responseAllocation)
+      ? safeBudgetData.responseAllocation
+      : Array.isArray(responsivenessStrategy)
+        ? [...responsivenessStrategy]
+        : []
+  };
+
+  const totalExternalCost = normalizedBudgetData.totalExternalCost;
+  const totalInternalCost = normalizedBudgetData.totalInternalCost;
+  const totalBudget = normalizedBudgetData.totalBudget || totalExternalCost + totalInternalCost;
+  const optimization = typeof optimizeBudgetAllocation === 'function'
+    ? optimizeBudgetAllocation()
+    : null;
 
   container.innerHTML = `
     <div class="cost-analysis-panel" style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
@@ -1670,18 +1763,18 @@ export function createCostAnalysisPanel(containerId, options) {
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
           <div style="display: flex; flex-direction: column; gap: 4px;">
             <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Suppliers to Monitor</label>
-            <input type="number" 
-                   id="supplierCountInput" 
-                   value="${supplierCount}" 
+            <input type="number"
+                   id="supplierCountInput"
+                   value="${sanitizedSupplierCount}"
                    min="1" 
                    step="1"
                    style="width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center;">
           </div>
           <div style="display: flex; flex-direction: column; gap: 4px;">
             <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Cost per Hour (USD)</label>
-            <input type="number" 
-                   id="hourlyRateInput" 
-                   value="${hourlyRate}" 
+            <input type="number"
+                   id="hourlyRateInput"
+                   value="${sanitizedHourlyRate}"
                    min="0" 
                    step="0.01"
                    style="width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center;">
@@ -1711,18 +1804,18 @@ export function createCostAnalysisPanel(containerId, options) {
                 <div style="margin-bottom: 12px;">
                   <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Annual Programme Cost (USD)</label>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" 
-                           id="toolAnnualCost_${index}" 
-                           min="0" 
-                           max="50000" 
-                           step="100" 
-                           value="${toolAnnualProgrammeCosts[index]}"
+                    <input type="range"
+                           id="toolAnnualCost_${index}"
+                           min="0"
+                           max="50000"
+                           step="100"
+                           value="${sanitizedToolAnnualProgrammeCosts[index] || 0}"
                            style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number" 
-                           id="toolAnnualCostNum_${index}" 
-                           min="0" 
-                           step="100" 
-                           value="${toolAnnualProgrammeCosts[index]}"
+                    <input type="number"
+                           id="toolAnnualCostNum_${index}"
+                           min="0"
+                           step="100"
+                           value="${sanitizedToolAnnualProgrammeCosts[index] || 0}"
                            style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
                   </div>
                 </div>
@@ -1731,18 +1824,18 @@ export function createCostAnalysisPanel(containerId, options) {
                 <div style="margin-bottom: 12px;">
                   <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Per Supplier Cost (USD/year)</label>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" 
-                           id="toolPerSupplierCost_${index}" 
-                           min="0" 
-                           max="2000" 
-                           step="10" 
-                           value="${toolPerSupplierCosts[index]}"
+                    <input type="range"
+                           id="toolPerSupplierCost_${index}"
+                           min="0"
+                           max="2000"
+                           step="10"
+                           value="${sanitizedToolPerSupplierCosts[index] || 0}"
                            style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number" 
-                           id="toolPerSupplierCostNum_${index}" 
-                           min="0" 
-                           step="10" 
-                           value="${toolPerSupplierCosts[index]}"
+                    <input type="number"
+                           id="toolPerSupplierCostNum_${index}"
+                           min="0"
+                           step="10"
+                           value="${sanitizedToolPerSupplierCosts[index] || 0}"
                            style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
                   </div>
                 </div>
@@ -1751,18 +1844,18 @@ export function createCostAnalysisPanel(containerId, options) {
                 <div>
                   <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Internal Hours (per supplier/year)</label>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" 
-                           id="toolInternalHours_${index}" 
-                           min="0" 
-                           max="500" 
-                           step="5" 
-                           value="${toolInternalHours[index]}"
+                    <input type="range"
+                           id="toolInternalHours_${index}"
+                           min="0"
+                           max="500"
+                           step="5"
+                           value="${sanitizedToolInternalHours[index] || 0}"
                            style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number" 
-                           id="toolInternalHoursNum_${index}" 
-                           min="0" 
-                           step="5" 
-                           value="${toolInternalHours[index]}"
+                    <input type="number"
+                           id="toolInternalHoursNum_${index}"
+                           min="0"
+                           step="5"
+                           value="${sanitizedToolInternalHours[index] || 0}"
                            style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
                   </div>
                 </div>
@@ -1790,18 +1883,18 @@ export function createCostAnalysisPanel(containerId, options) {
                 <div>
                   <label style="font-size: 12px; font-weight: 500; color: #4b5563; display: block; margin-bottom: 4px;">Internal Hours (per supplier/year)</label>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" 
-                           id="responseInternalHours_${index}" 
-                           min="0" 
-                           max="200" 
-                           step="5" 
-                           value="${responseInternalHours[index]}"
+                    <input type="range"
+                           id="responseInternalHours_${index}"
+                           min="0"
+                           max="200"
+                           step="5"
+                           value="${sanitizedResponseInternalHours[index] || 0}"
                            style="flex: 1; height: 6px; border-radius: 3px;">
-                    <input type="number" 
-                           id="responseInternalHoursNum_${index}" 
-                           min="0" 
-                           step="5" 
-                           value="${responseInternalHours[index]}"
+                    <input type="number"
+                           id="responseInternalHoursNum_${index}"
+                           min="0"
+                           step="5"
+                           value="${sanitizedResponseInternalHours[index] || 0}"
                            style="width: 100px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: center;">
                   </div>
                 </div>
@@ -1817,19 +1910,19 @@ export function createCostAnalysisPanel(containerId, options) {
         <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(4, 1fr)')}; gap: 16px; text-align: center;">
           <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
             <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">EXTERNAL COSTS</div>
-            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${budgetData.totalExternalCost.toLocaleString()}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${totalExternalCost.toLocaleString()}</div>
           </div>
           <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
             <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">INTERNAL COSTS</div>
-            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${budgetData.totalInternalCost.toLocaleString()}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${totalInternalCost.toLocaleString()}</div>
           </div>
           <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
             <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">TOTAL BUDGET</div>
-            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${budgetData.totalBudget.toLocaleString()}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${totalBudget.toLocaleString()}</div>
           </div>
           <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
             <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">COST PER SUPPLIER</div>
-            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${(budgetData.totalBudget / supplierCount).toFixed(0)}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${(totalBudget / sanitizedSupplierCount).toFixed(0)}</div>
           </div>
         </div>
       </div>
@@ -1844,15 +1937,40 @@ export function createCostAnalysisPanel(containerId, options) {
         </div>
         
         <div id="optimizationResults">
-          ${renderOptimizationResults(optimization, budgetData, baselineRisk, managedRisk)}
+          ${renderOptimizationResults(optimization, normalizedBudgetData, baselineRisk, managedRisk)}
         </div>
       </div>
 
       <!-- Detailed Budget Breakdown -->
-      ${renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, hourlyRate, externalCosts, internalHours)}
+      <div id="detailedBudgetBreakdown">
+        ${renderDetailedBudgetBreakdown(
+          normalizedBudgetData,
+          optimization,
+          sanitizedSupplierCount,
+          sanitizedHourlyRate,
+          sanitizedToolAnnualProgrammeCosts,
+          sanitizedToolPerSupplierCosts,
+          sanitizedToolInternalHours
+        )}
+      </div>
 
       <!-- Risk Transformation Comparison -->
-      ${renderRiskTransformationComparison(optimization, budgetData, baselineRisk, managedRisk, selectedCountries, countryVolumes, countryRisks, hrddStrategy, transparencyEffectiveness, responsivenessStrategy, responsivenessEffectiveness, focus)}
+      <div id="riskTransformationComparison">
+        ${renderRiskTransformationComparison(
+          optimization,
+          normalizedBudgetData,
+          baselineRisk,
+          managedRisk,
+          selectedCountries,
+          countryVolumes,
+          countryRisks,
+          hrddStrategy,
+          transparencyEffectiveness,
+          responsivenessStrategy,
+          responsivenessEffectiveness,
+          focus
+        )}
+      </div>
 
     </div>
   `;
@@ -1866,10 +1984,23 @@ export function createCostAnalysisPanel(containerId, options) {
     onToolInternalHoursChange,
     onResponseInternalHoursChange,
     optimizeBudgetAllocation,
-    toolAnnualProgrammeCosts,
-    toolPerSupplierCosts,
-    toolInternalHours,
-    responseInternalHours
+    toolAnnualProgrammeCosts: sanitizedToolAnnualProgrammeCosts,
+    toolPerSupplierCosts: sanitizedToolPerSupplierCosts,
+    toolInternalHours: sanitizedToolInternalHours,
+    responseInternalHours: sanitizedResponseInternalHours,
+    supplierCount: sanitizedSupplierCount,
+    hourlyRate: sanitizedHourlyRate,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    selectedCountries,
+    countryVolumes,
+    countryRisks,
+    focus,
+    baselineRisk,
+    managedRisk,
+    budgetData: normalizedBudgetData
   });
 }
 
@@ -1882,6 +2013,17 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
       </div>
     `;
   }
+
+  const safeBudgetData = budgetData || {};
+  const currentAllocation = Array.isArray(safeBudgetData.currentAllocation)
+    ? safeBudgetData.currentAllocation
+    : [];
+
+  const optimizedToolAllocation = Array.isArray(optimization?.optimizedToolAllocation)
+    ? optimization.optimizedToolAllocation
+    : Array.isArray(optimization?.optimizedAllocation)
+      ? optimization.optimizedAllocation
+      : [];
 
   const currentEffectiveness = ((baselineRisk - managedRisk) / baselineRisk * 100).toFixed(1);
   const optimizedEffectiveness = ((optimization.baselineRisk - optimization.optimizedManagedRisk) / optimization.baselineRisk * 100).toFixed(1);
@@ -1914,8 +2056,8 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
         <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Recommended Tool Allocation</h4>
         <div style="max-height: 200px; overflow-y: auto;">
           ${riskEngine.hrddStrategyLabels.map((label, index) => {
-            const current = budgetData.currentAllocation[index] || 0;
-            const optimized = optimization.optimizedAllocation[index] || 0;
+            const current = currentAllocation[index] || 0;
+            const optimized = optimizedToolAllocation[index] || 0;
             const change = optimized - current;
             return `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
@@ -1954,8 +2096,43 @@ function setupCostAnalysisEventListeners(handlers) {
     toolAnnualProgrammeCosts,
     toolPerSupplierCosts,
     toolInternalHours,
-    responseInternalHours
+    responseInternalHours,
+    supplierCount,
+    hourlyRate,
+    hrddStrategy,
+    transparencyEffectiveness,
+    responsivenessStrategy,
+    responsivenessEffectiveness,
+    selectedCountries,
+    countryVolumes,
+    countryRisks,
+    focus,
+    baselineRisk,
+    managedRisk,
+    budgetData
   } = handlers;
+
+  const clampNumber = (value, min, max, fallback = 0) => {
+    const numeric = parseFloat(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    const lowerBound = Math.max(min, numeric);
+    return Number.isFinite(max) ? Math.min(max, lowerBound) : lowerBound;
+  };
+
+  const readInputValue = (id, min, max, fallback = 0) => {
+    const element = document.getElementById(id);
+    return clampNumber(element ? element.value : undefined, min, max, fallback);
+  };
+
+  const readArrayValues = (idPrefix, length, min, max, fallbackArray = []) => {
+    return Array.from({ length }, (_, index) => {
+      const element = document.getElementById(`${idPrefix}${index}`);
+      const fallback = fallbackArray[index] || 0;
+      return clampNumber(element ? element.value : undefined, min, max, fallback);
+    });
+  };
 
   // Supplier count input
   const supplierInput = document.getElementById('supplierCountInput');
@@ -2089,27 +2266,172 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   }
 
-  // Optimization button (with updated variable names but same logic structure)
   const optimizeBtn = document.getElementById('runOptimization');
   if (optimizeBtn) {
-    // ... (same optimization logic but using the new cost variable names)
+    optimizeBtn.addEventListener('click', () => {
+      if (typeof optimizeBudgetAllocation !== 'function') return;
+
+      const originalText = optimizeBtn.textContent;
+      optimizeBtn.disabled = true;
+      optimizeBtn.textContent = 'Optimizing...';
+
+      try {
+        const latestSupplierCount = Math.max(
+          1,
+          Math.floor(readInputValue('supplierCountInput', 1, Number.POSITIVE_INFINITY, supplierCount))
+        );
+        const latestHourlyRate = readInputValue(
+          'hourlyRateInput',
+          0,
+          Number.POSITIVE_INFINITY,
+          hourlyRate
+        );
+        const latestAnnualProgrammeCosts = readArrayValues(
+          'toolAnnualCostNum_',
+          toolAnnualProgrammeCosts.length,
+          0,
+          50000,
+          toolAnnualProgrammeCosts
+        );
+        const latestPerSupplierCosts = readArrayValues(
+          'toolPerSupplierCostNum_',
+          toolPerSupplierCosts.length,
+          0,
+          2000,
+          toolPerSupplierCosts
+        );
+        const latestToolInternalHours = readArrayValues(
+          'toolInternalHoursNum_',
+          toolInternalHours.length,
+          0,
+          500,
+          toolInternalHours
+        );
+        const latestResponseInternalHours = readArrayValues(
+          'responseInternalHoursNum_',
+          responseInternalHours.length,
+          0,
+          200,
+          responseInternalHours
+        );
+
+        const latestOptimization = optimizeBudgetAllocation();
+        const latestBudget = riskEngine.calculateBudgetAnalysis(
+          latestSupplierCount,
+          latestHourlyRate,
+          latestAnnualProgrammeCosts,
+          latestPerSupplierCosts,
+          latestToolInternalHours,
+          latestResponseInternalHours,
+          hrddStrategy,
+          transparencyEffectiveness,
+          responsivenessStrategy,
+          responsivenessEffectiveness,
+          selectedCountries,
+          countryVolumes,
+          countryRisks,
+          focus
+        ) || budgetData;
+
+        const optimizationContainer = document.getElementById('optimizationResults');
+        if (optimizationContainer) {
+          optimizationContainer.innerHTML = renderOptimizationResults(
+            latestOptimization,
+            latestBudget,
+            baselineRisk,
+            managedRisk
+          );
+        }
+
+        const breakdownContainer = document.getElementById('detailedBudgetBreakdown');
+        if (breakdownContainer) {
+          breakdownContainer.innerHTML = renderDetailedBudgetBreakdown(
+            latestBudget,
+            latestOptimization,
+            latestSupplierCount,
+            latestHourlyRate,
+            latestAnnualProgrammeCosts,
+            latestPerSupplierCosts,
+            latestToolInternalHours
+          );
+        }
+
+        const comparisonContainer = document.getElementById('riskTransformationComparison');
+        if (comparisonContainer) {
+          comparisonContainer.innerHTML = renderRiskTransformationComparison(
+            latestOptimization,
+            latestBudget,
+            baselineRisk,
+            managedRisk,
+            selectedCountries,
+            countryVolumes,
+            countryRisks,
+            hrddStrategy,
+            transparencyEffectiveness,
+            responsivenessStrategy,
+            responsivenessEffectiveness,
+            focus
+          );
+        }
+      } finally {
+        optimizeBtn.disabled = false;
+        optimizeBtn.textContent = originalText;
+      }
+    });
   }
 }
 
-function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, hourlyRate, externalCosts, internalHours) {
+function renderDetailedBudgetBreakdown(
+  budgetData,
+  optimization,
+  supplierCount,
+  hourlyRate,
+  toolAnnualProgrammeCosts,
+  toolPerSupplierCosts,
+  toolInternalHours
+) {
   if (!optimization) return '';
+
+  const safeBudgetData = budgetData || {};
+  const currentAllocation = Array.isArray(safeBudgetData.currentAllocation)
+    ? safeBudgetData.currentAllocation
+    : [];
+  const optimizedToolAllocation = Array.isArray(optimization?.optimizedToolAllocation)
+    ? optimization.optimizedToolAllocation
+    : Array.isArray(optimization?.optimizedAllocation)
+      ? optimization.optimizedAllocation
+      : [];
+  const safeAnnualCosts = Array.isArray(toolAnnualProgrammeCosts)
+    ? toolAnnualProgrammeCosts
+    : [];
+  const safePerSupplierCosts = Array.isArray(toolPerSupplierCosts)
+    ? toolPerSupplierCosts
+    : [];
+  const safeInternalHours = Array.isArray(toolInternalHours)
+    ? toolInternalHours
+    : [];
+  const safeSupplierCount = Math.max(
+    1,
+    Math.floor(supplierCount || safeBudgetData.supplierCount || 1)
+  );
+  const safeHourlyRate = Math.max(
+    0,
+    parseFloat(hourlyRate || safeBudgetData.hourlyRate || 0)
+  );
 
   const mobile = isMobileView();
   const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
 
-  // Calculate current tool breakdown
   const currentBreakdown = riskEngine.hrddStrategyLabels.map((label, index) => {
-    const coverage = budgetData.currentAllocation[index] || 0;
-    const suppliersUsingTool = Math.ceil(supplierCount * (coverage / 100));
-    const externalCostPerTool = externalCosts[index] || 0;
-    const hoursPerTool = internalHours[index] || 0;
-    const totalExternalCost = suppliersUsingTool * externalCostPerTool;
-    const totalInternalCost = suppliersUsingTool * hoursPerTool * hourlyRate;
+    const coverage = currentAllocation[index] || 0;
+    const coverageRatio = Math.max(0, Math.min(1, coverage / 100));
+    const suppliersUsingTool = Math.ceil(safeSupplierCount * coverageRatio);
+    const annualProgrammeBase = safeAnnualCosts[index] || 0;
+    const annualProgrammeCost = annualProgrammeBase * coverageRatio;
+    const perSupplierCost = safePerSupplierCosts[index] || 0;
+    const hoursPerTool = safeInternalHours[index] || 0;
+    const totalExternalCost = annualProgrammeCost + suppliersUsingTool * perSupplierCost;
+    const totalInternalCost = suppliersUsingTool * hoursPerTool * safeHourlyRate;
 
     return {
       name: label,
@@ -2121,14 +2443,16 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
     };
   });
 
-  // Calculate optimized tool breakdown
   const optimizedBreakdown = riskEngine.hrddStrategyLabels.map((label, index) => {
-    const coverage = optimization.optimizedAllocation[index] || 0;
-    const suppliersUsingTool = Math.ceil(supplierCount * (coverage / 100));
-    const externalCostPerTool = externalCosts[index] || 0;
-    const hoursPerTool = internalHours[index] || 0;
-    const totalExternalCost = suppliersUsingTool * externalCostPerTool;
-    const totalInternalCost = suppliersUsingTool * hoursPerTool * hourlyRate;
+    const coverage = optimizedToolAllocation[index] || 0;
+    const coverageRatio = Math.max(0, Math.min(1, coverage / 100));
+    const suppliersUsingTool = Math.ceil(safeSupplierCount * coverageRatio);
+    const annualProgrammeBase = safeAnnualCosts[index] || 0;
+    const annualProgrammeCost = annualProgrammeBase * coverageRatio;
+    const perSupplierCost = safePerSupplierCosts[index] || 0;
+    const hoursPerTool = safeInternalHours[index] || 0;
+    const totalExternalCost = annualProgrammeCost + suppliersUsingTool * perSupplierCost;
+    const totalInternalCost = suppliersUsingTool * hoursPerTool * safeHourlyRate;
 
     return {
       name: label,
@@ -2139,17 +2463,19 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
       totalCost: totalExternalCost + totalInternalCost
     };
   });
+
+  const currentTotal = currentBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0);
 
   return `
     <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
       <h3 style="font-size: ${responsive('16px', '18px')}; font-weight: 600; color: #1f2937; margin-bottom: 20px; text-align: center;">
         Detailed Budget Breakdown: Current vs Optimized
       </h3>
-      
+
       <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px;">
-        
+
         <!-- Current Allocation Column -->
-         <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; border: 1px solid #fecaca; display: flex; flex-direction: column; min-height: 100%;">
+         <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; border:1px solid #fecaca; display: flex; flex-direction: column; min-height: 100%;">
           <h4 style="font-size: 16px; font-weight: 600; color: #991b1b; margin: 0 0 16px 0; text-align: center;">
             Current Strategy Allocation
           </h4>
@@ -2174,7 +2500,7 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #dc2626; margin-top: auto;">
             <div style="text-align: center; color: #991b1b;">
               <div style="font-size: 12px; margin-bottom: 4px;">CURRENT TOTAL BUDGET</div>
-              <div style="font-size: 20px; font-weight: bold;">$${budgetData.totalBudget.toLocaleString()}</div>
+              <div style="font-size: 20px; font-weight: bold;">$${currentTotal.toLocaleString()}</div>
             </div>
           </div>
         </div>
@@ -2189,7 +2515,7 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
               const currentTool = currentBreakdown[index];
               const coverageChange = tool.coverage - currentTool.coverage;
               const costChange = tool.totalCost - currentTool.totalCost;
-              
+
               return `
                 <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #22c55e;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -2220,7 +2546,7 @@ function renderDetailedBudgetBreakdown(budgetData, optimization, supplierCount, 
               `;
             }).join('')}
           </div>
-          div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #16a34a; margin-top: auto;">
+          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #16a34a; margin-top: auto;">
             <div style="text-align: center; color: #14532d;">
               <div style="font-size: 12px; margin-bottom: 4px;">OPTIMIZED TOTAL BUDGET</div>
               <div style="font-size: 20px; font-weight: bold;">$${optimizedBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0).toLocaleString()}</div>
@@ -2247,14 +2573,14 @@ function renderRiskTransformationComparison(optimization, budgetData, baselineRi
   // Calculate optimized risk transformation steps  
   const optimizedDetails = riskEngine.calculateManagedRiskDetails(
     selectedCountries, countryVolumes, countryRisks,
-    optimization.optimizedAllocation, transparencyEffectiveness,
-    responsivenessStrategy, responsivenessEffectiveness, focus
+    optimizedToolAllocation, transparencyEffectiveness,
+    optimizedResponseAllocation, responsivenessEffectiveness, focus
   );
 
   const optimizedTransformation = calculateRiskTransformationSteps(
     optimization.baselineRisk, optimization.optimizedManagedRisk, 
-    optimization.optimizedAllocation, transparencyEffectiveness,
-    responsivenessStrategy, responsivenessEffectiveness, focus
+    optimizedToolAllocation, transparencyEffectiveness,
+    optimizedResponseAllocation, responsivenessEffectiveness, focus
   );
 
   return `
