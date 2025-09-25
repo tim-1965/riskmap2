@@ -1754,9 +1754,94 @@ export function createCostAnalysisPanel(containerId, options) {
     ? optimizeBudgetAllocation()
     : null;
 
+  const rowCount = Math.max(strategyCount, responseCount);
+
+  const renderToolCard = (index) => {
+    if (!Array.isArray(riskEngine?.hrddStrategyLabels) || index >= riskEngine.hrddStrategyLabels.length) {
+      return `
+        <div style="background: transparent; border-radius: 12px;"></div>
+      `;
+    }
+
+    const label = riskEngine.hrddStrategyLabels[index];
+
+    return `
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
+        <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${label}</div>
+        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(3, minmax(0, 1fr))')}; gap: ${responsive('12px', '16px')};">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #475569;">
+            <span>Annual Programme (USD)</span>
+            <input type="number"
+                   id="toolAnnualCostNum_${index}"
+                   min="0"
+                   step="100"
+                   value="${sanitizedToolAnnualProgrammeCosts[index] || 0}"
+                   style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5f5; border-radius: 6px; font-size: 13px; text-align: right; background: white;">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #475569;">
+            <span>Per Supplier (USD/yr)</span>
+            <input type="number"
+                   id="toolPerSupplierCostNum_${index}"
+                   min="0"
+                   step="10"
+                   value="${sanitizedToolPerSupplierCosts[index] || 0}"
+                   style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5f5; border-radius: 6px; font-size: 13px; text-align: right; background: white;">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #475569;">
+            <span>Internal Hours (per supplier)</span>
+            <input type="number"
+                   id="toolInternalHoursNum_${index}"
+                   min="0"
+                   step="5"
+                   value="${sanitizedToolInternalHours[index] || 0}"
+                   style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5f5; border-radius: 6px; font-size: 13px; text-align: right; background: white;">
+          </label>
+        </div>
+      </div>
+    `;
+  };
+
+  const renderResponseCard = (index) => {
+    if (!Array.isArray(riskEngine?.responsivenessLabels) || index >= riskEngine.responsivenessLabels.length) {
+      return `
+        <div style="background: transparent; border-radius: 12px;"></div>
+      `;
+    }
+
+    const label = riskEngine.responsivenessLabels[index];
+
+    return `
+      <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
+        <div style="font-size: 13px; font-weight: 600; color: #92400e;">${label}</div>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #92400e;">
+          <span>Internal Hours (per supplier)</span>
+          <input type="number"
+                 id="responseInternalHoursNum_${index}"
+                 min="0"
+                 step="5"
+                 value="${sanitizedResponseInternalHours[index] || 0}"
+                 style="width: 100%; padding: 8px 10px; border: 1px solid #fbbf24; border-radius: 6px; font-size: 13px; text-align: right; background: white;">
+        </label>
+      </div>
+    `;
+  };
+
+  const renderCostConfigurationRows = () => {
+    if (rowCount === 0) {
+      return '';
+    }
+
+    return Array.from({ length: rowCount }, (_, index) => `
+      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
+        ${renderToolCard(index)}
+        ${renderResponseCard(index)}
+      </div>
+    `).join('');
+  };
+
   container.innerHTML = `
     <div class="cost-analysis-panel" style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-      
+
       <!-- Header Section -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
         <h2 style="font-size: ${responsive('18px', '20px')}; font-weight: bold; color: #1f2937; margin: 0;">Cost Analysis & Budget Optimization</h2>
@@ -1782,63 +1867,32 @@ export function createCostAnalysisPanel(containerId, options) {
         </div>
       </div>
 
-     <!-- Two Column Cost Configuration -->
-      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px; margin-bottom: 32px;">
-        
-        <!-- Panel 3 Tools Column -->
-        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 3: HRDD Strategy Tools</h3>
-            <button id="resetToolCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
-              Reset to Default
-            </button>
+    <!-- Two Column Cost Configuration -->
+      <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')}; margin-bottom: 32px;">
+        <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
+          <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 3: HRDD Strategy Tools</h3>
+              <button id="resetToolCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                Reset to Default
+              </button>
+            </div>
+            <div style="font-size: 12px; color: #475569;">Configure costs for each due diligence tool</div>
           </div>
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 16px;">Configure costs for each due diligence tool</div>
-          
-         <div id="toolCostControls" style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #374151;">
-              <thead>
-                <tr style="background: #e2e8f0; text-align: left;">
-                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937;">Tool</th>
-                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937; text-align: right;">Annual Programme (USD)</th>
-                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937; text-align: right;">Per Supplier (USD/yr)</th>
-                  <th style="padding: 10px 12px; font-weight: 600; color: #1f2937; text-align: right;">Internal Hours (per supplier/yr)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${riskEngine.hrddStrategyLabels.map((label, index) => `
-                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-                    <td style="padding: 10px 12px; font-weight: 500;">${label}</td>
-                    <td style="padding: 10px 12px; text-align: right;">
-                      <input type="number"
-                             id="toolAnnualCostNum_${index}"
-                             min="0"
-                             step="100"
-                             value="${sanitizedToolAnnualProgrammeCosts[index] || 0}"
-                             style="width: 110px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: right;">
-                    </td>
-                    <td style="padding: 10px 12px; text-align: right;">
-                      <input type="number"
-                             id="toolPerSupplierCostNum_${index}"
-                             min="0"
-                             step="10"
-                             value="${sanitizedToolPerSupplierCosts[index] || 0}"
-                             style="width: 110px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: right;">
-                    </td>
-                    <td style="padding: 10px 12px; text-align: right;">
-                      <input type="number"
-                             id="toolInternalHoursNum_${index}"
-                             min="0"
-                             step="5"
-                             value="${sanitizedToolInternalHours[index] || 0}"
-                             style="width: 110px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; text-align: right;">
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+          <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <h3 style="font-size: 16px; font-weight: 600; color: #92400e; margin: 0;">Panel 4: Response Methods</h3>
+              <button id="resetResponseCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                Reset to Default
+              </button>
+            </div>
+            <div style="font-size: 12px; color: #92400e;">Configure internal effort for each response method</div>
           </div>
         </div>
+        <div style="display: flex; flex-direction: column; gap: ${responsive('12px', '16px')};">
+          ${renderCostConfigurationRows()}
+        </div>
+      </div>
 
         <!-- Panel 4 Response Methods Column -->
           <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b;">
