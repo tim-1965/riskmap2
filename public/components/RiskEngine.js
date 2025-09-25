@@ -1452,11 +1452,32 @@ export class RiskEngine {
 
 
   // Panel 6 Budget Analysis Methods (conditionally available)
-  calculateBudgetAnalysis(
+  // Panel 6 Budget Analysis Methods (conditionally available)
+
+// Default cost assumptions - grouped together for easy modification
+getDefaultCostAssumptions() {
+  return {
+    // Panel 3 Tool Costs (6 tools)
+    toolAnnualProgrammeCosts: [100, 100, 100, 100, 100, 100], // Fixed annual programme costs
+    toolPerSupplierCosts: [100, 100, 100, 100, 100, 100],     // Variable per-supplier costs  
+    toolInternalHours: [100, 100, 100, 100, 100, 100],        // Internal hours per supplier per tool
+    
+    // Panel 4 Response Method Costs (6 methods)
+    responseInternalHours: [100, 100, 100, 100, 100, 100],    // Internal hours per supplier per response method
+    
+    // General defaults
+    defaultSupplierCount: 250,
+    defaultHourlyRate: 40
+  };
+}
+
+ calculateBudgetAnalysis(
     supplierCount,
     hourlyRate,
-    externalCosts,
-    internalHours,
+    toolAnnualProgrammeCosts,
+    toolPerSupplierCosts,
+    toolInternalHours,
+    responseInternalHours,
     hrddStrategy,
     transparencyEffectiveness,
     responsivenessStrategy,
@@ -1466,42 +1487,122 @@ export class RiskEngine {
     countryRisks,
     focus
   ) {
-    // Check if Panel 6 is enabled (this will be available globally)
-    if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
-      return null;
-    }
 
-    const safeSupplierCount = Math.max(1, Math.floor(supplierCount || 1));
-    const safeHourlyRate = Math.max(0, hourlyRate || 20);
-    const safeExternalCosts = Array.isArray(externalCosts) ? externalCosts : [100, 100, 100, 100, 100, 100];
-    const safeInternalHours = Array.isArray(internalHours) ? internalHours : [10, 10, 10, 10, 10, 10];
-    const safeHrddStrategy = Array.isArray(hrddStrategy) ? hrddStrategy : this.defaultHRDDStrategy;
+  // Check if Panel 6 is enabled (this will be available globally)
+  if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
+    return null;
+  }
+
+  const defaults = this.getDefaultCostAssumptions();
+ const safeSupplierCount = Math.max(1, Math.floor(supplierCount || 1));
+    const safeHourlyRate = Math.max(0, Number.isFinite(hourlyRate) ? hourlyRate : 20);
+
+    const toolCount = Array.isArray(this.hrddStrategyLabels)
+      ? this.hrddStrategyLabels.length
+      : 6;
+    const responseCount = Array.isArray(this.responsivenessLabels)
+      ? this.responsivenessLabels.length
+      : 6;
+
+    const safeAnnualProgrammeCosts = Array.from({ length: toolCount }, (_, index) => {
+      const value = Array.isArray(toolAnnualProgrammeCosts)
+        ? toolAnnualProgrammeCosts[index]
+        : undefined;
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    });
+
+    const safePerSupplierCosts = Array.from({ length: toolCount }, (_, index) => {
+      const value = Array.isArray(toolPerSupplierCosts)
+        ? toolPerSupplierCosts[index]
+        : undefined;
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    });
+
+    const safeToolInternalHours = Array.from({ length: toolCount }, (_, index) => {
+      const value = Array.isArray(toolInternalHours)
+        ? toolInternalHours[index]
+        : undefined;
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    });
+
+    const safeResponseInternalHours = Array.from({ length: responseCount }, (_, index) => {
+      const value = Array.isArray(responseInternalHours)
+        ? responseInternalHours[index]
+        : undefined;
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    });
+
+    const safeHrddStrategy = Array.from({ length: toolCount }, (_, index) => {
+      const value = Array.isArray(hrddStrategy) ? hrddStrategy[index] : undefined;
+      return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+    });
+
+    const safeResponsivenessStrategy = Array.from({ length: responseCount }, (_, index) => {
+      const value = Array.isArray(responsivenessStrategy)
+        ? responsivenessStrategy[index]
+        : Array.isArray(this.defaultResponsivenessStrategy)
+          ? this.defaultResponsivenessStrategy[index]
+          : 0;
+      return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+    });
 
     // Calculate actual deployment per tool based on coverage percentages
     const toolDeployments = safeHrddStrategy.map((coverage, index) => {
-      const suppliersUsingTool = Math.ceil(safeSupplierCount * (coverage / 100));
-      const externalCostPerTool = safeExternalCosts[index] || 0;
-      const hoursPerTool = safeInternalHours[index] || 0;
+      const coverageRatio = Math.max(0, Math.min(1, coverage / 100));
+      const suppliersUsingTool = Math.ceil(safeSupplierCount * coverageRatio);
 
-      const totalExternalCost = suppliersUsingTool * externalCostPerTool;
-      const totalInternalCost = suppliersUsingTool * hoursPerTool * safeHourlyRate;
+      const annualProgrammeBase = safeAnnualProgrammeCosts[index] || 0;
+      const annualProgrammeCost = annualProgrammeBase * coverageRatio;
+      const perSupplierCost = safePerSupplierCosts[index] || 0;
+      const hoursPerSupplier = safeToolInternalHours[index] || 0;
+
+      const totalExternalCost = annualProgrammeCost + (suppliersUsingTool * perSupplierCost);
+      const totalInternalCost = suppliersUsingTool * hoursPerSupplier * safeHourlyRate;
       const totalCost = totalExternalCost + totalInternalCost;
 
       return {
         toolIndex: index,
-        toolName: this.hrddStrategyLabels[index],
-        coverage: coverage,
+        toolName: Array.isArray(this.hrddStrategyLabels)
+          ? this.hrddStrategyLabels[index]
+          : `Tool ${index + 1}`,
+        coverage,
         suppliersUsingTool,
-        externalCostPerSupplier: externalCostPerTool,
-        hoursPerSupplier: hoursPerTool,
+        annualProgrammeBase,
+        annualProgrammeCost,
+        perSupplierCost,
+        externalCostPerSupplier: suppliersUsingTool > 0
+          ? totalExternalCost / suppliersUsingTool
+          : perSupplierCost,
+        hoursPerSupplier,
         totalExternalCost,
         totalInternalCost,
         totalCost
       };
     });
 
+    const responseDeployments = safeResponsivenessStrategy.map((coverage, index) => {
+      const coverageRatio = Math.max(0, Math.min(1, coverage / 100));
+      const suppliersUsingMethod = Math.ceil(safeSupplierCount * coverageRatio);
+      const hoursPerSupplier = safeResponseInternalHours[index] || 0;
+
+      const totalInternalCost = suppliersUsingMethod * hoursPerSupplier * safeHourlyRate;
+
+      return {
+        responseIndex: index,
+        responseName: Array.isArray(this.responsivenessLabels)
+          ? this.responsivenessLabels[index]
+          : `Response ${index + 1}`,
+        coverage,
+        suppliersUsingMethod,
+        hoursPerSupplier,
+        totalInternalCost
+      };
+    });
+
     const totalExternalCost = toolDeployments.reduce((sum, tool) => sum + tool.totalExternalCost, 0);
-    const totalInternalCost = toolDeployments.reduce((sum, tool) => sum + tool.totalInternalCost, 0);
+    const totalToolInternalCost = toolDeployments.reduce((sum, tool) => sum + tool.totalInternalCost, 0);
+    const totalResponseInternalCost = responseDeployments.reduce((sum, response) => sum + response.totalInternalCost, 0);
+    const totalInternalCost = totalToolInternalCost + totalResponseInternalCost;
     const totalBudget = totalExternalCost + totalInternalCost;
 
     return {
@@ -1509,18 +1610,24 @@ export class RiskEngine {
       hourlyRate: safeHourlyRate,
       totalExternalCost,
       totalInternalCost,
+      totalToolInternalCost,
+      totalResponseInternalCost,
       totalBudget,
       costPerSupplier: totalBudget / safeSupplierCount,
       toolDeployments,
-      currentAllocation: safeHrddStrategy
+      responseDeployments,
+      currentAllocation: safeHrddStrategy,
+      responseAllocation: safeResponsivenessStrategy
     };
   }
 
-optimizeBudgetAllocation(
+  optimizeBudgetAllocation(
     supplierCount,
     hourlyRate,
-    externalCosts,
-    internalHours,
+    toolAnnualProgrammeCosts,
+    toolPerSupplierCosts,
+    toolInternalHours,
+    responseInternalHours,
     hrddStrategy,
     transparencyEffectiveness,
     responsivenessStrategy,
@@ -1530,180 +1637,245 @@ optimizeBudgetAllocation(
     countryRisks,
     focus
   ) {
-    // Check if Panel 6 is enabled
-    if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
-      return null;
-    }
+  // Check if Panel 6 is enabled
+  if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
+    return null;
+  }
 
-    // Calculate current budget and effectiveness
-    const currentBudget = this.calculateBudgetAnalysis(
-      supplierCount, hourlyRate, externalCosts, internalHours,
-      hrddStrategy, transparencyEffectiveness, responsivenessStrategy,
-      responsivenessEffectiveness, selectedCountries, countryVolumes, countryRisks, focus
+  // Calculate current budget and effectiveness using new cost structure
+  const currentBudget = this.calculateBudgetAnalysis(
+      supplierCount,
+      hourlyRate,
+      toolAnnualProgrammeCosts,
+      toolPerSupplierCosts,
+      toolInternalHours,
+      responseInternalHours,
+      hrddStrategy,
+      transparencyEffectiveness,
+      responsivenessStrategy,
+      responsivenessEffectiveness,
+      selectedCountries,
+      countryVolumes,
+      countryRisks,
+      focus
     );
 
     if (!currentBudget) return null;
 
-    const responsivenessLength = Array.isArray(this.responsivenessLabels)
-      ? this.responsivenessLabels.length
-      : (Array.isArray(responsivenessStrategy) ? responsivenessStrategy.length : 0);
+    const safeSupplierCount = Math.max(1, Math.floor(supplierCount || 1));
 
-    const baseResponsiveness = Array.from({ length: responsivenessLength }, (_, index) => {
-      const provided = Array.isArray(responsivenessStrategy) ? responsivenessStrategy[index] : undefined;
-      if (Number.isFinite(provided)) {
-        return provided;
-      }
-      const fallback = Array.isArray(this.defaultResponsivenessStrategy)
-        ? this.defaultResponsivenessStrategy[index]
-        : 0;
-      return Number.isFinite(fallback) ? fallback : 0;
+  const defaults = this.getDefaultCostAssumptions();
+  const safeToolAnnualCosts = Array.isArray(toolAnnualProgrammeCosts) ? toolAnnualProgrammeCosts : defaults.toolAnnualProgrammeCosts;
+  const safeToolPerSupplierCosts = Array.isArray(toolPerSupplierCosts) ? toolPerSupplierCosts : defaults.toolPerSupplierCosts;
+  const safeToolInternalHours = Array.isArray(toolInternalHours) ? toolInternalHours : defaults.toolInternalHours;
+  const safeResponseInternalHours = Array.isArray(responseInternalHours) ? responseInternalHours : defaults.responseInternalHours;
+
+  // Helper function to calculate total cost for tool and response allocations
+  const calculateAllocationCost = (toolAllocation, responseAllocation) => {
+    let totalCost = 0;
+    
+    // Panel 3 tool costs (three components)
+    toolAllocation.forEach((coverage, index) => {
+      const suppliersUsingTool = Math.ceil(supplierCount * (coverage / 100));
+      const annualCost = safeToolAnnualCosts[index] || 0;
+      const perSupplierCost = (safeToolPerSupplierCosts[index] || 0) * suppliersUsingTool;
+      const internalCost = suppliersUsingTool * (safeToolInternalHours[index] || 0) * hourlyRate;
+      totalCost += annualCost + perSupplierCost + internalCost;
     });
+    
+    // Panel 4 response method costs
+    responseAllocation.forEach((allocation, index) => {
+      const effectiveSuppliers = Math.ceil(supplierCount * (allocation / 100));
+      const internalCost = effectiveSuppliers * (safeResponseInternalHours[index] || 0) * hourlyRate;
+      totalCost += internalCost;
+    });
+    
+    return totalCost;
+  };
 
-    if (baseResponsiveness.length > 0) {
-      baseResponsiveness[0] = Number.isFinite(hrddStrategy[0]) ? hrddStrategy[0] : 0;
+  // Helper function to evaluate combined tool and response allocation
+  const evaluateAllocation = (toolAllocation, responseAllocation) => {
+    const cost = calculateAllocationCost(toolAllocation, responseAllocation);
+    if (Math.abs(cost - targetBudget) > targetBudget * 0.05) { // Allow 5% budget tolerance
+      return { managedRisk: Infinity, cost }; // Penalize budget violations heavily
     }
 
-    const buildLinkedResponsiveness = (allocation) => {
-      const linked = [...baseResponsiveness];
-      if (linked.length > 0 && Array.isArray(allocation)) {
-        linked[0] = Number.isFinite(allocation[0]) ? allocation[0] : 0;
-      }
-      return linked;
-    };
+    // Ensure continuous worker voice linkage (tool[0] = response[0])
+    const linkedResponseAllocation = [...responseAllocation];
+    linkedResponseAllocation[0] = toolAllocation[0];
 
-    const currentDetails = this.calculateManagedRiskDetails(
+    const details = this.calculateManagedRiskDetails(
       selectedCountries, countryVolumes, countryRisks,
-      hrddStrategy, transparencyEffectiveness,
-      buildLinkedResponsiveness(hrddStrategy), responsivenessEffectiveness, focus
+      toolAllocation, transparencyEffectiveness,
+      linkedResponseAllocation, responsivenessEffectiveness, focus
     );
+    return { managedRisk: details.managedRisk, cost };
+  };
 
-    const targetBudget = currentBudget.totalBudget;
-    
-    // Enhanced optimization favoring continuous worker voice
-    let bestAllocation = [...hrddStrategy];
-    let bestManagedRisk = currentDetails.managedRisk;
-    
-    // Helper function to calculate total cost for an allocation
-    const calculateAllocationCost = (allocation) => {
-      let totalCost = 0;
-      allocation.forEach((coverage, index) => {
-        const suppliersUsingTool = Math.ceil(supplierCount * (coverage / 100));
-        const externalCost = suppliersUsingTool * (externalCosts[index] || 0);
-        const internalCost = suppliersUsingTool * (internalHours[index] || 0) * hourlyRate;
-        totalCost += externalCost + internalCost;
-      });
-      return totalCost;
-    };
+  const targetBudget = currentBudget.totalBudget;
+  
+  // Enhanced optimization for both tool and response allocations
+  let bestToolAllocation = [...hrddStrategy];
+  let bestResponseAllocation = [...responsivenessStrategy];
+  let bestManagedRisk = Infinity;
 
-    // Helper function to evaluate an allocation
-    const evaluateAllocation = (allocation) => {
-      const cost = calculateAllocationCost(allocation);
-      if (Math.abs(cost - targetBudget) > targetBudget * 0.03) { // Allow 3% budget tolerance
-        return { managedRisk: Infinity, cost }; // Penalize budget violations heavily
+  // Calculate current performance
+  const currentDetails = this.calculateManagedRiskDetails(
+    selectedCountries, countryVolumes, countryRisks,
+    hrddStrategy, transparencyEffectiveness,
+    responsivenessStrategy, responsivenessEffectiveness, focus
+  );
+  bestManagedRisk = currentDetails.managedRisk;
+
+  // Progress tracking
+  const updateProgress = (iteration, total, strategy) => {
+    if (typeof document !== 'undefined') {
+      const progressEl = document.getElementById('optimizationProgress');
+      if (progressEl) {
+        progressEl.textContent = `Testing strategy ${iteration}/${total}: ${strategy}`;
+      }
+    }
+  };
+
+  // Enhanced strategic optimization approaches considering both tools and response methods
+  const strategies = [
+    {
+      name: "Current allocation",
+      generator: () => ({ tools: [...hrddStrategy], responses: [...responsivenessStrategy] })
+    },
+    {
+      name: "Voice-heavy approach",
+      generator: () => ({ 
+        tools: [70, 40, 15, 30, 60, 80], // Maximize continuous voice
+        responses: [70, 10, 20, 15, 10, 5] // Align with voice-heavy approach
+      })
+    },
+    {
+      name: "Audit-focused approach", 
+      generator: () => ({ 
+        tools: [25, 15, 60, 35, 75, 85], // Favor unannounced audits
+        responses: [25, 15, 35, 20, 10, 10] // Align with audit approach
+      })
+    },
+    {
+      name: "Balanced high-engagement",
+      generator: () => ({ 
+        tools: [50, 35, 35, 25, 55, 70], // Balance voice + audits
+        responses: [50, 15, 30, 25, 15, 5] // Balanced response mix
+      })
+    },
+    {
+      name: "Maximum transparency focus",
+      generator: () => ({ 
+        tools: [85, 55, 45, 20, 45, 60], // Maximum detection capability
+        responses: [85, 20, 25, 15, 5, 5] // Strong real-time response
+      })
+    },
+    {
+      name: "Commercial leverage focus",
+      generator: () => ({ 
+        tools: [30, 25, 30, 40, 70, 80], // Mixed detection
+        responses: [30, 40, 30, 20, 10, 5] // Heavy commercial leverage
+      })
+    }
+  ];
+
+  // Test each strategic approach + hill climbing for both tool and response optimization
+  const totalIterations = strategies.length * 20; // 6 strategies × ~20 iterations each
+  let iterationCount = 0;
+
+  for (const strategy of strategies) {
+    // Test 3 variations of each strategy
+    for (let variation = 0; variation < 3; variation++) {
+      iterationCount++;
+      updateProgress(iterationCount, totalIterations, `${strategy.name} (var ${variation + 1})`);
+      
+      let allocation = strategy.generator();
+      let currentToolAllocation = [...allocation.tools];
+      let currentResponseAllocation = [...allocation.responses];
+      
+      // Add variation (except for iteration 0 which uses exact strategy)
+      if (variation > 0) {
+        const variationScale = variation * 15; // More variation for later iterations
+        currentToolAllocation = currentToolAllocation.map(coverage => {
+          const noise = (Math.random() - 0.5) * variationScale;
+          return Math.max(5, Math.min(95, coverage + noise));
+        });
+        currentResponseAllocation = currentResponseAllocation.map(allocation => {
+          const noise = (Math.random() - 0.5) * variationScale;
+          return Math.max(5, Math.min(95, allocation + noise));
+        });
       }
 
-      const details = this.calculateManagedRiskDetails(
-        selectedCountries, countryVolumes, countryRisks,
-        allocation, transparencyEffectiveness,
-        buildLinkedResponsiveness(allocation), responsivenessEffectiveness, focus
+      // Adjust to target budget
+      [currentToolAllocation, currentResponseAllocation] = this.adjustCombinedAllocationToTargetBudget(
+        currentToolAllocation, currentResponseAllocation, targetBudget, calculateAllocationCost
       );
-      return { managedRisk: details.managedRisk, cost };
-    };
 
-    // Progress tracking
-    const updateProgress = (iteration, total, strategy) => {
-      if (typeof document !== 'undefined') {
-        const progressEl = document.getElementById('optimizationProgress');
-        if (progressEl) {
-          progressEl.textContent = `Testing strategy ${iteration}/${total}: ${strategy}`;
-        }
-      }
-    };
-
-    // Strategic optimization approaches
-    const strategies = [
-      {
-        name: "Current allocation",
-        generator: () => [...hrddStrategy]
-      },
-      {
-        name: "Voice-heavy approach",
-        generator: () => {
-          const allocation = [60, 30, 15, 40, 70, 85]; // Favor continuous voice + surveys
-          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
-        }
-      },
-      {
-        name: "Audit-focused approach", 
-        generator: () => {
-          const allocation = [25, 15, 50, 35, 80, 90]; // Favor unannounced audits
-          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
-        }
-      },
-      {
-        name: "Balanced high-tech",
-        generator: () => {
-          const allocation = [45, 35, 30, 25, 60, 75]; // Balance voice + audits
-          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
-        }
-      },
-      {
-        name: "Extreme voice focus",
-        generator: () => {
-          const allocation = [80, 50, 10, 20, 50, 70]; // Maximum continuous voice
-          return this.adjustToTargetBudget(allocation, targetBudget, calculateAllocationCost);
-        }
-      }
-    ];
-
-    // Test each strategic approach + hill climbing
-    const totalIterations = strategies.length * 15; // 5 strategies × 3 variations × 5 hill climbs each
-    let iterationCount = 0;
-
-    for (const strategy of strategies) {
-      // Test 3 variations of each strategy
-      for (let variation = 0; variation < 3; variation++) {
+      // Hill climbing from this strategic starting point
+      for (let hillClimb = 0; hillClimb < 6; hillClimb++) {
         iterationCount++;
-        updateProgress(iterationCount, totalIterations, `${strategy.name} (var ${variation + 1})`);
+        updateProgress(iterationCount, totalIterations, `${strategy.name} hill climb ${hillClimb + 1}`);
         
-        let currentAllocation = strategy.generator();
+        const currentResult = evaluateAllocation(currentToolAllocation, currentResponseAllocation);
+        if (currentResult.managedRisk === Infinity) break;
         
-        // Add some variation (except for iteration 0 which uses exact strategy)
-        if (variation > 0) {
-          currentAllocation = currentAllocation.map(coverage => {
-            const noise = (Math.random() - 0.5) * 20 * variation; // More variation for later iterations
-            return Math.max(5, Math.min(95, coverage + noise));
-          });
-          currentAllocation = this.adjustToTargetBudget(currentAllocation, targetBudget, calculateAllocationCost);
-        }
+        let improved = false;
+        
+        // Try tool adjustments (favor continuous worker voice)
+        for (let toolIndex = 0; toolIndex < 6; toolIndex++) {
+          const stepSizes = toolIndex === 0 ? [10, 5, -5] : [8, -8, 5]; // Favor increases for voice tool
+          
+          for (const stepSize of stepSizes) {
+            let testToolAllocation = [...currentToolAllocation];
+            testToolAllocation[toolIndex] = Math.max(5, Math.min(95,
+              testToolAllocation[toolIndex] + stepSize
+            ));
 
-        // Hill climbing from this strategic starting point
-        for (let hillClimb = 0; hillClimb < 5; hillClimb++) {
-          iterationCount++;
-          updateProgress(iterationCount, totalIterations, `${strategy.name} hill climb ${hillClimb + 1}`);
+            // Maintain voice linkage
+            let testResponseAllocation = [...currentResponseAllocation];
+            if (toolIndex === 0) {
+              testResponseAllocation[0] = testToolAllocation[0];
+            }
+
+            // Adjust to budget constraints
+            [testToolAllocation, testResponseAllocation] = this.adjustCombinedAllocationToTargetBudget(
+              testToolAllocation, testResponseAllocation, targetBudget, calculateAllocationCost
+            );
+            
+            const testResult = evaluateAllocation(testToolAllocation, testResponseAllocation);
+            
+            if (testResult.managedRisk < currentResult.managedRisk) {
+              currentToolAllocation = testToolAllocation;
+              currentResponseAllocation = testResponseAllocation;
+              improved = true;
+              break;
+            }
+          }
           
-          const currentResult = evaluateAllocation(currentAllocation);
-          if (currentResult.managedRisk === Infinity) break;
-          
-          let improved = false;
-          
-          // Try adjustments favoring continuous worker voice
-          for (let toolIndex = 0; toolIndex < 6; toolIndex++) {
-            const stepSizes = toolIndex === 0 ? [10, 5, -5] : [5, -5, 10]; // Favor increases for voice tool
+          if (improved) break;
+        }
+        
+        // Try response method adjustments if tool adjustments didn't improve
+        if (!improved) {
+          for (let responseIndex = 1; responseIndex < 6; responseIndex++) { // Skip index 0 (linked to voice)
+            const stepSizes = [8, -8, 5];
             
             for (const stepSize of stepSizes) {
-              let testAllocation = [...currentAllocation];
-              testAllocation[toolIndex] = Math.max(5, Math.min(95,
-                testAllocation[toolIndex] + stepSize
+              let testResponseAllocation = [...currentResponseAllocation];
+              testResponseAllocation[responseIndex] = Math.max(5, Math.min(95,
+                testResponseAllocation[responseIndex] + stepSize
               ));
 
-              // Adjust other tools to maintain budget
-              testAllocation = this.adjustToTargetBudget(testAllocation, targetBudget, calculateAllocationCost);
+              // Adjust to budget constraints
+              [currentToolAllocation, testResponseAllocation] = this.adjustCombinedAllocationToTargetBudget(
+                currentToolAllocation, testResponseAllocation, targetBudget, calculateAllocationCost
+              );
               
-              const testResult = evaluateAllocation(testAllocation);
+              const testResult = evaluateAllocation(currentToolAllocation, testResponseAllocation);
               
               if (testResult.managedRisk < currentResult.managedRisk) {
-                currentAllocation = testAllocation;
+                currentResponseAllocation = testResponseAllocation;
                 improved = true;
                 break;
               }
@@ -1711,116 +1883,212 @@ optimizeBudgetAllocation(
             
             if (improved) break;
           }
-          
-          if (!improved) break; // No more improvements found
         }
         
-        // Check if this is the best solution found
-        const finalResult = evaluateAllocation(currentAllocation);
-        if (finalResult.managedRisk < bestManagedRisk && finalResult.managedRisk !== Infinity) {
-          bestManagedRisk = finalResult.managedRisk;
-          bestAllocation = [...currentAllocation];
-        }
+        if (!improved) break; // No more improvements found
+      }
+      
+      // Check if this is the best solution found
+      const finalResult = evaluateAllocation(currentToolAllocation, currentResponseAllocation);
+      if (finalResult.managedRisk < bestManagedRisk && finalResult.managedRisk !== Infinity) {
+        bestManagedRisk = finalResult.managedRisk;
+        bestToolAllocation = [...currentToolAllocation];
+        bestResponseAllocation = [...currentResponseAllocation];
       }
     }
-
-    // Clear progress indicator
-    if (typeof document !== 'undefined') {
-      const progressEl = document.getElementById('optimizationProgress');
-      if (progressEl) {
-        progressEl.textContent = 'Optimization complete!';
-        setTimeout(() => {
-          if (progressEl.parentNode) progressEl.parentNode.removeChild(progressEl);
-        }, 2000);
-      }
-    }
-
-    // Calculate final results
-    const optimizedDetails = this.calculateManagedRiskDetails(
-      selectedCountries, countryVolumes, countryRisks,
-      bestAllocation, transparencyEffectiveness,
-      buildLinkedResponsiveness(bestAllocation), responsivenessEffectiveness, focus
-    );
-
-    // Generate insight
-    const currentEffectiveness = currentDetails.managedRisk < currentDetails.baselineRisk ?
-      ((currentDetails.baselineRisk - currentDetails.managedRisk) / currentDetails.baselineRisk * 100) : 0;
-    const optimizedEffectiveness = optimizedDetails.managedRisk < optimizedDetails.baselineRisk ?
-      ((optimizedDetails.baselineRisk - optimizedDetails.managedRisk) / optimizedDetails.baselineRisk * 100) : 0;
-
-    const improvement = optimizedEffectiveness - currentEffectiveness;
-    const finalBudget = calculateAllocationCost(bestAllocation);
-    
-    let insight = '';
-    const voiceIncrease = bestAllocation[0] - hrddStrategy[0];
-    
-    if (improvement > 5) {
-      insight = `Strategic reallocation could improve risk reduction by ${improvement.toFixed(1)}%. ${voiceIncrease > 5 ? `The optimization recommends increasing continuous worker voice coverage by ${voiceIncrease.toFixed(0)}% for maximum impact.` : 'The optimization found a significantly better tool mix.'} `;
-    } else if (improvement > 1) {
-      insight = `Modest improvements possible (${improvement.toFixed(1)}% better risk reduction) through strategic reallocation.`;
-    } else if (improvement > 0.1) {
-      insight = `Minor optimization opportunities (${improvement.toFixed(1)}% improvement) identified.`;
-    } else {
-      insight = 'Your current allocation appears highly optimized. The strategic analysis found no significant improvements within budget constraints.';
-    }
-
-    return {
-      baselineRisk: currentDetails.baselineRisk,
-      currentManagedRisk: currentDetails.managedRisk,
-      optimizedManagedRisk: optimizedDetails.managedRisk,
-      currentAllocation: hrddStrategy,
-      optimizedAllocation: bestAllocation,
-      optimizedResponsivenessStrategy: buildLinkedResponsiveness(bestAllocation),
-      currentEffectiveness,
-      optimizedEffectiveness,
-      improvement,
-      insight,
-      budgetUtilization: Math.abs(finalBudget - targetBudget) < targetBudget * 0.03 ? 100 : 
-        (finalBudget / targetBudget * 100),
-      budgetConstraintMet: Math.abs(finalBudget - targetBudget) < targetBudget * 0.03,
-      finalBudget,
-      targetBudget,
-      iterationsTested: totalIterations
-    };
   }
 
-  // Helper method to adjust allocation to target budget
-  adjustToTargetBudget(allocation, targetBudget, calculateCost) {
-    const maxAdjustments = 20;
-    let adjustments = 0;
+  // Clear progress indicator
+  if (typeof document !== 'undefined') {
+    const progressEl = document.getElementById('optimizationProgress');
+    if (progressEl) {
+      progressEl.textContent = 'Optimization complete!';
+      setTimeout(() => {
+        if (progressEl.parentNode) progressEl.parentNode.removeChild(progressEl);
+      }, 2000);
+    }
+  }
+
+  // Calculate final results with optimized allocations
+  const optimizedDetails = this.calculateManagedRiskDetails(
+    selectedCountries, countryVolumes, countryRisks,
+    bestToolAllocation, transparencyEffectiveness,
+    bestResponseAllocation, responsivenessEffectiveness, focus
+  );
+
+  // Generate comprehensive insight including both tool and response optimization
+  const currentEffectiveness = currentDetails.managedRisk < currentDetails.baselineRisk ?
+    ((currentDetails.baselineRisk - currentDetails.managedRisk) / currentDetails.baselineRisk * 100) : 0;
+  const optimizedEffectiveness = optimizedDetails.managedRisk < optimizedDetails.baselineRisk ?
+    ((optimizedDetails.baselineRisk - optimizedDetails.managedRisk) / optimizedDetails.baselineRisk * 100) : 0;
+
+  const improvement = optimizedEffectiveness - currentEffectiveness;
+  const finalBudget = calculateAllocationCost(bestToolAllocation, bestResponseAllocation);
+  
+  const voiceIncrease = bestToolAllocation[0] - hrddStrategy[0];
+  const responseChanges = bestResponseAllocation.map((alloc, i) => alloc - responsivenessStrategy[i]);
+  const significantResponseChanges = responseChanges.filter((change, i) => Math.abs(change) > 10 && i > 0); // Exclude voice link
+  
+  let insight = '';
+  if (improvement > 8) {
+    insight = `Major optimization opportunity found: ${improvement.toFixed(1)}% better risk reduction. `;
+    if (voiceIncrease > 10) {
+      insight += `Significantly increase continuous worker voice coverage (+${voiceIncrease.toFixed(0)}%). `;
+    }
+    if (significantResponseChanges.length > 0) {
+      insight += `Also optimize response method allocation for maximum impact.`;
+    }
+  } else if (improvement > 3) {
+    insight = `Significant optimization possible (${improvement.toFixed(1)}% improvement) through strategic reallocation of both tools and response methods.`;
+  } else if (improvement > 0.5) {
+    insight = `Moderate optimization opportunities (${improvement.toFixed(1)}% improvement) identified across tool and response allocations.`;
+  } else {
+    insight = 'Your current combined tool and response allocation appears well-optimized. The comprehensive analysis found minimal improvement opportunities within budget constraints.';
+  }
+
+  return {
+    baselineRisk: currentDetails.baselineRisk,
+    currentManagedRisk: currentDetails.managedRisk,
+    optimizedManagedRisk: optimizedDetails.managedRisk,
+    currentToolAllocation: hrddStrategy,
+    currentResponseAllocation: responsivenessStrategy,
+    optimizedToolAllocation: bestToolAllocation,
+    optimizedResponseAllocation: bestResponseAllocation,
+    currentEffectiveness,
+    optimizedEffectiveness,
+    improvement,
+    insight,
+    budgetUtilization: Math.abs(finalBudget - targetBudget) < targetBudget * 0.05 ? 100 : 
+      (finalBudget / targetBudget * 100),
+    budgetConstraintMet: Math.abs(finalBudget - targetBudget) < targetBudget * 0.05,
+    finalBudget,
+    targetBudget,
+    iterationsTested: totalIterations,
     
-    while (adjustments < maxAdjustments) {
-      const currentCost = calculateCost(allocation);
-      const difference = currentCost - targetBudget;
+    // Enhanced breakdown showing both tool and response optimization
+    toolChanges: bestToolAllocation.map((alloc, i) => ({
+      tool: this.hrddStrategyLabels[i],
+      current: hrddStrategy[i],
+      optimized: alloc,
+      change: alloc - hrddStrategy[i]
+    })),
+    responseChanges: bestResponseAllocation.map((alloc, i) => ({
+      method: this.responsivenessLabels[i],
+      current: responsivenessStrategy[i],
+      optimized: alloc,
+      change: alloc - responsivenessStrategy[i]
+    }))
+  };
+}
+
+  // Helper method to adjust allocation to target budget
+  // Helper method to adjust both tool and response allocations to target budget
+adjustCombinedAllocationToTargetBudget(toolAllocation, responseAllocation, targetBudget, calculateCost) {
+  const maxAdjustments = 30;
+  let adjustments = 0;
+  let currentToolAllocation = [...toolAllocation];
+  let currentResponseAllocation = [...responseAllocation];
+  
+  while (adjustments < maxAdjustments) {
+    const currentCost = calculateCost(currentToolAllocation, currentResponseAllocation);
+    const difference = currentCost - targetBudget;
+    
+    if (Math.abs(difference) < targetBudget * 0.05) break; // Within 5% tolerance
+    
+    if (difference > 0) {
+      // Cost too high, reduce allocations strategically
+      // Priority: reduce non-voice tools first, then response methods, then voice as last resort
       
-      if (Math.abs(difference) < targetBudget * 0.03) break; // Within 3% tolerance
+      const nonVoiceToolsWithRoom = [1, 2, 3, 4, 5].filter(i => currentToolAllocation[i] > 10);
+      const responseMethodsWithRoom = [1, 2, 3, 4, 5].filter(i => currentResponseAllocation[i] > 10);
       
-      if (difference > 0) {
-        // Cost too high, reduce allocation (avoid reducing continuous voice if possible)
-        const nonVoiceTools = [1, 2, 3, 4, 5].filter(i => allocation[i] > 10);
-        if (nonVoiceTools.length > 0) {
-          const toolToReduce = nonVoiceTools[Math.floor(Math.random() * nonVoiceTools.length)];
-          allocation[toolToReduce] = Math.max(5, allocation[toolToReduce] - 5);
-        } else if (allocation[0] > 10) {
-          allocation[0] = Math.max(5, allocation[0] - 5);
-        }
+      if (nonVoiceToolsWithRoom.length > 0) {
+        const toolToReduce = nonVoiceToolsWithRoom[Math.floor(Math.random() * nonVoiceToolsWithRoom.length)];
+        currentToolAllocation[toolToReduce] = Math.max(5, currentToolAllocation[toolToReduce] - 8);
+      } else if (responseMethodsWithRoom.length > 0) {
+        const methodToReduce = responseMethodsWithRoom[Math.floor(Math.random() * responseMethodsWithRoom.length)];
+        currentResponseAllocation[methodToReduce] = Math.max(5, currentResponseAllocation[methodToReduce] - 8);
+      } else if (currentToolAllocation[0] > 15) {
+        // Reduce voice only if necessary and not too low
+        currentToolAllocation[0] = Math.max(10, currentToolAllocation[0] - 5);
+        currentResponseAllocation[0] = currentToolAllocation[0]; // Maintain linkage
+      }
+    } else {
+      // Cost too low, increase allocations strategically
+      // Priority: increase voice first, then high-impact tools/methods
+      
+      if (currentToolAllocation[0] < 85) {
+        currentToolAllocation[0] = Math.min(95, currentToolAllocation[0] + 8);
+        currentResponseAllocation[0] = currentToolAllocation[0]; // Maintain linkage
+      } else if (currentToolAllocation[2] < 85) { // Unannounced audits
+        currentToolAllocation[2] = Math.min(95, currentToolAllocation[2] + 6);
+      } else if (currentResponseAllocation[1] < 85) { // Commercial levers
+        currentResponseAllocation[1] = Math.min(95, currentResponseAllocation[1] + 6);
       } else {
-        // Cost too low, increase allocation (prefer continuous voice)
-        if (allocation[0] < 90) {
-          allocation[0] = Math.min(95, allocation[0] + 5);
-        } else {
+        // Increase random allocation
+        const isToolIncrease = Math.random() < 0.6; // 60% chance to increase tools
+        if (isToolIncrease) {
           const toolToIncrease = Math.floor(Math.random() * 6);
-          if (allocation[toolToIncrease] < 90) {
-            allocation[toolToIncrease] = Math.min(95, allocation[toolToIncrease] + 5);
+          if (currentToolAllocation[toolToIncrease] < 90) {
+            currentToolAllocation[toolToIncrease] = Math.min(95, currentToolAllocation[toolToIncrease] + 5);
+            if (toolToIncrease === 0) {
+              currentResponseAllocation[0] = currentToolAllocation[0]; // Maintain linkage
+            }
+          }
+        } else {
+          const methodToIncrease = Math.floor(Math.random() * 6);
+          if (currentResponseAllocation[methodToIncrease] < 90) {
+            currentResponseAllocation[methodToIncrease] = Math.min(95, currentResponseAllocation[methodToIncrease] + 5);
+            if (methodToIncrease === 0) {
+              currentToolAllocation[0] = currentResponseAllocation[0]; // Maintain linkage
+            }
           }
         }
       }
-      
-      adjustments++;
     }
     
-    return allocation;
-  
+    adjustments++;
   }
+  
+  return [currentToolAllocation, currentResponseAllocation];
+}
+
+// Helper method to adjust allocation to target budget (legacy method kept for compatibility)
+adjustToTargetBudget(allocation, targetBudget, calculateCost) {
+  const maxAdjustments = 20;
+  let adjustments = 0;
+  
+  while (adjustments < maxAdjustments) {
+    const currentCost = calculateCost(allocation);
+    const difference = currentCost - targetBudget;
+    
+    if (Math.abs(difference) < targetBudget * 0.03) break; // Within 3% tolerance
+    
+    if (difference > 0) {
+      // Cost too high, reduce allocation (avoid reducing continuous voice if possible)
+      const nonVoiceTools = [1, 2, 3, 4, 5].filter(i => allocation[i] > 10);
+      if (nonVoiceTools.length > 0) {
+        const toolToReduce = nonVoiceTools[Math.floor(Math.random() * nonVoiceTools.length)];
+        allocation[toolToReduce] = Math.max(5, allocation[toolToReduce] - 5);
+      } else if (allocation[0] > 10) {
+        allocation[0] = Math.max(5, allocation[0] - 5);
+      }
+    } else {
+      // Cost too low, increase allocation (prefer continuous voice)
+      if (allocation[0] < 90) {
+        allocation[0] = Math.min(95, allocation[0] + 5);
+      } else {
+        const toolToIncrease = Math.floor(Math.random() * 6);
+        if (allocation[toolToIncrease] < 90) {
+          allocation[toolToIncrease] = Math.min(95, allocation[toolToIncrease] + 5);
+        }
+      }
+    }
+    
+    adjustments++;
+  }
+  
+  return allocation;
+}
 }
 export const riskEngine = new RiskEngine();

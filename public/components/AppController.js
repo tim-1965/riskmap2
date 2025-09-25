@@ -138,15 +138,16 @@ export class AppController {
     this.handleWheelScroll = this.handleWheelScroll.bind(this);
 
     // Panel 6 handlers (only if enabled)
-    (ENABLE_PANEL_6 ? [
-    this.onSupplierCountChange = this.onSupplierCountChange.bind(this),
-    this.onHourlyRateChange = this.onHourlyRateChange.bind(this),
-    this.onToolAnnualProgrammeCostChange = this.onToolAnnualProgrammeCostChange.bind(this),
-    this.onToolPerSupplierCostChange = this.onToolPerSupplierCostChange.bind(this),
-    this.onToolInternalHoursChange = this.onToolInternalHoursChange.bind(this),
-    this.onResponseInternalHoursChange = this.onResponseInternalHoursChange.bind(this),
-    this.optimizeBudgetAllocation = this.optimizeBudgetAllocation.bind(this)
-    ] : []),
+    if (ENABLE_PANEL_6) {
+      this.onSupplierCountChange = this.onSupplierCountChange.bind(this);
+      this.onHourlyRateChange = this.onHourlyRateChange.bind(this);
+      this.onToolAnnualProgrammeCostChange = this.onToolAnnualProgrammeCostChange.bind(this);
+      this.onToolPerSupplierCostChange = this.onToolPerSupplierCostChange.bind(this);
+      this.onToolInternalHoursChange = this.onToolInternalHoursChange.bind(this);
+      this.onResponseInternalHoursChange = this.onResponseInternalHoursChange.bind(this);
+    }
+
+this.optimizeBudgetAllocation = this.optimizeBudgetAllocation.bind(this);
 
     // Container
     this.containerElement = null;
@@ -572,24 +573,24 @@ onResponseInternalHoursChange(responseIndex, hours) {
   }
 }
 
-  optimizeBudgetAllocation() {
-    if (!ENABLE_PANEL_6) return null;
-    const optimization = riskEngine.optimizeBudgetAllocation(
-      this.state.supplierCount,
-      this.state.hourlyRate,
-      this.state.externalCosts,
-      this.state.internalHours,
-      this.state.hrddStrategy,
-      this.state.transparencyEffectiveness,
-      this.state.responsivenessStrategy,
-      this.state.responsivenessEffectiveness,
-      this.state.selectedCountries,
-      this.state.countryVolumes,
-      this.state.countryRisks,
-      this.state.focus
+ optimizeBudgetAllocation() {
+  if (!ENABLE_PANEL_6) return null;
+  return riskEngine.optimizeBudgetAllocation(
+    this.state.supplierCount,
+    this.state.hourlyRate,
+    this.state.toolAnnualProgrammeCosts,
+    this.state.toolPerSupplierCosts,
+    this.state.toolInternalHours,
+    this.state.responseInternalHours,
+    this.state.hrddStrategy,
+    this.state.transparencyEffectiveness,
+    this.state.responsivenessStrategy,
+    this.state.responsivenessEffectiveness,
+    this.state.selectedCountries,
+    this.state.countryVolumes,
+    this.state.countryRisks,
+    this.state.focus
     );
-
-    return optimization;
   }
 
   /* ------------------------------- UI -------------------------------- */
@@ -1400,12 +1401,14 @@ if (ENABLE_PANEL_6 && panel === 6) {
         </div>
       `);
 
-      queueMicrotask(() => {
+     queueMicrotask(() => {
         UIComponents.createCostAnalysisPanel('costAnalysisPanel', {
           supplierCount: this.state.supplierCount,
           hourlyRate: this.state.hourlyRate,
-          externalCosts: this.state.externalCosts,
-          internalHours: this.state.internalHours,
+          toolAnnualProgrammeCosts: this.state.toolAnnualProgrammeCosts,
+          toolPerSupplierCosts: this.state.toolPerSupplierCosts,
+          toolInternalHours: this.state.toolInternalHours,
+          responseInternalHours: this.state.responseInternalHours,
           hrddStrategy: this.state.hrddStrategy,
           transparencyEffectiveness: this.state.transparencyEffectiveness,
           responsivenessStrategy: this.state.responsivenessStrategy,
@@ -1418,8 +1421,10 @@ if (ENABLE_PANEL_6 && panel === 6) {
           managedRisk: this.state.managedRisk,
           onSupplierCountChange: this.onSupplierCountChange,
           onHourlyRateChange: this.onHourlyRateChange,
-          onExternalCostChange: this.onExternalCostChange,
-          onInternalHoursChange: this.onInternalHoursChange,
+          onToolAnnualProgrammeCostChange: this.onToolAnnualProgrammeCostChange,
+          onToolPerSupplierCostChange: this.onToolPerSupplierCostChange,
+          onToolInternalHoursChange: this.onToolInternalHoursChange,
+          onResponseInternalHoursChange: this.onResponseInternalHoursChange,
           optimizeBudgetAllocation: this.optimizeBudgetAllocation
         });
       });
@@ -1720,7 +1725,7 @@ if (ENABLE_PANEL_6 && panel === 6) {
 
   /* ---------------------------- Persistence -------------------------- */
 
-  saveState() {
+   saveState() {
     try {
       const snapshot = {
         selectedCountries: this.state.selectedCountries,
@@ -1733,6 +1738,15 @@ if (ENABLE_PANEL_6 && panel === 6) {
         riskConcentration: this.state.riskConcentration,
         countryVolumes: this.state.countryVolumes
       };
+
+      if (ENABLE_PANEL_6) {
+        snapshot.supplierCount = this.state.supplierCount;
+        snapshot.hourlyRate = this.state.hourlyRate;
+        snapshot.toolAnnualProgrammeCosts = [...this.state.toolAnnualProgrammeCosts];
+        snapshot.toolPerSupplierCosts = [...this.state.toolPerSupplierCosts];
+        snapshot.toolInternalHours = [...this.state.toolInternalHours];
+        snapshot.responseInternalHours = [...this.state.responseInternalHours];
+      }
       localStorage.setItem('hrdd_app_state_v5', JSON.stringify(snapshot));
       this.state.isDirty = false;
     } catch (e) {
@@ -1777,6 +1791,40 @@ if (ENABLE_PANEL_6 && panel === 6) {
       if (typeof parsed.focus === 'number') {
         this.state.focus = this.clamp01(parsed.focus);
         restored = true;
+      }
+      if (ENABLE_PANEL_6) {
+        if (typeof parsed.supplierCount === 'number') {
+          this.state.supplierCount = Math.max(1, Math.floor(parsed.supplierCount));
+          restored = true;
+        }
+        if (typeof parsed.hourlyRate === 'number') {
+          this.state.hourlyRate = Math.max(0, parsed.hourlyRate);
+          restored = true;
+        }
+        if (Array.isArray(parsed.toolAnnualProgrammeCosts)) {
+          this.state.toolAnnualProgrammeCosts = parsed.toolAnnualProgrammeCosts.map(value =>
+            Math.max(0, Number.isFinite(value) ? value : 0)
+          );
+          restored = true;
+        }
+        if (Array.isArray(parsed.toolPerSupplierCosts)) {
+          this.state.toolPerSupplierCosts = parsed.toolPerSupplierCosts.map(value =>
+            Math.max(0, Number.isFinite(value) ? value : 0)
+          );
+          restored = true;
+        }
+        if (Array.isArray(parsed.toolInternalHours)) {
+          this.state.toolInternalHours = parsed.toolInternalHours.map(value =>
+            Math.max(0, Number.isFinite(value) ? value : 0)
+          );
+          restored = true;
+        }
+        if (Array.isArray(parsed.responseInternalHours)) {
+          this.state.responseInternalHours = parsed.responseInternalHours.map(value =>
+            Math.max(0, Number.isFinite(value) ? value : 0)
+          );
+          restored = true;
+        }
       }
       if (typeof parsed.riskConcentration === 'number') {
         this.state.riskConcentration = parsed.riskConcentration;
