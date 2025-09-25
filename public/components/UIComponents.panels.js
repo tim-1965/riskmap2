@@ -2564,9 +2564,23 @@ function renderRiskTransformationComparison(optimization, budgetData, baselineRi
   const mobile = isMobileView();
   const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
 
+  const optimizedToolAllocation = Array.isArray(optimization?.optimizedToolAllocation)
+    ? optimization.optimizedToolAllocation
+    : Array.isArray(optimization?.optimizedAllocation)
+      ? optimization.optimizedAllocation
+      : Array.isArray(hrddStrategy)
+        ? [...hrddStrategy]
+        : [];
+
+  const optimizedResponseAllocation = Array.isArray(optimization?.optimizedResponseAllocation)
+    ? optimization.optimizedResponseAllocation
+    : Array.isArray(responsivenessStrategy)
+      ? [...responsivenessStrategy]
+      : [];
+
   // Calculate current risk transformation steps
   const currentTransformation = calculateRiskTransformationSteps(
-    baselineRisk, managedRisk, hrddStrategy, transparencyEffectiveness, 
+    baselineRisk, managedRisk, hrddStrategy, transparencyEffectiveness,
     responsivenessStrategy, responsivenessEffectiveness, focus
   );
 
