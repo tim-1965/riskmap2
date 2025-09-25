@@ -1754,7 +1754,7 @@ export function createCostAnalysisPanel(containerId, options) {
     ? optimizeBudgetAllocation()
     : null;
 
-  const rowCount = Math.max(strategyCount, responseCount);
+  const rowCount = strategyCount;
 
   const inputGridTemplate = responsive('1fr', 'repeat(3, minmax(0, 1fr))');
   const inputGridGap = responsive('12px', '16px');
@@ -1804,42 +1804,14 @@ export function createCostAnalysisPanel(containerId, options) {
     `;
   };
 
-  const renderResponseCard = (index) => {
-    if (!Array.isArray(riskEngine?.responsivenessLabels) || index >= riskEngine.responsivenessLabels.length) {
-      return `
-        <div style="background: transparent; border-radius: 12px;"></div>
-      `;
-    }
-
-    const label = riskEngine.responsivenessLabels[index];
-
-     return `
-      <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
-        <div style="font-size: 13px; font-weight: 600; color: #92400e;">${label}</div>
-        <div style="display: grid; grid-template-columns: ${inputGridTemplate}; gap: ${inputGridGap}; align-items: stretch;">
-          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #92400e; ${mobile ? '' : 'grid-column: 1 / span 3;'}">
-            <span>Internal Hours (per supplier)</span>
-            <input type="number"
-                   id="responseInternalHoursNum_${index}"
-                   min="0"
-                   step="5"
-                   value="${sanitizedResponseInternalHours[index] || 0}"
-                   style="width: 100%; padding: 8px 10px; border: 1px solid #fbbf24; border-radius: 6px; font-size: 13px; text-align: right; background: white;">
-          </label>
-        </div>
-      </div>
-    `;
-  };
-
-  const renderCostConfigurationRows = () => {
+ const renderCostConfigurationRows = () => {
     if (rowCount === 0) {
       return '';
     }
 
     return Array.from({ length: rowCount }, (_, index) => `
-      <div style="display: grid; grid-template-columns: ${responsive('1fr', 'minmax(0, 3fr) minmax(0, 1fr)')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
+      <div style="display: grid; grid-template-columns: 1fr; gap: ${responsive('12px', '24px')}; align-items: stretch;">
         ${renderToolCard(index)}
-        ${renderResponseCard(index)}
       </div>
     `).join('');
   };
@@ -1872,9 +1844,9 @@ export function createCostAnalysisPanel(containerId, options) {
         </div>
       </div>
 
-    <!-- Two Column Cost Configuration -->
+     <!-- Cost Configuration -->
       <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')}; margin-bottom: 32px;">
-        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'minmax(0, 3fr) minmax(0, 1fr)')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: ${responsive('12px', '24px')}; align-items: stretch;">
           <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
               <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 3: HRDD Strategy Tools</h3>
@@ -1884,23 +1856,14 @@ export function createCostAnalysisPanel(containerId, options) {
             </div>
             <div style="font-size: 12px; color: #475569;">Configure costs for each due diligence tool</div>
           </div>
-          <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b; display: flex; flex-direction: column; gap: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #92400e; margin: 0;">Panel 4: Response Methods</h3>
-              <button id="resetResponseCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                Reset to Default
-              </button>
-            </div>
-            <div style="font-size: 12px; color: #92400e;">Configure internal effort for each response method</div>
-          </div>
         </div>
         <div style="display: flex; flex-direction: column; gap: ${responsive('12px', '16px')};">
           ${renderCostConfigurationRows()}
         </div>
       </div>
 
-        <!-- Panel 4 Response Methods Column -->
-          <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b;">
+      <!-- Panel 4 Response Methods Column -->
+      <div style="background: #fef3c7; padding: 20px; border-radius: 12px; border: 1px solid #f59e0b;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 4: Response Methods</h3>
             <button id="resetResponseCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
