@@ -1876,13 +1876,13 @@ optimizeBudgetAllocation(
         updateProgress('Simulated Annealing', i + 1, iterations);
         
         // Generate neighbor with budget-aware moves
-        const newTools = currentTools.map((val, idx) => {
+        let newTools = currentTools.map((val, idx) => {
           const stepSize = Math.random() * 12 - 6;
           const voiceBonus = idx === 0 && startingStrategy === 'voice_priority' ? 3 : 0;
           return Math.max(8, Math.min(92, val + stepSize + voiceBonus * Math.random()));
         });
-        
-        const newResponses = [...currentResponses];
+
+        let newResponses = [...currentResponses];
         newResponses[0] = newTools[0]; // Voice linkage
         for (let j = 1; j < newResponses.length; j++) {
           const stepSize = Math.random() * 10 - 5;
