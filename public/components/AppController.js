@@ -43,16 +43,16 @@ export class AppController {
 
       // Panel 6 cost analysis state (only if enabled)
         ...(ENABLE_PANEL_6 ? {
-        supplierCount: 250, // Default number of suppliers
+        supplierCount: 500, // Default number of suppliers
         hourlyRate: 40, // Default cost per man hour in USD
 
       // Panel 3 Tools - Three cost components each
-        toolAnnualProgrammeCosts: [100, 100, 100, 100, 100, 100], // Annual programme cost for all suppliers
-        toolPerSupplierCosts: [100, 100, 100, 100, 100, 100], // Additional per supplier annual cost
-        toolInternalHours: [100, 100, 100, 100, 100, 100], // Internal work hours per supplier per year
+        toolAnnualProgrammeCosts: [12000, 0, 0, 40000, 0, 0], // Annual programme cost for all suppliers
+        toolPerSupplierCosts: [120, 0, 1000, 0, 0, 0], // Additional per supplier annual cost
+        toolInternalHours: [6, 20, 20, 6, 2, 1], // Internal work hours per supplier per year
 
       // Panel 4 Response Methods - Internal hours only
-      responseInternalHours: [100, 100, 100, 100, 100, 100], // Internal work hours per supplier per year for each response method
+      responseInternalHours: [0, 10, 10, 6, 2, 2], // Internal work hours per supplier per year for each response method
         } : {}),
 
       // Selection + volumes

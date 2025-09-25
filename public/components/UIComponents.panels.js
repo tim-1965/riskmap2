@@ -1756,6 +1756,9 @@ export function createCostAnalysisPanel(containerId, options) {
 
   const rowCount = Math.max(strategyCount, responseCount);
 
+  const inputGridTemplate = responsive('1fr', 'repeat(3, minmax(0, 1fr))');
+  const inputGridGap = responsive('12px', '16px');
+
   const renderToolCard = (index) => {
     if (!Array.isArray(riskEngine?.hrddStrategyLabels) || index >= riskEngine.hrddStrategyLabels.length) {
       return `
@@ -1768,7 +1771,7 @@ export function createCostAnalysisPanel(containerId, options) {
     return `
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
         <div style="font-size: 13px; font-weight: 600; color: #1f2937;">${label}</div>
-        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(3, minmax(0, 1fr))')}; gap: ${responsive('12px', '16px')};">
+        <div style="display: grid; grid-template-columns: ${inputGridTemplate}; gap: ${inputGridGap}; align-items: stretch;">
           <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #475569;">
             <span>Annual Programme (USD)</span>
             <input type="number"
@@ -1810,18 +1813,20 @@ export function createCostAnalysisPanel(containerId, options) {
 
     const label = riskEngine.responsivenessLabels[index];
 
-    return `
+     return `
       <div style="background: #fffbeb; border: 1px solid #f59e0b; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%;">
         <div style="font-size: 13px; font-weight: 600; color: #92400e;">${label}</div>
-        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #92400e;">
-          <span>Internal Hours (per supplier)</span>
-          <input type="number"
-                 id="responseInternalHoursNum_${index}"
-                 min="0"
-                 step="5"
-                 value="${sanitizedResponseInternalHours[index] || 0}"
-                 style="width: 100%; padding: 8px 10px; border: 1px solid #fbbf24; border-radius: 6px; font-size: 13px; text-align: right; background: white;">
-        </label>
+        <div style="display: grid; grid-template-columns: ${inputGridTemplate}; gap: ${inputGridGap}; align-items: stretch;">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 500; color: #92400e; ${mobile ? '' : 'grid-column: 1 / span 3;'}">
+            <span>Internal Hours (per supplier)</span>
+            <input type="number"
+                   id="responseInternalHoursNum_${index}"
+                   min="0"
+                   step="5"
+                   value="${sanitizedResponseInternalHours[index] || 0}"
+                   style="width: 100%; padding: 8px 10px; border: 1px solid #fbbf24; border-radius: 6px; font-size: 13px; text-align: right; background: white;">
+          </label>
+        </div>
       </div>
     `;
   };
@@ -1832,7 +1837,7 @@ export function createCostAnalysisPanel(containerId, options) {
     }
 
     return Array.from({ length: rowCount }, (_, index) => `
-      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
+      <div style="display: grid; grid-template-columns: ${responsive('1fr', 'minmax(0, 3fr) minmax(0, 1fr)')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
         ${renderToolCard(index)}
         ${renderResponseCard(index)}
       </div>
@@ -1869,7 +1874,7 @@ export function createCostAnalysisPanel(containerId, options) {
 
     <!-- Two Column Cost Configuration -->
       <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')}; margin-bottom: 32px;">
-        <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
+        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'minmax(0, 3fr) minmax(0, 1fr)')}; gap: ${responsive('12px', '24px')}; align-items: stretch;">
           <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
               <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 3: HRDD Strategy Tools</h3>
