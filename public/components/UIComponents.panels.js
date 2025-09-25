@@ -2010,6 +2010,278 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
     `;
   }
 
+// Add this function to UIComponents.panels.js after renderOptimizationResults
+
+function renderOptimizationResults(optimization, budgetData, baselineRisk, managedRisk) {
+  if (!optimization) {
+    return `
+      <div style="text-align: center; padding: 20px; color: #6b7280;">
+        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+        <p>Click "Run Optimization" to see how to improve your risk reduction per dollar spent</p>
+        <div style="margin-top: 12px; font-size: 12px; color: #9ca3af;">
+          <div style="display: inline-flex; align-items: center; gap: 6px;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444;"></div>
+            <span>Not optimized with current settings</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const safeBudgetData = budgetData || {};
+  const currentAllocation = Array.isArray(safeBudgetData.currentAllocation)
+    ? safeBudgetData.currentAllocation
+    : [];
+
+  const optimizedToolAllocation = Array.isArray(optimization?.optimizedToolAllocation)
+    ? optimization.optimizedToolAllocation
+    : Array.isArray(optimization?.optimizedAllocation)
+      ? optimization.optimizedAllocation
+      : [];
+
+  const currentRiskReduction = ((baselineRisk - managedRisk) / baselineRisk * 100).toFixed(1);
+  const optimizedRiskReduction = optimization.optimizedRiskReduction 
+    ? (optimization.optimizedRiskReduction / optimization.baselineRisk * 100).toFixed(1)
+    : currentRiskReduction;
+  const improvementPts = optimization.improvement || 0;
+
+  // Optimization status indicator
+  const optimizationStatus = optimization.alreadyOptimized 
+    ? { color: '#22c55e', text: 'Previously optimized', icon: '✓' }
+    : optimization.optimizationRun 
+      ? { color: '#3b82f6', text: 'Newly optimized', icon: '🔄' }
+      : { color: '#ef4444', text: 'Not optimized', icon: '○' };
+
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+      
+      <!-- Optimization Status Banner -->
+      <div style="grid-column: 1 / -1; background: ${optimizationStatus.color}15; border: 1px solid ${optimizationStatus.color}40; border-radius: 8px; padding: 12px 16px;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span style="font-size: 16px;">${optimizationStatus.icon}</span>
+          <span style="font-size: 14px; font-weight: 600; color: ${optimizationStatus.color};">
+            ${optimizationStatus.text}${optimization.reOptimizationAttempted ? ' (Previous results retained)' : ''}
+          </span>
+        </div>
+      </div>
+      
+      <!-- Current vs Optimized Comparison -->
+      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
+        <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Risk Reduction Comparison</h4>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #374151;">Current Setup:</span>
+          <span style="font-size: 13px; font-weight: 600; color: #6b7280;">${currentRiskReduction}% reduction</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: #374151;">Optimized Setup:</span>
+          <span style="font-size: 13px; font-weight: 600; color: #16a34a;">${optimizedRiskReduction}% reduction</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+          <span style="font-size: 13px; font-weight: 600; color: #14532d;">Improvement:</span>
+          <span style="font-size: 13px; font-weight: 600; color: ${improvementPts > 0 ? '#16a34a' : improvementPts < 0 ? '#dc2626' : '#6b7280'};">
+            ${improvementPts > 0 ? '+' : ''}${improvementPts.toFixed(1)} pts
+          </span>
+        </div>
+      </div>
+
+      <!-- Tool Allocation Comparison -->
+      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
+        <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Recommended Tool Allocation</h4>
+        <div style="max-height: 200px; overflow-y: auto;">
+          ${riskEngine.hrddStrategyLabels.map((label, index) => {
+            const current = currentAllocation[index] || 0;
+            const optimized = optimizedToolAllocation[index] || 0;
+            const change = optimized - current;
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
+                <span style="flex: 1; color: #374151;">${label.substring(0, 20)}${label.length > 20 ? '...' : ''}</span>
+                <span style="color: #6b7280; margin: 0 8px;">${current.toFixed(0)}%</span>
+                <span style="color: #16a34a;">→ ${optimized.toFixed(0)}%</span>
+                <span style="color: ${change > 0 ? '#16a34a' : change < 0 ? '#dc2626' : '#6b7280'}; margin-left: 8px; min-width: 40px; text-align: right;">
+                  ${change > 0 ? '+' : ''}${change.toFixed(0)}%
+                </span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+    </div>
+
+    <div style="background: #fef3c7; padding: 12px; border-radius: 6px; border: 1px solid #f59e0b; margin-top: 16px;">
+      <div style="font-size: 13px; color: #92400e;">
+        <strong>Budget Optimization Insight:</strong> 
+        ${optimization.insight || 'The optimization suggests focusing more resources on higher-effectiveness tools while maintaining the same total budget.'}
+      </div>
+    </div>
+  `;
+}
+
+// Update the setupCostAnalysisEventListeners function to handle optimization state
+
+function setupCostAnalysisEventListeners(handlers) {
+  // ... existing code ...
+
+  const optimizeBtn = document.getElementById('runOptimization');
+  if (optimizeBtn) {
+    optimizeBtn.addEventListener('click', () => {
+      if (typeof optimizeBudgetAllocation !== 'function') return;
+
+      const originalText = optimizeBtn.textContent;
+      
+      // Update button to show optimization status
+      optimizeBtn.disabled = true;
+      optimizeBtn.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 16px; height: 16px; border: 2px solid #ffffff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <span>Optimizing...</span>
+        </div>
+        <style>
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+      `;
+
+      // Add progress indicator
+      const progressContainer = document.createElement('div');
+      progressContainer.id = 'optimizationProgressContainer';
+      progressContainer.style.cssText = 'margin-top: 8px; text-align: center;';
+      progressContainer.innerHTML = '<div id="optimizationProgress" style="font-size: 12px; color: #6b7280;">Initializing...</div>';
+      optimizeBtn.parentNode.insertBefore(progressContainer, optimizeBtn.nextSibling);
+
+      try {
+        const latestSupplierCount = Math.max(
+          1,
+          Math.floor(readInputValue('supplierCountInput', 1, Number.POSITIVE_INFINITY, supplierCount))
+        );
+        const latestHourlyRate = readInputValue(
+          'hourlyRateInput',
+          0,
+          Number.POSITIVE_INFINITY,
+          hourlyRate
+        );
+        const latestAnnualProgrammeCosts = readArrayValues(
+          'toolAnnualCostNum_',
+          toolAnnualProgrammeCosts.length,
+          0,
+          50000,
+          toolAnnualProgrammeCosts
+        );
+        const latestPerSupplierCosts = readArrayValues(
+          'toolPerSupplierCostNum_',
+          toolPerSupplierCosts.length,
+          0,
+          2000,
+          toolPerSupplierCosts
+        );
+        const latestToolInternalHours = readArrayValues(
+          'toolInternalHoursNum_',
+          toolInternalHours.length,
+          0,
+          500,
+          toolInternalHours
+        );
+        const latestResponseInternalHours = readArrayValues(
+          'responseInternalHoursNum_',
+          responseInternalHours.length,
+          0,
+          200,
+          responseInternalHours
+        );
+
+        const latestOptimization = optimizeBudgetAllocation();
+        const latestBudget = riskEngine.calculateBudgetAnalysis(
+          latestSupplierCount,
+          latestHourlyRate,
+          latestAnnualProgrammeCosts,
+          latestPerSupplierCosts,
+          latestToolInternalHours,
+          latestResponseInternalHours,
+          hrddStrategy,
+          transparencyEffectiveness,
+          responsivenessStrategy,
+          responsivenessEffectiveness,
+          selectedCountries,
+          countryVolumes,
+          countryRisks,
+          focus
+        ) || budgetData;
+
+        const optimizationContainer = document.getElementById('optimizationResults');
+        if (optimizationContainer) {
+          optimizationContainer.innerHTML = renderOptimizationResults(
+            latestOptimization,
+            latestBudget,
+            baselineRisk,
+            managedRisk
+          );
+        }
+
+        const breakdownContainer = document.getElementById('detailedBudgetBreakdown');
+        if (breakdownContainer) {
+          breakdownContainer.innerHTML = renderDetailedBudgetBreakdown(
+            latestBudget,
+            latestOptimization,
+            latestSupplierCount,
+            latestHourlyRate,
+            latestAnnualProgrammeCosts,
+            latestPerSupplierCosts,
+            latestToolInternalHours
+          );
+        }
+
+        const comparisonContainer = document.getElementById('riskTransformationComparison');
+        if (comparisonContainer) {
+          comparisonContainer.innerHTML = renderRiskTransformationComparison(
+            latestOptimization,
+            latestBudget,
+            baselineRisk,
+            managedRisk,
+            selectedCountries,
+            countryVolumes,
+            countryRisks,
+            hrddStrategy,
+            transparencyEffectiveness,
+            responsivenessStrategy,
+            responsivenessEffectiveness,
+            focus
+          );
+        }
+
+        // Update button text based on optimization result
+        if (latestOptimization.alreadyOptimized || latestOptimization.reOptimizationAttempted) {
+          optimizeBtn.textContent = 'Already Optimized ✓';
+          optimizeBtn.style.background = '#22c55e';
+        } else if (latestOptimization.optimizationRun && latestOptimization.improvement > 0) {
+          optimizeBtn.textContent = 'Optimization Complete ✓';
+          optimizeBtn.style.background = '#3b82f6';
+        } else {
+          optimizeBtn.textContent = 'No Improvement Found';
+          optimizeBtn.style.background = '#6b7280';
+        }
+
+      } catch (error) {
+        console.error('Optimization error:', error);
+        optimizeBtn.textContent = 'Optimization Failed';
+        optimizeBtn.style.background = '#ef4444';
+      } finally {
+        optimizeBtn.disabled = false;
+        
+        // Remove progress indicator
+        const progressContainer = document.getElementById('optimizationProgressContainer');
+        if (progressContainer) {
+          progressContainer.remove();
+        }
+        
+        // Reset button after 3 seconds
+        setTimeout(() => {
+          optimizeBtn.textContent = originalText;
+          optimizeBtn.style.background = '#16a34a';
+        }, 3000);
+      }
+    });
+  }
+ }
+
   const safeBudgetData = budgetData || {};
   const currentAllocation = Array.isArray(safeBudgetData.currentAllocation)
     ? safeBudgetData.currentAllocation
