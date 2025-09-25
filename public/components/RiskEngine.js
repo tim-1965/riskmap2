@@ -1624,6 +1624,9 @@ getDefaultCostAssumptions() {
   // Enhanced budget optimization algorithm for the RiskEngine class
 // Replace the existing optimizeBudgetAllocation method with this improved version
 
+// Enhanced budget optimization algorithm for RiskEngine.js
+// Replace the existing optimizeBudgetAllocation method with this improved version
+
 optimizeBudgetAllocation(
   supplierCount,
   hourlyRate,
@@ -1655,10 +1658,22 @@ optimizeBudgetAllocation(
 
   if (!currentBudget) return null;
 
+  // ENHANCED: Stricter budget constraints
   const targetBudget = currentBudget.totalBudget;
-  const budgetTolerance = targetBudget * 0.05; // 5% tolerance
+  const budgetTolerance = targetBudget * 0.02; // Reduced from 5% to 2%
+  const minImprovementThreshold = 0.1; // Minimum 0.1% improvement required
 
-  // Enhanced cost calculation function
+  // Calculate current effectiveness baseline
+  const currentDetails = this.calculateManagedRiskDetails(
+    selectedCountries, countryVolumes, countryRisks,
+    hrddStrategy, transparencyEffectiveness,
+    responsivenessStrategy, responsivenessEffectiveness, focus
+  );
+
+  const baselineEffectiveness = currentDetails.managedRisk < currentDetails.baselineRisk ?
+    ((currentDetails.baselineRisk - currentDetails.managedRisk) / currentDetails.baselineRisk * 100) : 0;
+
+  // ENHANCED: Improved cost calculation with strict budget enforcement
   const calculateAllocationCost = (toolAllocation, responseAllocation) => {
     let totalCost = 0;
     const safeSupplierCount = Math.max(1, Math.floor(supplierCount));
@@ -1684,14 +1699,25 @@ optimizeBudgetAllocation(
     return totalCost;
   };
 
-  // Enhanced evaluation function with penalty for budget violations
+  // ENHANCED: Stricter evaluation with minimum improvement filter
   const evaluateAllocation = (toolAllocation, responseAllocation) => {
     // Maintain voice linkage constraint
     const linkedResponseAllocation = [...responseAllocation];
     linkedResponseAllocation[0] = toolAllocation[0];
 
     const cost = calculateAllocationCost(toolAllocation, linkedResponseAllocation);
-    const budgetViolation = Math.abs(cost - targetBudget);
+    
+    // STRICT BUDGET ENFORCEMENT: Reject if over budget
+    if (cost > targetBudget + budgetTolerance) {
+      return { 
+        managedRisk: 999, // High penalty 
+        cost, 
+        fitness: 999, 
+        budgetViolation: cost - targetBudget,
+        responseAllocation: linkedResponseAllocation,
+        valid: false
+      };
+    }
     
     // Calculate risk reduction effectiveness
     const details = this.calculateManagedRiskDetails(
@@ -1700,20 +1726,36 @@ optimizeBudgetAllocation(
       linkedResponseAllocation, responsivenessEffectiveness, focus
     );
     
-    let fitness = details.managedRisk;
+    const newEffectiveness = details.managedRisk < details.baselineRisk ?
+      ((details.baselineRisk - details.managedRisk) / details.baselineRisk * 100) : 0;
     
-    // Apply budget penalty (exponential penalty for violations > tolerance)
-    if (budgetViolation > budgetTolerance) {
-      const penaltyFactor = Math.pow(budgetViolation / budgetTolerance, 2);
-      fitness += penaltyFactor * 10; // Heavy penalty for budget violations
+    const improvement = newEffectiveness - baselineEffectiveness;
+    
+    // MINIMUM IMPROVEMENT FILTER: Reject if improvement < 0.1%
+    if (improvement < minImprovementThreshold) {
+      return { 
+        managedRisk: details.managedRisk, 
+        cost, 
+        fitness: details.managedRisk + 50, // Penalty for insufficient improvement
+        budgetViolation: Math.abs(cost - targetBudget),
+        responseAllocation: linkedResponseAllocation,
+        valid: false,
+        improvement
+      };
     }
+    
+    // Fitness = managed risk (lower is better) with small budget penalty
+    const budgetPenalty = Math.abs(cost - targetBudget) / targetBudget * 2;
+    const fitness = details.managedRisk + budgetPenalty;
     
     return { 
       managedRisk: details.managedRisk, 
       cost, 
       fitness, 
-      budgetViolation,
-      responseAllocation: linkedResponseAllocation 
+      budgetViolation: Math.abs(cost - targetBudget),
+      responseAllocation: linkedResponseAllocation,
+      valid: true,
+      improvement
     };
   };
 
@@ -1722,339 +1764,450 @@ optimizeBudgetAllocation(
   let bestResponseAllocation = [...responsivenessStrategy];
   let bestFitness = Infinity;
   let bestResult = null;
+  let validSolutionsFound = 0;
+  let maxAttempts = 5; // Maximum restart attempts
+  let currentAttempt = 0;
 
-  // Calculate current performance baseline
-  const currentResult = evaluateAllocation(hrddStrategy, responsivenessStrategy);
-  bestFitness = currentResult.fitness;
-  bestResult = currentResult;
-
-  const updateProgress = (iteration, total, strategy) => {
+  const updateProgress = (phase, iteration, total) => {
     if (typeof document !== 'undefined') {
       const progressEl = document.getElementById('optimizationProgress');
       if (progressEl) {
-        progressEl.textContent = `${strategy} (${iteration}/${total})`;
+        progressEl.textContent = `${phase} - Attempt ${currentAttempt + 1}/${maxAttempts} (${iteration}/${total})`;
       }
     }
   };
 
-  // PHASE 1: SIMULATED ANNEALING GLOBAL SEARCH
-  const runSimulatedAnnealing = (startingTools, startingResponses, iterations = 200) => {
-    let currentTools = [...startingTools];
-    let currentResponses = [...startingResponses];
-    let currentResult = evaluateAllocation(currentTools, currentResponses);
+  // ENHANCED: Improved budget adjustment with multiple strategies
+  const adjustToBudget = (toolAllocation, responseAllocation, strategy = 'balanced') => {
+    const maxAdjustments = 50;
+    let adjustments = 0;
+    let currentTools = [...toolAllocation];
+    let currentResponses = [...responseAllocation];
     
-    let localBestTools = [...currentTools];
-    let localBestResponses = [...currentResult.responseAllocation];
-    let localBestFitness = currentResult.fitness;
-    
-    const initialTemp = 20.0;
-    const coolingRate = 0.95;
-    let temperature = initialTemp;
-    
-    for (let i = 0; i < iterations; i++) {
-      // Generate neighbor solution
-      const newTools = currentTools.map((val, idx) => {
-        const stepSize = Math.random() * 20 - 10; // -10 to +10
-        const voiceBonus = idx === 0 ? 5 : 0; // Favor continuous voice increases
-        return Math.max(5, Math.min(95, val + stepSize + voiceBonus * Math.random()));
-      });
+    while (adjustments < maxAdjustments) {
+      const currentCost = calculateAllocationCost(currentTools, currentResponses);
+      const difference = currentCost - targetBudget;
       
-      const newResponses = currentResponses.map((val, idx) => {
-        if (idx === 0) return newTools[0]; // Voice linkage
-        const stepSize = Math.random() * 16 - 8; // -8 to +8
-        return Math.max(5, Math.min(95, val + stepSize));
-      });
+      if (Math.abs(difference) <= budgetTolerance) break;
       
-      const newResult = evaluateAllocation(newTools, newResponses);
-      
-      // Accept or reject based on simulated annealing criteria
-      const deltaFitness = newResult.fitness - currentResult.fitness;
-      const acceptProbability = deltaFitness <= 0 ? 1.0 : Math.exp(-deltaFitness / temperature);
-      
-      if (Math.random() < acceptProbability) {
-        currentTools = newTools;
-        currentResponses = newResult.responseAllocation;
-        currentResult = newResult;
-        
-        // Track local best
-        if (newResult.fitness < localBestFitness) {
-          localBestTools = [...newTools];
-          localBestResponses = [...newResult.responseAllocation];
-          localBestFitness = newResult.fitness;
-        }
-      }
-      
-      temperature *= coolingRate;
-    }
-    
-    return { tools: localBestTools, responses: localBestResponses, fitness: localBestFitness };
-  };
-
-  // PHASE 2: GENETIC ALGORITHM WITH MULTIPLE POPULATIONS
-  const runGeneticAlgorithm = (generations = 150, populationSize = 20) => {
-    // Initialize diverse population
-    const population = [];
-    
-    // Add strategic starting points
-    const strategies = [
-      { tools: [70, 40, 15, 30, 60, 80], responses: [70, 10, 20, 15, 10, 5] },
-      { tools: [25, 15, 60, 35, 75, 85], responses: [25, 15, 35, 20, 10, 10] },
-      { tools: [50, 35, 35, 25, 55, 70], responses: [50, 15, 30, 25, 15, 5] },
-      { tools: [85, 55, 45, 20, 45, 60], responses: [85, 20, 25, 15, 5, 5] },
-      { tools: [...hrddStrategy], responses: [...responsivenessStrategy] }
-    ];
-    
-    strategies.forEach(strategy => {
-      population.push({
-        tools: [...strategy.tools],
-        responses: [...strategy.responses],
-        fitness: Infinity
-      });
-    });
-    
-    // Add random individuals to fill population
-    while (population.length < populationSize) {
-      const randomTools = Array.from({ length: 6 }, () => Math.random() * 90 + 5);
-      const randomResponses = Array.from({ length: 6 }, (_, i) => 
-        i === 0 ? randomTools[0] : Math.random() * 90 + 5
-      );
-      
-      population.push({
-        tools: randomTools,
-        responses: randomResponses,
-        fitness: Infinity
-      });
-    }
-    
-    // Evaluate initial population
-    population.forEach(individual => {
-      const result = evaluateAllocation(individual.tools, individual.responses);
-      individual.fitness = result.fitness;
-      individual.responseAllocation = result.responseAllocation;
-    });
-    
-    // Evolution loop
-    for (let gen = 0; gen < generations; gen++) {
-      updateProgress(gen + 1, generations, `Genetic Algorithm Gen`);
-      
-      // Selection: tournament selection
-      const selectParent = () => {
-        const tournamentSize = 3;
-        let best = population[Math.floor(Math.random() * population.length)];
-        
-        for (let i = 1; i < tournamentSize; i++) {
-          const candidate = population[Math.floor(Math.random() * population.length)];
-          if (candidate.fitness < best.fitness) {
-            best = candidate;
+      if (difference > 0) {
+        // Cost too high - reduce strategically based on strategy
+        if (strategy === 'preserve_voice') {
+          // Reduce non-voice tools first
+          const nonVoiceTools = [1, 2, 3, 4, 5].filter(i => currentTools[i] > 15);
+          if (nonVoiceTools.length > 0) {
+            const toolToReduce = nonVoiceTools[Math.floor(Math.random() * nonVoiceTools.length)];
+            currentTools[toolToReduce] = Math.max(10, currentTools[toolToReduce] - 8);
+          } else {
+            const responseMethods = [1, 2, 3, 4, 5].filter(i => currentResponses[i] > 15);
+            if (responseMethods.length > 0) {
+              const methodToReduce = responseMethods[Math.floor(Math.random() * responseMethods.length)];
+              currentResponses[methodToReduce] = Math.max(10, currentResponses[methodToReduce] - 8);
+            }
+          }
+        } else if (strategy === 'efficiency_focused') {
+          // Reduce lowest efficiency tools first
+          const toolEfficiencies = [90, 45, 25, 15, 12, 5]; // Base effectiveness from transparencyEffectiveness
+          const inefficientTools = [2, 3, 4, 5].filter(i => currentTools[i] > 15);
+          if (inefficientTools.length > 0) {
+            // Sort by efficiency (lower first)
+            inefficientTools.sort((a, b) => toolEfficiencies[a] - toolEfficiencies[b]);
+            currentTools[inefficientTools[0]] = Math.max(10, currentTools[inefficientTools[0]] - 10);
+          }
+        } else {
+          // Balanced approach
+          const allTools = [0, 1, 2, 3, 4, 5].filter(i => currentTools[i] > 12);
+          if (allTools.length > 0) {
+            const toolToReduce = allTools[Math.floor(Math.random() * allTools.length)];
+            const reduction = toolToReduce === 0 ? 5 : 8; // Smaller reduction for voice
+            currentTools[toolToReduce] = Math.max(8, currentTools[toolToReduce] - reduction);
+            if (toolToReduce === 0) currentResponses[0] = currentTools[0]; // Maintain linkage
           }
         }
-        return best;
-      };
-      
-      // Create next generation
-      const newPopulation = [];
-      
-      // Keep best 20% (elitism)
-      const sorted = [...population].sort((a, b) => a.fitness - b.fitness);
-      const eliteCount = Math.floor(populationSize * 0.2);
-      for (let i = 0; i < eliteCount; i++) {
-        newPopulation.push({ ...sorted[i] });
-      }
-      
-      // Generate offspring
-      while (newPopulation.length < populationSize) {
-        const parent1 = selectParent();
-        const parent2 = selectParent();
-        
-        // Crossover
-        const child = { tools: [], responses: [], fitness: Infinity };
-        for (let i = 0; i < 6; i++) {
-          // Blend crossover with mutation
-          const alpha = 0.5 + (Math.random() - 0.5) * 0.3;
-          const toolValue = alpha * parent1.tools[i] + (1 - alpha) * parent2.tools[i];
-          const responseValue = i === 0 ? toolValue : // Voice linkage
-            alpha * parent1.responses[i] + (1 - alpha) * parent2.responses[i];
-          
-          // Add mutation
-          const mutationStrength = 8;
-          const toolMutation = (Math.random() - 0.5) * mutationStrength;
-          const responseMutation = (Math.random() - 0.5) * mutationStrength;
-          
-          child.tools[i] = Math.max(5, Math.min(95, toolValue + toolMutation));
-          child.responses[i] = Math.max(5, Math.min(95, 
-            i === 0 ? child.tools[i] : responseValue + responseMutation
-          ));
+      } else {
+        // Cost too low - increase strategically
+        if (strategy === 'voice_priority') {
+          if (currentTools[0] < 85) {
+            currentTools[0] = Math.min(95, currentTools[0] + 8);
+            currentResponses[0] = currentTools[0];
+          } else if (currentTools[2] < 85) { // Unannounced audits
+            currentTools[2] = Math.min(95, currentTools[2] + 6);
+          }
+        } else {
+          // Increase highest efficiency tools
+          if (currentTools[0] < 90) {
+            currentTools[0] = Math.min(95, currentTools[0] + 6);
+            currentResponses[0] = currentTools[0];
+          } else if (currentTools[1] < 90) { // Worker surveys
+            currentTools[1] = Math.min(95, currentTools[1] + 6);
+          }
         }
-        
-        // Evaluate child
-        const result = evaluateAllocation(child.tools, child.responses);
-        child.fitness = result.fitness;
-        child.responseAllocation = result.responseAllocation;
-        
-        newPopulation.push(child);
       }
       
-      population.splice(0, population.length, ...newPopulation);
+      adjustments++;
     }
     
-    // Return best individual
-    const best = population.reduce((best, current) => 
-      current.fitness < best.fitness ? current : best
-    );
-    
-    return { tools: best.tools, responses: best.responseAllocation, fitness: best.fitness };
+    return [currentTools, currentResponses];
   };
 
-  // PHASE 3: ADVANCED LOCAL SEARCH
-  const runAdvancedLocalSearch = (startingTools, startingResponses, iterations = 100) => {
-    let currentTools = [...startingTools];
-    let currentResponses = [...startingResponses];
-    let currentResult = evaluateAllocation(currentTools, currentResponses);
-    
-    const directions = [
-      [1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0],
-      [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1],
-      [-1, 0, 0, 0, 0, 0], [0, -1, 0, 0, 0, 0], [0, 0, -1, 0, 0, 0],
-      [0, 0, 0, -1, 0, 0], [0, 0, 0, 0, -1, 0], [0, 0, 0, 0, 0, -1]
-    ];
-    
-    for (let iter = 0; iter < iterations; iter++) {
-      let improved = false;
-      const stepSize = Math.max(2, 15 * (1 - iter / iterations)); // Decreasing step size
+  // ENHANCED: Multi-restart optimization with different strategies
+  const runOptimizationRound = (startingStrategy = 'balanced') => {
+    let localBestTools = [...hrddStrategy];
+    let localBestResponses = [...responsivenessStrategy];
+    let localBestFitness = Infinity;
+    let localValidSolutions = 0;
+
+    // PHASE 1: Enhanced Simulated Annealing
+    const runEnhancedSimulatedAnnealing = (iterations = 150) => {
+      let currentTools = [...localBestTools];
+      let currentResponses = [...localBestResponses];
+      let currentResult = evaluateAllocation(currentTools, currentResponses);
       
-      // Try each direction for tools
-      for (const direction of directions) {
-        const newTools = currentTools.map((val, idx) => 
-          Math.max(5, Math.min(95, val + direction[idx] * stepSize))
-        );
-        
-        const newResponses = [...currentResponses];
-        newResponses[0] = newTools[0]; // Maintain voice linkage
-        
-        const result = evaluateAllocation(newTools, newResponses);
-        
-        if (result.fitness < currentResult.fitness) {
-          currentTools = newTools;
-          currentResponses = result.responseAllocation;
-          currentResult = result;
-          improved = true;
-          break;
-        }
+      if (!currentResult.valid) {
+        // Try to adjust to budget first
+        [currentTools, currentResponses] = adjustToBudget(currentTools, currentResponses, startingStrategy);
+        currentResult = evaluateAllocation(currentTools, currentResponses);
       }
       
-      // Try response methods (excluding voice which is linked)
-      if (!improved) {
-        for (let respIdx = 1; respIdx < 6; respIdx++) {
-          for (const step of [stepSize, -stepSize]) {
+      let temperature = 15.0;
+      const coolingRate = 0.92;
+      
+      for (let i = 0; i < iterations; i++) {
+        updateProgress('Simulated Annealing', i + 1, iterations);
+        
+        // Generate neighbor with budget-aware moves
+        const newTools = currentTools.map((val, idx) => {
+          const stepSize = Math.random() * 12 - 6;
+          const voiceBonus = idx === 0 && startingStrategy === 'voice_priority' ? 3 : 0;
+          return Math.max(8, Math.min(92, val + stepSize + voiceBonus * Math.random()));
+        });
+        
+        const newResponses = [...currentResponses];
+        newResponses[0] = newTools[0]; // Voice linkage
+        for (let j = 1; j < newResponses.length; j++) {
+          const stepSize = Math.random() * 10 - 5;
+          newResponses[j] = Math.max(8, Math.min(92, newResponses[j] + stepSize));
+        }
+        
+        // Quick budget check before expensive evaluation
+        const estimatedCost = calculateAllocationCost(newTools, newResponses);
+        if (estimatedCost > targetBudget + budgetTolerance * 2) {
+          [newTools, newResponses] = adjustToBudget(newTools, newResponses, startingStrategy);
+        }
+        
+        const newResult = evaluateAllocation(newTools, newResponses);
+        
+        if (newResult.valid) {
+          localValidSolutions++;
+          const deltaFitness = newResult.fitness - currentResult.fitness;
+          const acceptProbability = deltaFitness <= 0 ? 1.0 : Math.exp(-deltaFitness / temperature);
+          
+          if (Math.random() < acceptProbability) {
+            currentTools = newTools;
+            currentResponses = newResult.responseAllocation;
+            currentResult = newResult;
+            
+            if (newResult.fitness < localBestFitness) {
+              localBestTools = [...newTools];
+              localBestResponses = [...newResult.responseAllocation];
+              localBestFitness = newResult.fitness;
+            }
+          }
+        }
+        
+        temperature *= coolingRate;
+      }
+    };
+
+    // PHASE 2: Budget-Constrained Genetic Algorithm
+    const runBudgetConstrainedGA = (generations = 100, populationSize = 16) => {
+      const population = [];
+      
+      // Create initial population with budget adjustment
+      const strategies = [
+        { tools: [75, 45, 20, 25, 55, 75], responses: [75, 12, 25, 20, 15, 8] },
+        { tools: [35, 25, 55, 40, 70, 80], responses: [35, 18, 30, 25, 12, 10] },
+        { tools: [60, 40, 35, 30, 50, 65], responses: [60, 15, 28, 22, 18, 8] },
+        { tools: [...localBestTools], responses: [...localBestResponses] }
+      ];
+      
+      strategies.forEach(strategy => {
+        const [adjTools, adjResponses] = adjustToBudget(strategy.tools, strategy.responses, startingStrategy);
+        population.push({
+          tools: adjTools,
+          responses: adjResponses,
+          fitness: Infinity
+        });
+      });
+      
+      // Fill population with budget-adjusted random individuals
+      while (population.length < populationSize) {
+        let randomTools = Array.from({ length: 6 }, () => Math.random() * 80 + 10);
+        let randomResponses = Array.from({ length: 6 }, (_, i) => 
+          i === 0 ? randomTools[0] : Math.random() * 80 + 10
+        );
+        
+        [randomTools, randomResponses] = adjustToBudget(randomTools, randomResponses, startingStrategy);
+        
+        population.push({
+          tools: randomTools,
+          responses: randomResponses,
+          fitness: Infinity
+        });
+      }
+      
+      // Evaluate population
+      population.forEach(individual => {
+        const result = evaluateAllocation(individual.tools, individual.responses);
+        individual.fitness = result.fitness;
+        individual.valid = result.valid;
+        individual.responseAllocation = result.responseAllocation;
+        if (result.valid) localValidSolutions++;
+      });
+      
+      // Evolution with budget constraints
+      for (let gen = 0; gen < generations; gen++) {
+        updateProgress('Genetic Algorithm', gen + 1, generations);
+        
+        // Selection: prefer valid solutions
+        const selectParent = () => {
+          const validIndividuals = population.filter(ind => ind.valid);
+          if (validIndividuals.length > 0) {
+            return validIndividuals.reduce((best, current) => 
+              current.fitness < best.fitness ? current : best
+            );
+          }
+          return population[Math.floor(Math.random() * population.length)];
+        };
+        
+        const newPopulation = [];
+        
+        // Keep best valid solutions (elitism)
+        const validSorted = population.filter(ind => ind.valid).sort((a, b) => a.fitness - b.fitness);
+        const eliteCount = Math.min(3, validSorted.length);
+        for (let i = 0; i < eliteCount; i++) {
+          newPopulation.push({ ...validSorted[i] });
+        }
+        
+        // Generate offspring with budget awareness
+        while (newPopulation.length < populationSize) {
+          const parent1 = selectParent();
+          const parent2 = selectParent();
+          
+          const child = { tools: [], responses: [], fitness: Infinity };
+          
+          // Budget-aware crossover
+          for (let i = 0; i < 6; i++) {
+            const alpha = 0.6 + (Math.random() - 0.5) * 0.3;
+            let toolValue = alpha * parent1.tools[i] + (1 - alpha) * parent2.tools[i];
+            let responseValue = i === 0 ? toolValue : 
+              alpha * parent1.responses[i] + (1 - alpha) * parent2.responses[i];
+            
+            // Conservative mutation to stay within budget
+            const mutationStrength = 6;
+            toolValue += (Math.random() - 0.5) * mutationStrength;
+            if (i > 0) responseValue += (Math.random() - 0.5) * mutationStrength;
+            
+            child.tools[i] = Math.max(8, Math.min(92, toolValue));
+            child.responses[i] = Math.max(8, Math.min(92, i === 0 ? child.tools[i] : responseValue));
+          }
+          
+          // Ensure budget compliance
+          [child.tools, child.responses] = adjustToBudget(child.tools, child.responses, startingStrategy);
+          
+          const result = evaluateAllocation(child.tools, child.responses);
+          child.fitness = result.fitness;
+          child.valid = result.valid;
+          child.responseAllocation = result.responseAllocation;
+          if (result.valid) localValidSolutions++;
+          
+          if (result.valid && result.fitness < localBestFitness) {
+            localBestTools = [...child.tools];
+            localBestResponses = [...child.responseAllocation];
+            localBestFitness = result.fitness;
+          }
+          
+          newPopulation.push(child);
+        }
+        
+        population.splice(0, population.length, ...newPopulation);
+      }
+    };
+
+    // PHASE 3: Budget-Constrained Local Search
+    const runBudgetConstrainedLocalSearch = (iterations = 80) => {
+      let currentTools = [...localBestTools];
+      let currentResponses = [...localBestResponses];
+      let currentResult = evaluateAllocation(currentTools, currentResponses);
+      
+      if (!currentResult.valid) {
+        [currentTools, currentResponses] = adjustToBudget(currentTools, currentResponses, startingStrategy);
+        currentResult = evaluateAllocation(currentTools, currentResponses);
+      }
+      
+      for (let iter = 0; iter < iterations; iter++) {
+        updateProgress('Local Search', iter + 1, iterations);
+        
+        let improved = false;
+        const stepSize = Math.max(3, 10 * (1 - iter / iterations));
+        
+        // Try improvements on each tool
+        for (let toolIdx = 0; toolIdx < 6; toolIdx++) {
+          for (const direction of [stepSize, -stepSize]) {
+            const newTools = [...currentTools];
+            newTools[toolIdx] = Math.max(8, Math.min(92, newTools[toolIdx] + direction));
+            
             const newResponses = [...currentResponses];
-            newResponses[respIdx] = Math.max(5, Math.min(95, newResponses[respIdx] + step));
+            if (toolIdx === 0) newResponses[0] = newTools[0]; // Voice linkage
             
-            const result = evaluateAllocation(currentTools, newResponses);
+            // Quick budget pre-check
+            const estimatedCost = calculateAllocationCost(newTools, newResponses);
+            if (estimatedCost > targetBudget + budgetTolerance * 1.5) continue;
             
-            if (result.fitness < currentResult.fitness) {
+            const result = evaluateAllocation(newTools, newResponses);
+            
+            if (result.valid && result.fitness < currentResult.fitness) {
+              currentTools = newTools;
               currentResponses = result.responseAllocation;
               currentResult = result;
+              localValidSolutions++;
+              
+              if (result.fitness < localBestFitness) {
+                localBestTools = [...newTools];
+                localBestResponses = [...result.responseAllocation];
+                localBestFitness = result.fitness;
+              }
+              
               improved = true;
               break;
             }
           }
           if (improved) break;
         }
+        
+        if (!improved) {
+          // Try response methods (excluding voice)
+          for (let respIdx = 1; respIdx < 6; respIdx++) {
+            for (const direction of [stepSize, -stepSize]) {
+              const newResponses = [...currentResponses];
+              newResponses[respIdx] = Math.max(8, Math.min(92, newResponses[respIdx] + direction));
+              
+              const result = evaluateAllocation(currentTools, newResponses);
+              
+              if (result.valid && result.fitness < currentResult.fitness) {
+                currentResponses = result.responseAllocation;
+                currentResult = result;
+                localValidSolutions++;
+                
+                if (result.fitness < localBestFitness) {
+                  localBestTools = [...currentTools];
+                  localBestResponses = [...result.responseAllocation];
+                  localBestFitness = result.fitness;
+                }
+                
+                improved = true;
+                break;
+              }
+            }
+            if (improved) break;
+          }
+        }
+        
+        if (!improved) break; // Local optimum reached
       }
-      
-      if (!improved) break; // Local optimum reached
-    }
-    
-    return { tools: currentTools, responses: currentResponses, fitness: currentResult.fitness };
+    };
+
+    // Execute phases for this round
+    runEnhancedSimulatedAnnealing();
+    runBudgetConstrainedGA();
+    runBudgetConstrainedLocalSearch();
+
+    return {
+      bestTools: localBestTools,
+      bestResponses: localBestResponses,
+      bestFitness: localBestFitness,
+      validSolutions: localValidSolutions
+    };
   };
 
-  // Execute optimization phases
-  const totalPhases = 3;
-  let phase = 1;
+  // MAIN OPTIMIZATION LOOP: Multiple attempts with different strategies
+  const strategies = ['balanced', 'voice_priority', 'efficiency_focused', 'preserve_voice'];
   
-  // Phase 1: Simulated Annealing from multiple starting points
-  updateProgress(0, 100, `Phase ${phase}/${totalPhases}: Simulated Annealing`);
-  
-  const saStartingPoints = [
-    { tools: [...hrddStrategy], responses: [...responsivenessStrategy] },
-    { tools: [70, 40, 15, 30, 60, 80], responses: [70, 10, 20, 15, 10, 5] },
-    { tools: [25, 15, 60, 35, 75, 85], responses: [25, 15, 35, 20, 10, 10] },
-    { tools: [85, 55, 45, 20, 45, 60], responses: [85, 20, 25, 15, 5, 5] }
-  ];
-  
-  for (const startPoint of saStartingPoints) {
-    const saResult = runSimulatedAnnealing(startPoint.tools, startPoint.responses, 150);
-    if (saResult.fitness < bestFitness) {
-      bestToolAllocation = [...saResult.tools];
-      bestResponseAllocation = [...saResult.responses];
-      bestFitness = saResult.fitness;
+  for (currentAttempt = 0; currentAttempt < maxAttempts && validSolutionsFound < 3; currentAttempt++) {
+    const strategy = strategies[currentAttempt % strategies.length];
+    updateProgress(`Strategy: ${strategy}`, 0, 100);
+    
+    const roundResult = runOptimizationRound(strategy);
+    validSolutionsFound += roundResult.validSolutions;
+    
+    if (roundResult.bestFitness < bestFitness) {
+      bestToolAllocation = [...roundResult.bestTools];
+      bestResponseAllocation = [...roundResult.bestResponses];
+      bestFitness = roundResult.bestFitness;
     }
+    
+    // Early exit if we found a good solution
+    if (validSolutionsFound >= 5 && bestFitness < 999) break;
   }
-  
-  phase++;
-  
-  // Phase 2: Genetic Algorithm
-  updateProgress(0, 100, `Phase ${phase}/${totalPhases}: Genetic Algorithm`);
-  const gaResult = runGeneticAlgorithm(120, 18);
-  if (gaResult.fitness < bestFitness) {
-    bestToolAllocation = [...gaResult.tools];
-    bestResponseAllocation = [...gaResult.responses];
-    bestFitness = gaResult.fitness;
-  }
-  
-  phase++;
-  
-  // Phase 3: Advanced Local Search from best solutions
-  updateProgress(0, 100, `Phase ${phase}/${totalPhases}: Local Search Refinement`);
-  const localResult = runAdvancedLocalSearch(bestToolAllocation, bestResponseAllocation, 80);
-  if (localResult.fitness < bestFitness) {
-    bestToolAllocation = [...localResult.tools];
-    bestResponseAllocation = [...localResult.responses];
-    bestFitness = localResult.fitness;
-  }
-  
-  // Final evaluation and result generation
+
+  // FINAL VALIDATION AND RESULT GENERATION
   const finalResult = evaluateAllocation(bestToolAllocation, bestResponseAllocation);
+  
+  // Check if we found a valid improvement
+  if (!finalResult.valid || finalResult.improvement < minImprovementThreshold) {
+    updateProgress('No Improvement Found', 100, 100);
+    return {
+      baselineRisk: currentDetails.baselineRisk,
+      currentManagedRisk: currentDetails.managedRisk,
+      optimizedManagedRisk: currentDetails.managedRisk,
+      currentToolAllocation: hrddStrategy,
+      currentResponseAllocation: responsivenessStrategy,
+      optimizedToolAllocation: hrddStrategy,
+      optimizedResponseAllocation: responsivenessStrategy,
+      currentEffectiveness: baselineEffectiveness,
+      optimizedEffectiveness: baselineEffectiveness,
+      improvement: 0,
+      insight: `No improvement found after ${currentAttempt + 1} optimization attempts. Your current allocation appears to be near-optimal within the budget constraint of $${targetBudget.toLocaleString()}. Consider increasing budget or adjusting strategy parameters for further optimization.`,
+      budgetUtilization: 100,
+      budgetConstraintMet: true,
+      finalBudget: targetBudget,
+      targetBudget,
+      algorithmsUsed: ['Enhanced Simulated Annealing', 'Budget-Constrained GA', 'Local Search'],
+      validSolutionsFound
+    };
+  }
+
+  // Calculate final metrics
   const optimizedDetails = this.calculateManagedRiskDetails(
     selectedCountries, countryVolumes, countryRisks,
     bestToolAllocation, transparencyEffectiveness,
     bestResponseAllocation, responsivenessEffectiveness, focus
   );
-  
-  // Calculate improvements
-  const currentDetails = this.calculateManagedRiskDetails(
-    selectedCountries, countryVolumes, countryRisks,
-    hrddStrategy, transparencyEffectiveness,
-    responsivenessStrategy, responsivenessEffectiveness, focus
-  );
-  
-  const currentEffectiveness = currentDetails.managedRisk < currentDetails.baselineRisk ?
-    ((currentDetails.baselineRisk - currentDetails.managedRisk) / currentDetails.baselineRisk * 100) : 0;
+
   const optimizedEffectiveness = optimizedDetails.managedRisk < optimizedDetails.baselineRisk ?
     ((optimizedDetails.baselineRisk - optimizedDetails.managedRisk) / optimizedDetails.baselineRisk * 100) : 0;
-  
-  const improvement = optimizedEffectiveness - currentEffectiveness;
+
+  const improvement = optimizedEffectiveness - baselineEffectiveness;
   const voiceIncrease = bestToolAllocation[0] - hrddStrategy[0];
-  
-  // Generate insight
+
+  // Generate enhanced insight
   let insight = '';
-  if (improvement > 8) {
-    insight = `Major optimization opportunity found: ${improvement.toFixed(1)}% better risk reduction through advanced multi-phase optimization. `;
-    if (voiceIncrease > 10) {
-      insight += `Key finding: significantly increase continuous worker voice coverage (+${voiceIncrease.toFixed(0)}%). `;
+  if (improvement > 10) {
+    insight = `Exceptional optimization achieved: ${improvement.toFixed(1)}% better risk reduction through advanced multi-strategy optimization. `;
+    if (voiceIncrease > 15) {
+      insight += `Key finding: dramatically increase continuous worker voice coverage (+${voiceIncrease.toFixed(0)}%). `;
     }
-    insight += `The enhanced algorithm tested multiple solution approaches to find this optimal configuration.`;
-  } else if (improvement > 3) {
-    insight = `Significant optimization achieved (${improvement.toFixed(1)}% improvement) through comprehensive analysis of tool and response combinations using genetic algorithms and simulated annealing.`;
-  } else if (improvement > 0.5) {
-    insight = `Moderate optimization identified (${improvement.toFixed(1)}% improvement). The multi-phase approach found incremental improvements through strategic reallocation.`;
+    insight += `The enhanced algorithm tested ${currentAttempt + 1} strategic approaches to find this superior configuration within budget.`;
+  } else if (improvement > 5) {
+    insight = `Significant optimization achieved (${improvement.toFixed(1)}% improvement) through systematic analysis of ${validSolutionsFound} valid tool combinations within strict budget constraints.`;
+  } else if (improvement > 1) {
+    insight = `Meaningful optimization identified (${improvement.toFixed(1)}% improvement). The enhanced multi-strategy approach found incremental improvements through intelligent resource reallocation.`;
   } else {
-    insight = `Your current allocation is already well-optimized. The comprehensive multi-phase analysis (simulated annealing + genetic algorithm + local search) found minimal improvement opportunities within budget constraints.`;
+    insight = `Minor optimization achieved (${improvement.toFixed(1)}% improvement). Your allocation was already well-optimized, but the enhanced algorithm found small efficiency gains within budget constraints.`;
   }
-  
-  // Clear progress indicator
-  updateProgress(100, 100, 'Optimization Complete');
-  
+
+  updateProgress('Optimization Complete', 100, 100);
+
   return {
     baselineRisk: currentDetails.baselineRisk,
     currentManagedRisk: currentDetails.managedRisk,
@@ -2063,16 +2216,16 @@ optimizeBudgetAllocation(
     currentResponseAllocation: responsivenessStrategy,
     optimizedToolAllocation: bestToolAllocation,
     optimizedResponseAllocation: bestResponseAllocation,
-    currentEffectiveness,
-    optimizedEffectiveness,
+    currentEffectiveness: baselineEffectiveness,
+    optimizedEffectiveness: optimizedEffectiveness,
     improvement,
     insight,
-    budgetUtilization: Math.abs(finalResult.cost - targetBudget) < budgetTolerance ? 100 : 
-      (finalResult.cost / targetBudget * 100),
+    budgetUtilization: (finalResult.cost / targetBudget * 100),
     budgetConstraintMet: finalResult.budgetViolation <= budgetTolerance,
     finalBudget: finalResult.cost,
     targetBudget,
-    algorithmsUsed: ['Simulated Annealing', 'Genetic Algorithm', 'Advanced Local Search'],
+    algorithmsUsed: ['Enhanced Simulated Annealing', 'Budget-Constrained GA', 'Local Search'],
+    validSolutionsFound,
     
     // Enhanced breakdown
     toolChanges: bestToolAllocation.map((alloc, i) => ({
