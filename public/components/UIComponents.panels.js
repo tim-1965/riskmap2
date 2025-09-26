@@ -2009,18 +2009,6 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
       <div style="text-align: center; padding: 20px; color: #6b7280;">
         <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
         <p>Click "Run Optimization" to see how to improve your risk reduction per dollar spent</p>
-      </div>
-    `;
-  }
-
-// Add this function to UIComponents.panels.js after renderOptimizationResults
-
-function renderOptimizationResults(optimization, budgetData, baselineRisk, managedRisk) {
-  if (!optimization) {
-    return `
-      <div style="text-align: center; padding: 20px; color: #6b7280;">
-        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-        <p>Click "Run Optimization" to see how to improve your risk reduction per dollar spent</p>
         <div style="margin-top: 12px; font-size: 12px; color: #9ca3af;">
           <div style="display: inline-flex; align-items: center; gap: 6px;">
             <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444;"></div>
@@ -2042,78 +2030,114 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
       ? optimization.optimizedAllocation
       : [];
 
-  const currentRiskReduction = ((baselineRisk - managedRisk) / baselineRisk * 100).toFixed(1);
-  const optimizedRiskReduction = optimization.optimizedRiskReduction 
-    ? (optimization.optimizedRiskReduction / optimization.baselineRisk * 100).toFixed(1)
-    : currentRiskReduction;
-  const improvementPts = optimization.improvement || 0;
+  const mobile = isMobileView();
+  const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
 
-  // Optimization status indicator
-  const optimizationStatus = optimization.alreadyOptimized 
+  const normalizeRiskValue = (value, fallback = 0) =>
+    typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+  const currentBaselineRisk = normalizeRiskValue(
+    baselineRisk,
+    normalizeRiskValue(optimization?.baselineRisk, 1)
+  );
+
+  const currentManagedRisk = normalizeRiskValue(
+    managedRisk,
+    normalizeRiskValue(optimization?.currentManagedRisk, 0)
+  );
+
+  const optimizedBaselineRisk = normalizeRiskValue(optimization?.baselineRisk, currentBaselineRisk);
+  const optimizedManagedRisk = normalizeRiskValue(optimization?.optimizedManagedRisk, currentManagedRisk);
+
+  const calculateEffectiveness = (baseline, managed) =>
+    baseline !== 0 ? ((baseline - managed) / baseline) * 100 : 0;
+
+  const currentEffectivenessValue = calculateEffectiveness(currentBaselineRisk, currentManagedRisk);
+  const optimizedEffectivenessValue = calculateEffectiveness(optimizedBaselineRisk, optimizedManagedRisk);
+
+  const formatPercent = value => (Number.isFinite(value) ? value.toFixed(1) : '0.0');
+
+  const currentEffectiveness = formatPercent(currentEffectivenessValue);
+  const optimizedEffectiveness = formatPercent(optimizedEffectivenessValue);
+  const improvementValue = Number(
+    formatPercent(optimizedEffectivenessValue - currentEffectivenessValue)
+  );
+  const improvementDisplay = Number.isFinite(improvementValue)
+    ? Math.abs(improvementValue).toFixed(1)
+    : '0.0';
+
+  const improvementColor = improvementValue > 0 ? '#22c55e' : improvementValue < 0 ? '#ef4444' : '#6b7280';
+  const improvementLabel = improvementValue > 0 ? 'Improvement' : improvementValue < 0 ? 'Decrease' : 'No Change';
+  const currentColor = '#2563eb';
+  const optimizedColor = '#16a34a';
+
+  const optimizationStatus = optimization.alreadyOptimized
     ? { color: '#22c55e', text: 'Previously optimized', icon: '✓' }
-    : optimization.optimizationRun 
+    : optimization.optimizationRun
       ? { color: '#3b82f6', text: 'Newly optimized', icon: '🔄' }
       : { color: '#ef4444', text: 'Not optimized', icon: '○' };
 
   return `
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-      
-      <!-- Optimization Status Banner -->
-      <div style="grid-column: 1 / -1; background: ${optimizationStatus.color}15; border: 1px solid ${optimizationStatus.color}40; border-radius: 8px; padding: 12px 16px;">
-        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <span style="font-size: 16px;">${optimizationStatus.icon}</span>
-          <span style="font-size: 14px; font-weight: 600; color: ${optimizationStatus.color};">
-            ${optimizationStatus.text}${optimization.reOptimizationAttempted ? ' (Previous results retained)' : ''}
-          </span>
-        </div>
-      </div>
-      
-      <!-- Current vs Optimized Comparison -->
-      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
-        <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Risk Reduction Comparison</h4>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="font-size: 13px; color: #374151;">Current Setup:</span>
-          <span style="font-size: 13px; font-weight: 600; color: #6b7280;">${currentRiskReduction}% reduction</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="font-size: 13px; color: #374151;">Optimized Setup:</span>
-          <span style="font-size: 13px; font-weight: 600; color: #16a34a;">${optimizedRiskReduction}% reduction</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-          <span style="font-size: 13px; font-weight: 600; color: #14532d;">Improvement:</span>
-          <span style="font-size: 13px; font-weight: 600; color: ${improvementPts > 0 ? '#16a34a' : improvementPts < 0 ? '#dc2626' : '#6b7280'};">
-            ${improvementPts > 0 ? '+' : ''}${improvementPts.toFixed(1)} pts
-          </span>
+    <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')};">
+
+      <div style="background: ${optimizationStatus.color}15; border: 1px solid ${optimizationStatus.color}40; border-radius: 12px; padding: ${responsive('12px', '16px')}; text-align: center;">
+        <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: ${optimizationStatus.color};">
+          <span>${optimizationStatus.icon}</span>
+          <span>${optimizationStatus.text}${optimization.reOptimizationAttempted ? ' (Previous results retained)' : ''}</span>
         </div>
       </div>
 
-      <!-- Tool Allocation Comparison -->
-      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
+      <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); border-top: 4px solid #3b82f6;">
+        <h4 style="font-size: ${responsive('16px', '18px')}; font-weight: 600; color: #1f2937; margin: 0 0 ${responsive('16px', '20px')} 0; text-align: center;">Effectiveness Comparison</h4>
+        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(3, minmax(0, 1fr))')}; gap: ${responsive('12px', '16px')}; align-items: stretch;">
+          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${currentColor}; background-color: ${currentColor}15; text-align: center;">
+            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">CURRENT SETUP</div>
+            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${currentColor}; margin-bottom: 6px;">${currentEffectiveness}%</div>
+            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${currentColor};">Risk Reduction</div>
+            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Current programme performance</div>
+          </div>
+
+          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${optimizedColor}; background-color: ${optimizedColor}15; text-align: center;">
+            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">OPTIMIZED SETUP</div>
+            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${optimizedColor}; margin-bottom: 6px;">${optimizedEffectiveness}%</div>
+            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${optimizedColor};">Risk Reduction</div>
+            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Projected after optimization</div>
+          </div>
+
+          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${improvementColor}; background-color: ${improvementColor}15; text-align: center;">
+            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">IMPACT</div>
+            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${improvementColor}; margin-bottom: 6px;">${improvementValue > 0 ? '+' : improvementValue < 0 ? '-' : ''}${improvementDisplay}%</div>
+            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${improvementColor};">${improvementLabel}</div>
+            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Difference vs current setup</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; border: 1px solid #d1fae5; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
         <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Recommended Tool Allocation</h4>
-        <div style="max-height: 200px; overflow-y: auto;">
+        <div style="max-height: ${responsive('220px', '260px')}; overflow-y: auto;">
           ${riskEngine.hrddStrategyLabels.map((label, index) => {
             const current = currentAllocation[index] || 0;
             const optimized = optimizedToolAllocation[index] || 0;
             const change = optimized - current;
+            const changeColor = change > 0 ? '#16a34a' : change < 0 ? '#dc2626' : '#6b7280';
+            const changeSign = change > 0 ? '+' : '';
             return `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
                 <span style="flex: 1; color: #374151;">${label.substring(0, 20)}${label.length > 20 ? '...' : ''}</span>
                 <span style="color: #6b7280; margin: 0 8px;">${current.toFixed(0)}%</span>
                 <span style="color: #16a34a;">→ ${optimized.toFixed(0)}%</span>
-                <span style="color: ${change > 0 ? '#16a34a' : change < 0 ? '#dc2626' : '#6b7280'}; margin-left: 8px; min-width: 40px; text-align: right;">
-                  ${change > 0 ? '+' : ''}${change.toFixed(0)}%
-                </span>
+                <span style="color: ${changeColor}; margin-left: 8px; min-width: 40px; text-align: right;">${changeSign}${change.toFixed(0)}%</span>
               </div>
             `;
           }).join('')}
         </div>
       </div>
-
     </div>
 
-    <div style="background: #fef3c7; padding: 12px; border-radius: 6px; border: 1px solid #f59e0b; margin-top: 16px;">
+    <div style="background: #fef3c7; padding: ${responsive('12px', '16px')}; border-radius: 8px; border: 1px solid #f59e0b; margin-top: ${responsive('16px', '20px')};">
       <div style="font-size: 13px; color: #92400e;">
-        <strong>Budget Optimization Insight:</strong> 
+        <strong>Budget Optimization Insight:</strong>
         ${optimization.insight || 'The optimization suggests focusing more resources on higher-effectiveness tools while maintaining the same total budget.'}
       </div>
     </div>
