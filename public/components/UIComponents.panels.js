@@ -256,18 +256,18 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const strategyDescriptions = [
-    'Percent. of suppliers with always-on worker voice and daily feedback.',
-    'Percent. of suppliers surveyed with annual structured worker surveys.',
-    'Percent. of suppliers having unannounced third-party social audits.',
-    'Percent. of suppliers having planned / self-arranged social audits.',
-    'Percent. of suppliers doing self-reporting and self-assessment questionnaires.',
-    'Percent. of suppliers assessed through desk-based risk assessment.'
+    '% of suppliers with always-on worker voice and daily feedback.',
+    '% of suppliers surveyed with annual structured worker surveys.',
+    '% of suppliers having unannounced third-party social audits.',
+    '% of suppliers having planned / self-arranged social audits.',
+    '% of suppliers completing self-assessment questionnaires with supporting evidence.',
+    '% of suppliers completing self-assessment questionnaires without supporting evidence.'
   ];
 
   const categoryInfo = [
     { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
-    { name: 'Audit', color: '#f59e0b', tools: [2, 3] },
-    { name: 'Passive', color: '#6b7280', tools: [4, 5] }
+    { name: 'Audit', color: '#f59e0b', tools: [2, 3, 4] },
+    { name: 'Passive', color: '#6b7280', tools: [5] }
   ];
 
   let localStrategy = [...strategy];
@@ -532,8 +532,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     'Periodic anonymous worker surveys can snapshot many risks if suppliers not involved.',
     'Surprise audits catch unprepared visibile risks and some social risks.',
     'Announced audits allow are generally poor at identifying social risks.',
-    'Self-reporting has inherent transparency limitations and is likely ineffective.',
-    'Desk-based assessment is likely ineffective.'
+    'Evidence-supported self-reporting confirms existence of policies only',
+    'Self-reporting without evidence is likely ineffective.'
   ];
 
   const effectivenessAssumptions = [
@@ -541,8 +541,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
     'Intermittently effective if done well: can show issues at survey time.',
     'Can be effective where issues are easily visible.',
     'Not that effective as preparation/concealment of issues is possible.',
-    'Not effective as suppliers tend not to self-report problems.',
-    'Not effective as desk-based assessment is remote.'
+    'Confirms existence of policies not implementation of them',
+    'Not effective as suppliers tend not to self-report problems.'
   ];
 
   const categoryInfo = [

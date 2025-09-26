@@ -36,8 +36,8 @@ export class RiskEngine {
       'Worker Surveys (annual)',
       'Unannounced Social Audits',
       'Announced Social Audits',
-      'Supplier Self-Reporting',
-      'Desk-Based Risk Assessment'
+      'Supplier SAQ with Evidence',
+      'Supplier SAQ without Evidence'
     ];
 
     this.responsivenessLabels = [
