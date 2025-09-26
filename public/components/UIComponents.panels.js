@@ -1063,8 +1063,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
         const coverageDisplay = item.coverageRange ? 
           `Coverage: ${item.coverageRange} (focus-adjusted)` : 
           `Coverage: ${formatNumber(item.coverage, 0)}%`;
-        const safeBudgetData = budgetData || {};
-  return `
+      return `
           <div style="padding: 12px 14px; border: 1px solid ${color}30; border-left: 4px solid ${color}; border-radius: 8px; background-color: white; display: flex; flex-direction: column; gap: 6px;">
             <div style="font-weight: 600; color: #1f2937;">${item.name}</div>
             <div style="font-size: 12px; color: #4b5563;">
