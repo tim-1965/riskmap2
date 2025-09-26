@@ -2142,255 +2142,7 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
       </div>
     </div>
   `;
-}
-
-// Update the setupCostAnalysisEventListeners function to handle optimization state
-
-function setupCostAnalysisEventListeners(handlers) {
-  // ... existing code ...
-
-  const optimizeBtn = document.getElementById('runOptimization');
-  if (optimizeBtn) {
-    optimizeBtn.addEventListener('click', () => {
-      if (typeof optimizeBudgetAllocation !== 'function') return;
-
-      const originalText = optimizeBtn.textContent;
-      
-      // Update button to show optimization status
-      optimizeBtn.disabled = true;
-      optimizeBtn.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 16px; height: 16px; border: 2px solid #ffffff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-          <span>Optimizing...</span>
-        </div>
-        <style>
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        </style>
-      `;
-
-      // Add progress indicator
-      const progressContainer = document.createElement('div');
-      progressContainer.id = 'optimizationProgressContainer';
-      progressContainer.style.cssText = 'margin-top: 8px; text-align: center;';
-      progressContainer.innerHTML = '<div id="optimizationProgress" style="font-size: 12px; color: #6b7280;">Initializing...</div>';
-      optimizeBtn.parentNode.insertBefore(progressContainer, optimizeBtn.nextSibling);
-
-      try {
-        const latestSupplierCount = Math.max(
-          1,
-          Math.floor(readInputValue('supplierCountInput', 1, Number.POSITIVE_INFINITY, supplierCount))
-        );
-        const latestHourlyRate = readInputValue(
-          'hourlyRateInput',
-          0,
-          Number.POSITIVE_INFINITY,
-          hourlyRate
-        );
-        const latestAnnualProgrammeCosts = readArrayValues(
-          'toolAnnualCostNum_',
-          toolAnnualProgrammeCosts.length,
-          0,
-          50000,
-          toolAnnualProgrammeCosts
-        );
-        const latestPerSupplierCosts = readArrayValues(
-          'toolPerSupplierCostNum_',
-          toolPerSupplierCosts.length,
-          0,
-          2000,
-          toolPerSupplierCosts
-        );
-        const latestToolInternalHours = readArrayValues(
-          'toolInternalHoursNum_',
-          toolInternalHours.length,
-          0,
-          500,
-          toolInternalHours
-        );
-        const latestResponseInternalHours = readArrayValues(
-          'responseInternalHoursNum_',
-          responseInternalHours.length,
-          0,
-          200,
-          responseInternalHours
-        );
-
-        const latestOptimization = optimizeBudgetAllocation();
-        const latestBudget = riskEngine.calculateBudgetAnalysis(
-          latestSupplierCount,
-          latestHourlyRate,
-          latestAnnualProgrammeCosts,
-          latestPerSupplierCosts,
-          latestToolInternalHours,
-          latestResponseInternalHours,
-          hrddStrategy,
-          transparencyEffectiveness,
-          responsivenessStrategy,
-          responsivenessEffectiveness,
-          selectedCountries,
-          countryVolumes,
-          countryRisks,
-          focus
-        ) || budgetData;
-
-        const optimizationContainer = document.getElementById('optimizationResults');
-        if (optimizationContainer) {
-          optimizationContainer.innerHTML = renderOptimizationResults(
-            latestOptimization,
-            latestBudget,
-            baselineRisk,
-            managedRisk
-          );
-        }
-
-        const breakdownContainer = document.getElementById('detailedBudgetBreakdown');
-        if (breakdownContainer) {
-          breakdownContainer.innerHTML = renderDetailedBudgetBreakdown(
-            latestBudget,
-            latestOptimization,
-            latestSupplierCount,
-            latestHourlyRate,
-            latestAnnualProgrammeCosts,
-            latestPerSupplierCosts,
-            latestToolInternalHours
-          );
-        }
-
-        const comparisonContainer = document.getElementById('riskTransformationComparison');
-        if (comparisonContainer) {
-          comparisonContainer.innerHTML = renderRiskTransformationComparison(
-            latestOptimization,
-            latestBudget,
-            baselineRisk,
-            managedRisk,
-            selectedCountries,
-            countryVolumes,
-            countryRisks,
-            hrddStrategy,
-            transparencyEffectiveness,
-            responsivenessStrategy,
-            responsivenessEffectiveness,
-            focus
-          );
-        }
-
-        // Update button text based on optimization result
-        if (latestOptimization.alreadyOptimized || latestOptimization.reOptimizationAttempted) {
-          optimizeBtn.textContent = 'Already Optimized ✓';
-          optimizeBtn.style.background = '#22c55e';
-        } else if (latestOptimization.optimizationRun && latestOptimization.improvement > 0) {
-          optimizeBtn.textContent = 'Optimization Complete ✓';
-          optimizeBtn.style.background = '#3b82f6';
-        } else {
-          optimizeBtn.textContent = 'No Improvement Found';
-          optimizeBtn.style.background = '#6b7280';
-        }
-
-      } catch (error) {
-        console.error('Optimization error:', error);
-        optimizeBtn.textContent = 'Optimization Failed';
-        optimizeBtn.style.background = '#ef4444';
-      } finally {
-        optimizeBtn.disabled = false;
-        
-        // Remove progress indicator
-        const progressContainer = document.getElementById('optimizationProgressContainer');
-        if (progressContainer) {
-          progressContainer.remove();
-        }
-        
-        // Reset button after 3 seconds
-        setTimeout(() => {
-          optimizeBtn.textContent = originalText;
-          optimizeBtn.style.background = '#16a34a';
-        }, 3000);
-      }
-    });
   }
- }
-
-  const safeBudgetData = budgetData || {};
-  const currentAllocation = Array.isArray(safeBudgetData.currentAllocation)
-    ? safeBudgetData.currentAllocation
-    : [];
-
-  const optimizedToolAllocation = Array.isArray(optimization?.optimizedToolAllocation)
-    ? optimization.optimizedToolAllocation
-    : Array.isArray(optimization?.optimizedAllocation)
-      ? optimization.optimizedAllocation
-      : [];
-
-  const currentEffectiveness = ((baselineRisk - managedRisk) / baselineRisk * 100).toFixed(1);
-  const optimizedEffectiveness = ((optimization.baselineRisk - optimization.optimizedManagedRisk) / optimization.baselineRisk * 100).toFixed(1);
-  const improvementPct = (optimizedEffectiveness - currentEffectiveness).toFixed(1);
-  const improvementValue = parseFloat(improvementPct);
-  const improvementColor = improvementValue > 0 ? '#22c55e' : improvementValue < 0 ? '#ef4444' : '#6b7280';
-  const improvementLabel = improvementValue > 0 ? 'Improvement' : improvementValue < 0 ? 'Decrease' : 'No Change';
-  const currentColor = '#2563eb';
-  const optimizedColor = '#16a34a';
-
-  return `
-    <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')};">
-
-      <!-- Current vs Optimized Comparison -->
-      <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); border-top: 4px solid #3b82f6;">
-        <h4 style="font-size: ${responsive('16px', '18px')}; font-weight: 600; color: #1f2937; margin: 0 0 ${responsive('16px', '20px')} 0; text-align: center;">Effectiveness Comparison</h4>
-        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(3, minmax(0, 1fr))')}; gap: ${responsive('12px', '16px')}; align-items: stretch;">
-          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${currentColor}; background-color: ${currentColor}15; text-align: center;">
-            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">CURRENT SETUP</div>
-            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${currentColor}; margin-bottom: 6px;">${currentEffectiveness}%</div>
-            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${currentColor};">Risk Reduction</div>
-            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Current programme performance</div>
-          </div>
-
-          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${optimizedColor}; background-color: ${optimizedColor}15; text-align: center;">
-            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">OPTIMIZED SETUP</div>
-            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${optimizedColor}; margin-bottom: 6px;">${optimizedEffectiveness}%</div>
-            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${optimizedColor};">Risk Reduction</div>
-            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Projected after optimization</div>
-          </div>
-
-          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${improvementColor}; background-color: ${improvementColor}15; text-align: center;">
-            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">IMPACT</div>
-            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${improvementColor}; margin-bottom: 6px;">${improvementValue > 0 ? '+' : improvementValue < 0 ? '-' : ''}${Math.abs(improvementValue).toFixed(1)}%</div>
-            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${improvementColor};">${improvementLabel}</div>
-            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Difference vs current setup</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tool Allocation Comparison -->
-      <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; border: 1px solid #d1fae5; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-        <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Recommended Tool Allocation</h4>
-        <div style="max-height: ${responsive('220px', '260px')}; overflow-y: auto;">
-          ${riskEngine.hrddStrategyLabels.map((label, index) => {
-            const current = currentAllocation[index] || 0;
-            const optimized = optimizedToolAllocation[index] || 0;
-            const change = optimized - current;
-            return `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
-                <span style="flex: 1; color: #374151;">${label.substring(0, 20)}${label.length > 20 ? '...' : ''}</span>
-                <span style="color: #6b7280; margin: 0 8px;">${current.toFixed(0)}%</span>
-                <span style="color: #16a34a;">→ ${optimized.toFixed(0)}%</span>
-                <span style="color: ${change > 0 ? '#16a34a' : change < 0 ? '#dc2626' : '#6b7280'}; margin-left: 8px; min-width: 40px; text-align: right;">
-                  ${change > 0 ? '+' : ''}${change.toFixed(0)}%
-                </span>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-
-    </div>
-
-    <div style="background: #fef3c7; padding: 12px; border-radius: 6px; border: 1px solid #f59e0b; margin-top: 16px;">
-      <div style="font-size: 13px; color: #92400e;">
-        <strong>Budget Optimization Insight:</strong> 
-        ${optimization.insight || 'The optimization suggests focusing more resources on higher-effectiveness tools while maintaining the same total budget.'}
-      </div>
-    </div>
-  `;
-}
 
 function setupCostAnalysisEventListeners(handlers) {
   const {
@@ -2442,115 +2194,100 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   };
 
-  // Supplier count input
   const supplierInput = document.getElementById('supplierCountInput');
   if (supplierInput) {
-    supplierInput.addEventListener('input', (e) => {
-      onSupplierCountChange(e.target.value);
+    supplierInput.addEventListener('input', event => {
+      onSupplierCountChange(event.target.value);
     });
   }
 
-  // Hourly rate input
   const rateInput = document.getElementById('hourlyRateInput');
   if (rateInput) {
-    rateInput.addEventListener('input', (e) => {
-      onHourlyRateChange(e.target.value);
+    rateInput.addEventListener('input', event => {
+      onHourlyRateChange(event.target.value);
     });
   }
 
-   // Tool Annual Programme Cost controls
   toolAnnualProgrammeCosts.forEach((cost, index) => {
     const numberInput = document.getElementById(`toolAnnualCostNum_${index}`);
-
     if (numberInput) {
-      numberInput.addEventListener('input', (e) => {
-        const newValue = Math.min(50000, Math.max(0, parseFloat(e.target.value) || 0));
+      numberInput.addEventListener('input', event => {
+        const newValue = Math.min(50000, Math.max(0, parseFloat(event.target.value) || 0));
         numberInput.value = newValue;
         onToolAnnualProgrammeCostChange(index, newValue);
       });
     }
   });
 
-  // Tool Per Supplier Cost controls
   toolPerSupplierCosts.forEach((cost, index) => {
     const numberInput = document.getElementById(`toolPerSupplierCostNum_${index}`);
-
     if (numberInput) {
-      numberInput.addEventListener('input', (e) => {
-        const newValue = Math.min(2000, Math.max(0, parseFloat(e.target.value) || 0));
+      numberInput.addEventListener('input', event => {
+        const newValue = Math.min(2000, Math.max(0, parseFloat(event.target.value) || 0));
         numberInput.value = newValue;
         onToolPerSupplierCostChange(index, newValue);
       });
     }
   });
 
-  // Tool Internal Hours controls
   toolInternalHours.forEach((hours, index) => {
     const numberInput = document.getElementById(`toolInternalHoursNum_${index}`);
-
     if (numberInput) {
-      numberInput.addEventListener('input', (e) => {
-        const newValue = Math.min(500, Math.max(0, parseFloat(e.target.value) || 0));
+      numberInput.addEventListener('input', event => {
+        const newValue = Math.min(500, Math.max(0, parseFloat(event.target.value) || 0));
         numberInput.value = newValue;
         onToolInternalHoursChange(index, newValue);
       });
     }
   });
 
-  /// Response Internal Hours controls
   responseInternalHours.forEach((hours, index) => {
     const numberInput = document.getElementById(`responseInternalHoursNum_${index}`);
-
     if (numberInput) {
-      numberInput.addEventListener('input', (e) => {
-        const newValue = Math.min(200, Math.max(0, parseFloat(e.target.value) || 0));
+      numberInput.addEventListener('input', event => {
+        const newValue = Math.min(200, Math.max(0, parseFloat(event.target.value) || 0));
         numberInput.value = newValue;
         onResponseInternalHoursChange(index, newValue);
       });
     }
   });
 
-  // Reset buttons
   const resetToolCosts = document.getElementById('resetToolCosts');
-   if (resetToolCosts) {
+  if (resetToolCosts) {
     resetToolCosts.addEventListener('click', () => {
-      // Reset tool costs to defaults
-      [100, 100, 100, 100, 100, 100].forEach((defaultCost, index) => {
-        // Reset annual programme costs
-        onToolAnnualProgrammeCostChange(index, defaultCost);
-        const annualNumber = document.getElementById(`toolAnnualCostNum_${index}`);
-        if (annualNumber) annualNumber.value = defaultCost;
+      [100, 100, 100, 100, 100, 100].forEach((defaultValue, index) => {
+        onToolAnnualProgrammeCostChange(index, defaultValue);
+        const annualField = document.getElementById(`toolAnnualCostNum_${index}`);
+        if (annualField) annualField.value = defaultValue;
 
-        // Reset per supplier costs
-        onToolPerSupplierCostChange(index, defaultCost);
-        const perSupplierNumber = document.getElementById(`toolPerSupplierCostNum_${index}`);
-        if (perSupplierNumber) perSupplierNumber.value = defaultCost;
+        onToolPerSupplierCostChange(index, defaultValue);
+        const perSupplierField = document.getElementById(`toolPerSupplierCostNum_${index}`);
+        if (perSupplierField) perSupplierField.value = defaultValue;
 
-        // Reset tool internal hours
-        onToolInternalHoursChange(index, defaultCost);
-        const hoursNumber = document.getElementById(`toolInternalHoursNum_${index}`);
-        if (hoursNumber) hoursNumber.value = defaultCost;
+        onToolInternalHoursChange(index, defaultValue);
+        const hourField = document.getElementById(`toolInternalHoursNum_${index}`);
+        if (hourField) hourField.value = defaultValue;
       });
     });
   }
 
-   const resetResponseCosts = document.getElementById('resetResponseCosts');
+  const resetResponseCosts = document.getElementById('resetResponseCosts');
   if (resetResponseCosts) {
     resetResponseCosts.addEventListener('click', () => {
-      // Reset response method costs to defaults
       [100, 100, 100, 100, 100, 100].forEach((defaultHours, index) => {
         onResponseInternalHoursChange(index, defaultHours);
-        const numberInput = document.getElementById(`responseInternalHoursNum_${index}`);
-        if (numberInput) numberInput.value = defaultHours;
+        const hoursField = document.getElementById(`responseInternalHoursNum_${index}`);
+        if (hoursField) hoursField.value = defaultHours;
       });
     });
   }
-
 
   const optimizeBtn = document.getElementById('runOptimization');
   if (optimizeBtn) {
     optimizeBtn.addEventListener('click', () => {
-      if (typeof optimizeBudgetAllocation !== 'function') return;
+      if (typeof optimizeBudgetAllocation !== 'function') {
+        return;
+      }
 
       const originalText = optimizeBtn.textContent;
       optimizeBtn.disabled = true;
@@ -2561,12 +2298,7 @@ function setupCostAnalysisEventListeners(handlers) {
           1,
           Math.floor(readInputValue('supplierCountInput', 1, Number.POSITIVE_INFINITY, supplierCount))
         );
-        const latestHourlyRate = readInputValue(
-          'hourlyRateInput',
-          0,
-          Number.POSITIVE_INFINITY,
-          hourlyRate
-        );
+        const latestHourlyRate = readInputValue('hourlyRateInput', 0, Number.POSITIVE_INFINITY, hourlyRate);
         const latestAnnualProgrammeCosts = readArrayValues(
           'toolAnnualCostNum_',
           toolAnnualProgrammeCosts.length,
@@ -2661,6 +2393,8 @@ function setupCostAnalysisEventListeners(handlers) {
     });
   }
 }
+
+
 
 function renderDetailedBudgetBreakdown(
   budgetData,
