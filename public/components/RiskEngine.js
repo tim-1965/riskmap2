@@ -1914,7 +1914,7 @@ optimizeBudgetAllocation(
     let localValidSolutions = 0;
 
     // PHASE 1: Enhanced Simulated Annealing
-    const runEnhancedSimulatedAnnealing = (iterations = 150) => {
+    const runEnhancedSimulatedAnnealing = (iterations = 200) => {
       let currentTools = [...localBestTools];
       let currentResponses = [...localBestResponses];
       let currentResult = evaluateAllocation(currentTools, currentResponses);
@@ -1925,8 +1925,8 @@ optimizeBudgetAllocation(
         currentResult = evaluateAllocation(currentTools, currentResponses);
       }
       
-      let temperature = 15.0;
-      const coolingRate = 0.92;
+      let temperature = 20.0;
+      const coolingRate = 0.95;
       
       for (let i = 0; i < iterations; i++) {
         updateProgress('Simulated Annealing', i + 1, iterations);
@@ -1976,7 +1976,7 @@ optimizeBudgetAllocation(
     };
 
     // PHASE 2: Budget-Constrained Genetic Algorithm
-    const runBudgetConstrainedGA = (generations = 100, populationSize = 16) => {
+    const runBudgetConstrainedGA = (generations = 120, populationSize = 20) => {
       const population = [];
       
       // Create initial population with budget adjustment
@@ -2091,7 +2091,7 @@ optimizeBudgetAllocation(
     };
 
     // PHASE 3: Budget-Constrained Local Search
-    const runBudgetConstrainedLocalSearch = (iterations = 80) => {
+    const runBudgetConstrainedLocalSearch = (iterations = 100) => {
       let currentTools = [...localBestTools];
       let currentResponses = [...localBestResponses];
       let currentResult = evaluateAllocation(currentTools, currentResponses);
@@ -2202,8 +2202,8 @@ optimizeBudgetAllocation(
       bestFitness = roundResult.bestFitness;
     }
     
-    // Early exit if we found a good solution
-    if (validSolutionsFound >= 5 && bestFitness < 999) break;
+    // Early exit if we found a good solution and have run enough iterations
+    if (validSolutionsFound >= 10 && bestFitness < 999 && totalIterationsRun >= 400) break;
   }
 
   // FINAL VALIDATION AND RESULT GENERATION
@@ -2245,7 +2245,7 @@ optimizeBudgetAllocation(
     return noImprovementResult;
   }
 
-  // If we have previous optimization results, check if new results meet improvement criteria
+ // If we have previous optimization results, check if new results meet improvement criteria
   if (this.lastOptimizationState && this.lastOptimizationState.results) {
     const prevResults = this.lastOptimizationState.results;
     const newManagedRisk = finalResult.managedRisk;
@@ -2253,20 +2253,43 @@ optimizeBudgetAllocation(
     const prevManagedRisk = prevResults.optimizedManagedRisk || prevResults.currentManagedRisk;
     const prevBudget = prevResults.finalBudget || prevResults.targetBudget;
     
+    // Calculate improvements
+    const budgetImprovement = prevBudget - newBudget;
+    const riskImprovement = prevManagedRisk - newManagedRisk;
+    const riskImprovementPercentage = prevResults.baselineRisk > 0 
+      ? ((prevResults.baselineRisk - newManagedRisk) / prevResults.baselineRisk * 100) - 
+        ((prevResults.baselineRisk - prevManagedRisk) / prevResults.baselineRisk * 100)
+      : 0;
+    
     // Check improvement criteria:
-    // (a) Lower budget at same or better managed risk, OR
-    // (b) Lower managed risk while still under budget
-    const criteriaA = (newBudget < prevBudget) && (newManagedRisk <= prevManagedRisk);
-    const criteriaB = (newManagedRisk < prevManagedRisk) && (newBudget <= targetBudget + budgetTolerance);
+    // Criteria A: Lower budget with same or better managed risk
+    const criteriaA = (budgetImprovement > 0) && (riskImprovement >= 0);
+    
+    // Criteria B: Material risk improvement (0.1 percentage points) while staying within budget
+    const criteriaB = (riskImprovementPercentage >= minImprovementThreshold) && 
+                     (newBudget <= targetBudget + budgetTolerance);
     
     if (!criteriaA && !criteriaB) {
       // New results don't meet improvement criteria, return previous results
-      updateProgress('Previous Results Better', 100, 100);
+      updateProgress('Existing Solution Optimal', 100, 100);
+      
+      const noImprovementMessage = budgetImprovement <= 0 && riskImprovement <= minImprovementThreshold
+        ? `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but found no material improvements (requiring either lower budget or ${minImprovementThreshold}% better risk reduction while staying within budget).`
+        : `Previous optimization achieved managed risk ${prevManagedRisk.toFixed(1)} at budget $${prevBudget.toLocaleString()}. Current attempt found managed risk ${newManagedRisk.toFixed(1)} at budget $${newBudget.toLocaleString()}, which doesn't meet the improvement criteria.`;
+      
       return {
         ...prevResults,
-        insight: `Previous optimization results were better. Current run found managed risk ${newManagedRisk.toFixed(1)} at budget ${newBudget.toLocaleString()}, but previous results achieved managed risk ${prevManagedRisk.toFixed(1)} at budget ${prevBudget.toLocaleString()}. ${prevResults.insight}`,
+        insight: noImprovementMessage,
         alreadyOptimized: true,
-        reOptimizationAttempted: true
+        reOptimizationAttempted: true,
+        attemptedValidSolutions: validSolutionsFound,
+        criteriaChecked: {
+          budgetImprovement: budgetImprovement.toFixed(0),
+          riskImprovement: riskImprovement.toFixed(2),
+          riskImprovementPercentage: riskImprovementPercentage.toFixed(2),
+          criteriaAMet: criteriaA,
+          criteriaBMet: criteriaB
+        }
       };
     }
   }
