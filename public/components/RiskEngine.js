@@ -57,6 +57,40 @@ export class RiskEngine {
       'High': { min: 60, max: 79.99, color: '#ef4444' }, // Red
       'Very High': { min: 80, max: 100, color: '#991b1b' } // Dark Red
     };
+   }
+
+  generateOptimizationStateHash(state) {
+    const normalizeValue = (value) => {
+      if (Array.isArray(value)) {
+        return `[${value.map(normalizeValue).join(',')}]`;
+      }
+
+      if (value && typeof value === 'object') {
+        const keys = Object.keys(value).sort();
+        return `{${keys.map(key => `${key}:${normalizeValue(value[key])}`).join(',')}}`;
+      }
+
+      const numberValue = Number(value);
+      if (Number.isFinite(numberValue)) {
+        return numberValue.toFixed(4);
+      }
+
+      if (value === null || value === undefined) {
+        return 'null';
+      }
+
+      return String(value);
+    };
+
+    if (!state || typeof state !== 'object') {
+      return 'invalid-state';
+    }
+
+    const parts = Object.keys(state)
+      .sort()
+      .map(key => `${key}:${normalizeValue(state[key])}`);
+
+    return parts.join('|');
   }
 
   // MODIFIED: Further reduced maximum focus exponent for stronger rank preservation
@@ -1774,7 +1808,7 @@ optimizeBudgetAllocation(
       budgetViolation: Math.abs(cost - targetBudget),
       responseAllocation: linkedResponseAllocation,
       valid: true,
-      improvement
+      improvement: improvementInRiskReduction
     };
   };
 
