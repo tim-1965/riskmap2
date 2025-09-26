@@ -1750,6 +1750,9 @@ export function createCostAnalysisPanel(containerId, options) {
   const totalExternalCost = normalizedBudgetData.totalExternalCost;
   const totalInternalCost = normalizedBudgetData.totalInternalCost;
   const totalBudget = normalizedBudgetData.totalBudget || totalExternalCost + totalInternalCost;
+  const costPerSupplier = sanitizedSupplierCount > 0
+    ? Math.round(totalBudget / sanitizedSupplierCount)
+    : 0;
   const optimization = typeof optimizeBudgetAllocation === 'function'
     ? optimizeBudgetAllocation()
     : null;
@@ -1918,7 +1921,7 @@ export function createCostAnalysisPanel(containerId, options) {
           </div>
           <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e0f2fe;">
             <div style="font-size: 12px; color: #0369a1; margin-bottom: 4px;">COST PER SUPPLIER</div>
-            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${(totalBudget / sanitizedSupplierCount).toFixed(0)}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #0c4a6e;">$${costPerSupplier.toLocaleString()}</div>
           </div>
         </div>
       </div>
@@ -2296,33 +2299,46 @@ function setupCostAnalysisEventListeners(handlers) {
   const currentEffectiveness = ((baselineRisk - managedRisk) / baselineRisk * 100).toFixed(1);
   const optimizedEffectiveness = ((optimization.baselineRisk - optimization.optimizedManagedRisk) / optimization.baselineRisk * 100).toFixed(1);
   const improvementPct = (optimizedEffectiveness - currentEffectiveness).toFixed(1);
+  const improvementValue = parseFloat(improvementPct);
+  const improvementColor = improvementValue > 0 ? '#22c55e' : improvementValue < 0 ? '#ef4444' : '#6b7280';
+  const improvementLabel = improvementValue > 0 ? 'Improvement' : improvementValue < 0 ? 'Decrease' : 'No Change';
+  const currentColor = '#2563eb';
+  const optimizedColor = '#16a34a';
 
   return `
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-      
+    <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')};">
+
       <!-- Current vs Optimized Comparison -->
-      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
-        <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Effectiveness Comparison</h4>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="font-size: 13px; color: #374151;">Current Setup:</span>
-          <span style="font-size: 13px; font-weight: 600; color: #6b7280;">${currentEffectiveness}% reduction</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <span style="font-size: 13px; color: #374151;">Optimized Setup:</span>
-          <span style="font-size: 13px; font-weight: 600; color: #16a34a;">${optimizedEffectiveness}% reduction</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #e5e7eb;">
-          <span style="font-size: 13px; font-weight: 600; color: #14532d;">Improvement:</span>
-          <span style="font-size: 13px; font-weight: 600; color: ${improvementPct > 0 ? '#16a34a' : '#dc2626'};">
-            ${improvementPct > 0 ? '+' : ''}${improvementPct}%
-          </span>
+      <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); border-top: 4px solid #3b82f6;">
+        <h4 style="font-size: ${responsive('16px', '18px')}; font-weight: 600; color: #1f2937; margin: 0 0 ${responsive('16px', '20px')} 0; text-align: center;">Effectiveness Comparison</h4>
+        <div style="display: grid; grid-template-columns: ${responsive('1fr', 'repeat(3, minmax(0, 1fr))')}; gap: ${responsive('12px', '16px')}; align-items: stretch;">
+          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${currentColor}; background-color: ${currentColor}15; text-align: center;">
+            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">CURRENT SETUP</div>
+            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${currentColor}; margin-bottom: 6px;">${currentEffectiveness}%</div>
+            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${currentColor};">Risk Reduction</div>
+            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Current programme performance</div>
+          </div>
+
+          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${optimizedColor}; background-color: ${optimizedColor}15; text-align: center;">
+            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">OPTIMIZED SETUP</div>
+            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${optimizedColor}; margin-bottom: 6px;">${optimizedEffectiveness}%</div>
+            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${optimizedColor};">Risk Reduction</div>
+            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Projected after optimization</div>
+          </div>
+
+          <div style="padding: ${responsive('14px', '20px')}; border-radius: 12px; border: 3px solid ${improvementColor}; background-color: ${improvementColor}15; text-align: center;">
+            <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">IMPACT</div>
+            <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${improvementColor}; margin-bottom: 6px;">${improvementValue > 0 ? '+' : improvementValue < 0 ? '-' : ''}${Math.abs(improvementValue).toFixed(1)}%</div>
+            <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${improvementColor};">${improvementLabel}</div>
+            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Difference vs current setup</div>
+          </div>
         </div>
       </div>
 
       <!-- Tool Allocation Comparison -->
-      <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #d1fae5;">
+      <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; border: 1px solid #d1fae5; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
         <h4 style="font-size: 14px; font-weight: 600; color: #14532d; margin: 0 0 12px 0;">Recommended Tool Allocation</h4>
-        <div style="max-height: 200px; overflow-y: auto;">
+        <div style="max-height: ${responsive('220px', '260px')}; overflow-y: auto;">
           ${riskEngine.hrddStrategyLabels.map((label, index) => {
             const current = currentAllocation[index] || 0;
             const optimized = optimizedToolAllocation[index] || 0;
@@ -2705,7 +2721,21 @@ function renderDetailedBudgetBreakdown(
     };
   });
 
-  const currentTotal = currentBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0);
+  const currentTotal = Math.round(currentBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0));
+  const optimizedTotal = Math.round(optimizedBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0));
+  const combinedBreakdown = riskEngine.hrddStrategyLabels.map((label, index) => {
+    const current = currentBreakdown[index];
+    const optimized = optimizedBreakdown[index];
+    const coverageChange = optimized.coverage - current.coverage;
+    const costChange = optimized.totalCost - current.totalCost;
+
+    return {
+      current,
+      optimized,
+      coverageChange,
+      costChange
+    };
+  });
 
   return `
     <div style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
@@ -2713,86 +2743,58 @@ function renderDetailedBudgetBreakdown(
         Detailed Budget Breakdown: Current vs Optimized
       </h3>
 
-      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: 24px;">
-
-        <!-- Current Allocation Column -->
-         <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 12px; border:1px solid #fecaca; display: flex; flex-direction: column; min-height: 100%;">
-          <h4 style="font-size: 16px; font-weight: 600; color: #991b1b; margin: 0 0 16px 0; text-align: center;">
-            Current Strategy Allocation
-          </h4>
-          <div style="display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto;">
-            ${currentBreakdown.map((tool, index) => `
-              <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #f87171;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <span style="font-size: 13px; font-weight: 600; color: #7f1d1d; flex: 1;">${tool.name}</span>
-                  <span style="font-size: 12px; color: #991b1b; background: #fecaca; padding: 2px 8px; border-radius: 12px;">
-                    ${tool.coverage.toFixed(0)}% coverage
-                  </span>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 11px; color: #7f1d1d;">
-                  <div>Suppliers: <strong>${tool.suppliersUsingTool}</strong></div>
-                  <div>External: <strong>$${tool.totalExternalCost.toLocaleString()}</strong></div>
-                  <div>Internal: <strong>$${tool.totalInternalCost.toLocaleString()}</strong></div>
-                  <div>Total: <strong>$${tool.totalCost.toLocaleString()}</strong></div>
-                </div>
+      <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')};">
+        ${combinedBreakdown.map(({ current, optimized, coverageChange, costChange }) => `
+          <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: ${responsive('12px', '16px')}; align-items: stretch;">
+            <div style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: ${responsive('14px', '18px')}; border-radius: 12px; border: 1px solid #fecaca; display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: ${responsive('13px', '14px')}; font-weight: 600; color: #7f1d1d; flex: 1;">${current.name}</span>
+                <span style="font-size: ${responsive('11px', '12px')}; color: #991b1b; background: #fecaca; padding: 2px 8px; border-radius: 12px;">${current.coverage.toFixed(0)}% coverage</span>
               </div>
-            `).join('')}
-          </div>
-         <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #dc2626; margin-top: auto;">
-            <div style="text-align: center; color: #991b1b;">
-              <div style="font-size: 12px; margin-bottom: 4px;">CURRENT TOTAL BUDGET</div>
-              <div style="font-size: 20px; font-weight: bold;">$${currentTotal.toLocaleString()}</div>
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: ${responsive('11px', '12px')}; color: #7f1d1d;">
+                <div>Suppliers: <strong>${current.suppliersUsingTool}</strong></div>
+                <div>External: <strong>$${current.totalExternalCost.toLocaleString()}</strong></div>
+                <div>Internal: <strong>$${current.totalInternalCost.toLocaleString()}</strong></div>
+                <div>Total: <strong>$${current.totalCost.toLocaleString()}</strong></div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Optimized Allocation Column -->
-        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%); padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0; display: flex; flex-direction: column; min-height: 100%;">
-          <h4 style="font-size: 16px; font-weight: 600; color: #14532d; margin: 0 0 16px 0; text-align: center;">
-            Optimized Strategy Allocation
-          </h4>
-          <div style="display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto;">
-            ${optimizedBreakdown.map((tool, index) => {
-              const currentTool = currentBreakdown[index];
-              const coverageChange = tool.coverage - currentTool.coverage;
-              const costChange = tool.totalCost - currentTool.totalCost;
-
-              return `
-                <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #22c55e;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 13px; font-weight: 600; color: #14532d; flex: 1;">${tool.name}</span>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                      <span style="font-size: 12px; color: #16a34a; background: #dcfce7; padding: 2px 8px; border-radius: 12px;">
-                        ${tool.coverage.toFixed(0)}% coverage
-                      </span>
-                      ${Math.abs(coverageChange) > 0.5 ? `
-                        <span style="font-size: 10px; color: ${coverageChange > 0 ? '#16a34a' : '#dc2626'}; font-weight: bold;">
-                          ${coverageChange > 0 ? '+' : ''}${coverageChange.toFixed(0)}%
-                        </span>
-                      ` : ''}
-                    </div>
-                  </div>
-                  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 11px; color: #14532d;">
-                    <div>Suppliers: <strong>${tool.suppliersUsingTool}</strong></div>
-                    <div>External: <strong>$${tool.totalExternalCost.toLocaleString()}</strong></div>
-                    <div>Internal: <strong>$${tool.totalInternalCost.toLocaleString()}</strong></div>
-                    <div>Total: <strong>$${tool.totalCost.toLocaleString()}</strong></div>
-                  </div>
-                  ${Math.abs(costChange) > 10 ? `
-                    <div style="font-size: 10px; color: ${costChange > 0 ? '#dc2626' : '#16a34a'}; text-align: right; margin-top: 4px;">
-                      Cost change: ${costChange > 0 ? '+' : ''}$${Math.abs(costChange).toLocaleString()}
-                    </div>
+            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%); padding: ${responsive('14px', '18px')}; border-radius: 12px; border: 1px solid #bbf7d0; display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: ${responsive('13px', '14px')}; font-weight: 600; color: #14532d; flex: 1;">${optimized.name}</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: ${responsive('11px', '12px')}; color: #16a34a; background: #dcfce7; padding: 2px 8px; border-radius: 12px;">${optimized.coverage.toFixed(0)}% coverage</span>
+                  ${Math.abs(coverageChange) > 0.5 ? `
+                    <span style="font-size: ${responsive('10px', '11px')}; color: ${coverageChange > 0 ? '#16a34a' : '#dc2626'}; font-weight: 600;">
+                      ${coverageChange > 0 ? '+' : ''}${coverageChange.toFixed(0)}%
+                    </span>
                   ` : ''}
                 </div>
-              `;
-            }).join('')}
-          </div>
-          <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #16a34a; margin-top: auto;">
-            <div style="text-align: center; color: #14532d;">
-              <div style="font-size: 12px; margin-bottom: 4px;">OPTIMIZED TOTAL BUDGET</div>
-              <div style="font-size: 20px; font-weight: bold;">$${optimizedBreakdown.reduce((sum, tool) => sum + tool.totalCost, 0).toLocaleString()}</div>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: ${responsive('11px', '12px')}; color: #14532d;">
+                <div>Suppliers: <strong>${optimized.suppliersUsingTool}</strong></div>
+                <div>External: <strong>$${optimized.totalExternalCost.toLocaleString()}</strong></div>
+                <div>Internal: <strong>$${optimized.totalInternalCost.toLocaleString()}</strong></div>
+                <div>Total: <strong>$${optimized.totalCost.toLocaleString()}</strong></div>
+              </div>
+              ${Math.abs(costChange) > 10 ? `
+                <div style="font-size: ${responsive('10px', '11px')}; color: ${costChange > 0 ? '#dc2626' : '#16a34a'}; text-align: right;">
+                  Cost change: ${costChange > 0 ? '+' : ''}$${Math.abs(costChange).toLocaleString()}
+                </div>
+              ` : ''}
             </div>
           </div>
+        `).join('')}
+      </div>
+
+      <div style="display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: ${responsive('12px', '16px')}; margin-top: ${responsive('16px', '20px')};">
+        <div style="background: white; padding: ${responsive('14px', '16px')}; border-radius: 8px; border: 2px solid #dc2626; text-align: center; color: #991b1b;">
+          <div style="font-size: 12px; margin-bottom: 4px;">CURRENT TOTAL BUDGET</div>
+          <div style="font-size: 20px; font-weight: bold;">$${currentTotal.toLocaleString()}</div>
+        </div>
+        <div style="background: white; padding: ${responsive('14px', '16px')}; border-radius: 8px; border: 2px solid #16a34a; text-align: center; color: #14532d;">
+          <div style="font-size: 12px; margin-bottom: 4px;">OPTIMIZED TOTAL BUDGET</div>
+          <div style="font-size: 20px; font-weight: bold;">$${optimizedTotal.toLocaleString()}</div>
         </div>
       </div>
     </div>
