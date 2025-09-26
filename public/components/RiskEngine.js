@@ -1720,16 +1720,13 @@ optimizeBudgetAllocation(
     countryVolumes, countryRisks, focus
   });
 
-  // Check if we've already optimized with these exact settings
-  if (this.lastOptimizationState && this.lastOptimizationState.stateHash === currentStateHash) {
-    // Return previous results with indicator that no new optimization was needed
-    return {
-      ...this.lastOptimizationState.results,
-      alreadyOptimized: true,
-      insight: `Optimization already performed with current settings. ${this.lastOptimizationState.results.insight}`,
-      previouslyOptimized: true
-    };
-  }
+  // Track whether this is a re-optimization with the exact same inputs
+  const previousOptimizationState =
+    this.lastOptimizationState && this.lastOptimizationState.stateHash === currentStateHash
+      ? this.lastOptimizationState
+      : null;
+  const previousResults = previousOptimizationState?.results || null;
+  const isReOptimization = Boolean(previousResults);
 
   // ENHANCED: Improved cost calculation with strict budget enforcement
   const calculateAllocationCost = (toolAllocation, responseAllocation) => {
@@ -1789,14 +1786,15 @@ optimizeBudgetAllocation(
     
     // MINIMUM IMPROVEMENT FILTER: Reject if improvement < 0.1 percentage points
     if (improvementInRiskReduction < minImprovementThreshold) {
-      return { 
-        managedRisk: details.managedRisk, 
-        cost, 
+      return {
+        managedRisk: details.managedRisk,
+        cost,
         fitness: details.managedRisk + 50, // Penalty for insufficient improvement
         budgetViolation: Math.abs(cost - targetBudget),
         responseAllocation: linkedResponseAllocation,
         valid: false,
-        improvementInRiskReduction
+        improvementInRiskReduction,
+        riskReduction: newRiskReduction
       };
     }
     
@@ -1804,26 +1802,34 @@ optimizeBudgetAllocation(
     const budgetPenalty = Math.abs(cost - targetBudget) / targetBudget * 2;
     const fitness = details.managedRisk + budgetPenalty;
     
-    return { 
-      managedRisk: details.managedRisk, 
-      cost, 
-      fitness, 
+     return {
+      managedRisk: details.managedRisk,
+      cost,
+      fitness,
       budgetViolation: Math.abs(cost - targetBudget),
       responseAllocation: linkedResponseAllocation,
       valid: true,
-      improvement: improvementInRiskReduction
+      improvementInRiskReduction,
+      riskReduction: newRiskReduction
     };
   };
 
   // Initialize tracking variables
-  let bestToolAllocation = [...hrddStrategy];
+   let bestToolAllocation = [...hrddStrategy];
   let bestResponseAllocation = [...responsivenessStrategy];
   let bestFitness = Infinity;
-  let bestResult = null;
   let validSolutionsFound = 0;
   let maxAttempts = 5; // Maximum restart attempts
   let currentAttempt = 0;
   let totalIterationsRun = 0;
+  const desiredValidSolutions = 12;
+
+  const getNow = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? () => performance.now()
+    : () => Date.now();
+  const startTime = getNow();
+  const maxDurationMs = 4500;
+  const shouldStopForTime = () => (getNow() - startTime) >= maxDurationMs;
 
   const updateProgress = (phase, iteration, total) => {
     if (typeof document !== 'undefined') {
@@ -1929,7 +1935,8 @@ optimizeBudgetAllocation(
       let temperature = 20.0;
       const coolingRate = 0.95;
       
-       for (let i = 0; i < iterations; i++) {
+        for (let i = 0; i < iterations; i++) {
+        if (shouldStopForTime()) break;
         totalIterationsRun++;
         updateProgress('Simulated Annealing', i + 1, iterations);
         
@@ -1999,9 +2006,10 @@ optimizeBudgetAllocation(
       });
       
       // Fill population with budget-adjusted random individuals
-      while (population.length < populationSize) {
+       while (population.length < populationSize) {
+        if (shouldStopForTime()) break;
         let randomTools = Array.from({ length: 6 }, () => Math.random() * 80 + 10);
-        let randomResponses = Array.from({ length: 6 }, (_, i) => 
+        let randomResponses = Array.from({ length: 6 }, (_, i) =>
           i === 0 ? randomTools[0] : Math.random() * 80 + 10
         );
         
@@ -2024,7 +2032,8 @@ optimizeBudgetAllocation(
       });
       
       // Evolution with budget constraints
-      for (let gen = 0; gen < generations; gen++) {
+       for (let gen = 0; gen < generations; gen++) {
+        if (shouldStopForTime()) break;
         totalIterationsRun++;
         updateProgress('Genetic Algorithm', gen + 1, generations);
         
@@ -2050,6 +2059,7 @@ optimizeBudgetAllocation(
         
         // Generate offspring with budget awareness
         while (newPopulation.length < populationSize) {
+          if (shouldStopForTime()) break;
           const parent1 = selectParent();
           const parent2 = selectParent();
           
@@ -2105,6 +2115,7 @@ optimizeBudgetAllocation(
       }
       
        for (let iter = 0; iter < iterations; iter++) {
+        if (shouldStopForTime()) break;
         totalIterationsRun++;
         updateProgress('Local Search', iter + 1, iterations);
         
@@ -2193,10 +2204,11 @@ optimizeBudgetAllocation(
   // MAIN OPTIMIZATION LOOP: Multiple attempts with different strategies
   const strategies = ['balanced', 'voice_priority', 'efficiency_focused', 'preserve_voice'];
   
-  for (currentAttempt = 0; currentAttempt < maxAttempts && validSolutionsFound < 3; currentAttempt++) {
+  for (currentAttempt = 0; currentAttempt < maxAttempts; currentAttempt++) {
+    if (shouldStopForTime()) break;
     const strategy = strategies[currentAttempt % strategies.length];
     updateProgress(`Strategy: ${strategy}`, 0, 100);
-    
+
     const roundResult = runOptimizationRound(strategy);
     validSolutionsFound += roundResult.validSolutions;
     
@@ -2206,16 +2218,47 @@ optimizeBudgetAllocation(
       bestFitness = roundResult.bestFitness;
     }
     
-    // Early exit if we found a good solution and have run enough iterations
-    if (validSolutionsFound >= 10 && bestFitness < 999 && totalIterationsRun >= 400) break;
+      // Early exit if we found a good solution and have run enough iterations
+    if ((validSolutionsFound >= desiredValidSolutions && bestFitness < 999 && totalIterationsRun >= 400) || shouldStopForTime()) {
+      break;
+    }
   }
 
   // FINAL VALIDATION AND RESULT GENERATION
+  const recordResultsAndReturn = (results) => {
+    this.lastOptimizationState = {
+      stateHash: currentStateHash,
+      results,
+      timestamp: Date.now()
+    };
+    return results;
+  };
+
+  const computeRiskReductionPct = (baseline, managed) => {
+    if (!Number.isFinite(baseline) || baseline <= 0) {
+      return 0;
+    }
+    return ((baseline - managed) / baseline) * 100;
+  };
+
   const finalResult = evaluateAllocation(bestToolAllocation, bestResponseAllocation);
-  
+
   // Check if we found a valid improvement
   if (!finalResult.valid || finalResult.improvementInRiskReduction < minImprovementThreshold) {
     updateProgress('No Improvement Found', 100, 100);
+    if (previousResults) {
+      const message = `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but could not identify a material improvement (requiring either lower budget or ${minImprovementThreshold}% better risk reduction while staying within budget).`;
+      const merged = {
+        ...previousResults,
+        insight: message,
+        alreadyOptimized: true,
+        reOptimizationAttempted: true,
+        attemptedValidSolutions: validSolutionsFound,
+        optimizationRun: true
+      };
+      return recordResultsAndReturn(merged);
+    }
+
     const noImprovementResult = {
       baselineRisk: currentDetails.baselineRisk,
       currentManagedRisk: currentDetails.managedRisk,
@@ -2224,7 +2267,7 @@ optimizeBudgetAllocation(
       currentResponseAllocation: responsivenessStrategy,
       optimizedToolAllocation: hrddStrategy,
       optimizedResponseAllocation: responsivenessStrategy,
-       currentRiskReduction: currentRiskReduction,
+      currentRiskReduction: currentRiskReduction,
       optimizedRiskReduction: currentRiskReduction,
       currentEffectiveness: baselineEffectiveness,
       optimizedEffectiveness: baselineEffectiveness,
@@ -2239,63 +2282,61 @@ optimizeBudgetAllocation(
       optimizationRun: true,
       alreadyOptimized: false
     };
-    
-    // Store this as the last optimization state
-    this.lastOptimizationState = {
-      stateHash: currentStateHash,
-      results: noImprovementResult
-    };
-    
-    return noImprovementResult;
+
+    return recordResultsAndReturn(noImprovementResult);
   }
 
- // If we have previous optimization results, check if new results meet improvement criteria
-  if (this.lastOptimizationState && this.lastOptimizationState.results) {
-    const prevResults = this.lastOptimizationState.results;
+  // If we have previous optimization results, check if new results meet improvement criteria
+  let comparisonMetrics = null;
+  if (previousResults) {
+    const prevManagedRisk = previousResults.optimizedManagedRisk ?? previousResults.currentManagedRisk ?? currentDetails.managedRisk;
+    const prevBudget = previousResults.finalBudget ?? previousResults.targetBudget ?? targetBudget;
     const newManagedRisk = finalResult.managedRisk;
     const newBudget = finalResult.cost;
-    const prevManagedRisk = prevResults.optimizedManagedRisk || prevResults.currentManagedRisk;
-    const prevBudget = prevResults.finalBudget || prevResults.targetBudget;
-    
-    // Calculate improvements
+
+    const previousRiskReductionPct = computeRiskReductionPct(currentDetails.baselineRisk, prevManagedRisk);
+    const newRiskReductionPct = computeRiskReductionPct(currentDetails.baselineRisk, newManagedRisk);
+
     const budgetImprovement = prevBudget - newBudget;
     const riskImprovement = prevManagedRisk - newManagedRisk;
-    const riskImprovementPercentage = prevResults.baselineRisk > 0 
-      ? ((prevResults.baselineRisk - newManagedRisk) / prevResults.baselineRisk * 100) - 
-        ((prevResults.baselineRisk - prevManagedRisk) / prevResults.baselineRisk * 100)
-      : 0;
-    
-    // Check improvement criteria:
-    // Criteria A: Lower budget with same or better managed risk
-    const criteriaA = (budgetImprovement > 0) && (riskImprovement >= 0);
-    
-    // Criteria B: Material risk improvement (0.1 percentage points) while staying within budget
-    const criteriaB = (riskImprovementPercentage >= minImprovementThreshold) && 
-                     (newBudget <= targetBudget + budgetTolerance);
-    
+    const riskImprovementPercentage = newRiskReductionPct - previousRiskReductionPct;
+    const comparisonTolerance = Math.max(budgetTolerance, prevBudget * 0.001);
+
+    // Criteria A: Lower budget with same or better managed risk (allow very small tolerance)
+    const criteriaA = (budgetImprovement > comparisonTolerance) && (riskImprovement >= -0.05);
+
+    // Criteria B: Material risk improvement (0.1 percentage points) while staying within (or below) previous budget
+    const criteriaB = (riskImprovementPercentage >= minImprovementThreshold) &&
+                     (newBudget <= prevBudget + comparisonTolerance);
+
     if (!criteriaA && !criteriaB) {
-      // New results don't meet improvement criteria, return previous results
       updateProgress('Existing Solution Optimal', 100, 100);
-      
-      const noImprovementMessage = budgetImprovement <= 0 && riskImprovement <= minImprovementThreshold
-        ? `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but found no material improvements (requiring either lower budget or ${minImprovementThreshold}% better risk reduction while staying within budget).`
-        : `Previous optimization achieved managed risk ${prevManagedRisk.toFixed(1)} at budget $${prevBudget.toLocaleString()}. Current attempt found managed risk ${newManagedRisk.toFixed(1)} at budget $${newBudget.toLocaleString()}, which doesn't meet the improvement criteria.`;
-      
-      return {
-        ...prevResults,
-        insight: noImprovementMessage,
+      const message = `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but did not beat the previous outcome (requires either lower budget or ${minImprovementThreshold}% additional risk reduction while staying within budget).`;
+      const merged = {
+        ...previousResults,
+        insight: message,
         alreadyOptimized: true,
         reOptimizationAttempted: true,
         attemptedValidSolutions: validSolutionsFound,
+        optimizationRun: true,
         criteriaChecked: {
-          budgetImprovement: budgetImprovement.toFixed(0),
+          budgetImprovement: budgetImprovement.toFixed(2),
           riskImprovement: riskImprovement.toFixed(2),
           riskImprovementPercentage: riskImprovementPercentage.toFixed(2),
           criteriaAMet: criteriaA,
           criteriaBMet: criteriaB
         }
       };
+      return recordResultsAndReturn(merged);
     }
+
+    comparisonMetrics = {
+      budgetImprovement: budgetImprovement.toFixed(2),
+      riskImprovement: riskImprovement.toFixed(2),
+      riskImprovementPercentage: riskImprovementPercentage.toFixed(2),
+      criteriaAMet: criteriaA,
+      criteriaBMet: criteriaB
+    };
   }
 
   // Calculate final metrics
@@ -2329,10 +2370,12 @@ optimizeBudgetAllocation(
 
   updateProgress('Optimization Complete', 100, 100);
 
-  return {
+  const finalResponse = {
     baselineRisk: currentDetails.baselineRisk,
     currentManagedRisk: currentDetails.managedRisk,
     optimizedManagedRisk: optimizedDetails.managedRisk,
+    currentRiskReduction: currentRiskReduction,
+    optimizedRiskReduction: finalResult.riskReduction,
     currentToolAllocation: hrddStrategy,
     currentResponseAllocation: responsivenessStrategy,
     optimizedToolAllocation: bestToolAllocation,
@@ -2347,7 +2390,12 @@ optimizeBudgetAllocation(
     targetBudget,
     algorithmsUsed: ['Enhanced Simulated Annealing', 'Budget-Constrained GA', 'Local Search'],
     validSolutionsFound,
-    
+    optimizationRun: true,
+    alreadyOptimized: isReOptimization,
+    reOptimizationAttempted: isReOptimization,
+    attemptedValidSolutions: validSolutionsFound,
+    criteriaChecked: comparisonMetrics,
+
     // Enhanced breakdown
     toolChanges: bestToolAllocation.map((alloc, i) => ({
       tool: this.hrddStrategyLabels[i],
@@ -2355,13 +2403,15 @@ optimizeBudgetAllocation(
       optimized: alloc,
       change: alloc - hrddStrategy[i]
     })),
-    responseChanges: bestResponseAllocation.map((alloc, i) => ({
+   responseChanges: bestResponseAllocation.map((alloc, i) => ({
       method: this.responsivenessLabels[i],
       current: responsivenessStrategy[i],
       optimized: alloc,
       change: alloc - responsivenessStrategy[i]
     }))
   };
+
+  return recordResultsAndReturn(finalResponse);
 }
 
   // Helper method to adjust allocation to target budget
