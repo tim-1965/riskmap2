@@ -1823,6 +1823,7 @@ optimizeBudgetAllocation(
   let validSolutionsFound = 0;
   let maxAttempts = 5; // Maximum restart attempts
   let currentAttempt = 0;
+  let totalIterationsRun = 0;
 
   const updateProgress = (phase, iteration, total) => {
     if (typeof document !== 'undefined') {
@@ -1928,7 +1929,8 @@ optimizeBudgetAllocation(
       let temperature = 20.0;
       const coolingRate = 0.95;
       
-      for (let i = 0; i < iterations; i++) {
+       for (let i = 0; i < iterations; i++) {
+        totalIterationsRun++;
         updateProgress('Simulated Annealing', i + 1, iterations);
         
         // Generate neighbor with budget-aware moves
@@ -2023,6 +2025,7 @@ optimizeBudgetAllocation(
       
       // Evolution with budget constraints
       for (let gen = 0; gen < generations; gen++) {
+        totalIterationsRun++;
         updateProgress('Genetic Algorithm', gen + 1, generations);
         
         // Selection: prefer valid solutions
@@ -2101,7 +2104,8 @@ optimizeBudgetAllocation(
         currentResult = evaluateAllocation(currentTools, currentResponses);
       }
       
-      for (let iter = 0; iter < iterations; iter++) {
+       for (let iter = 0; iter < iterations; iter++) {
+        totalIterationsRun++;
         updateProgress('Local Search', iter + 1, iterations);
         
         let improved = false;
