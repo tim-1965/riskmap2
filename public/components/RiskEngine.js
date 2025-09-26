@@ -1708,6 +1708,9 @@ optimizeBudgetAllocation(
   );
 
   const currentRiskReduction = currentDetails.baselineRisk - currentDetails.managedRisk;
+  const baselineEffectiveness = currentDetails.baselineRisk > 0
+    ? (currentRiskReduction / currentDetails.baselineRisk * 100)
+    : 0;
 
   // Check if optimization has been run with current settings
   const currentStateHash = this.generateOptimizationStateHash({
@@ -2217,8 +2220,10 @@ optimizeBudgetAllocation(
       currentResponseAllocation: responsivenessStrategy,
       optimizedToolAllocation: hrddStrategy,
       optimizedResponseAllocation: responsivenessStrategy,
-      currentRiskReduction: currentRiskReduction,
+       currentRiskReduction: currentRiskReduction,
       optimizedRiskReduction: currentRiskReduction,
+      currentEffectiveness: baselineEffectiveness,
+      optimizedEffectiveness: baselineEffectiveness,
       improvement: 0,
       insight: `No meaningful improvement found after ${currentAttempt + 1} optimization attempts. Your current allocation appears to be near-optimal within the budget constraint of ${targetBudget.toLocaleString()}. Consider increasing budget or adjusting strategy parameters for further optimization.`,
       budgetUtilization: 100,
