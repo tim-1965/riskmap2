@@ -1835,7 +1835,7 @@ export function createCostAnalysisPanel(containerId, options) {
                    style="width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center;">
           </div>
           <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Cost per Hour (USD)</label>
+            <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Internal cost per work hour (USD)</label>
             <input type="number"
                    id="hourlyRateInput"
                    value="${sanitizedHourlyRate}"
