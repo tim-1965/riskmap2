@@ -2070,19 +2070,44 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
   const currentColor = '#2563eb';
   const optimizedColor = '#16a34a';
 
+  const normalizeCurrencyValue = (value, fallback = 0) =>
+    typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+  const currentTotalBudget = Math.max(
+    0,
+    Math.round(
+      normalizeCurrencyValue(
+        budgetData?.totalBudget,
+        normalizeCurrencyValue(optimization?.targetBudget, 0)
+      )
+    )
+  );
+
+  const optimizedTotalBudget = Math.max(
+    0,
+    Math.round(normalizeCurrencyValue(optimization?.finalBudget, currentTotalBudget))
+  );
+
   const optimizationStatus = optimization.alreadyOptimized
     ? { color: '#22c55e', text: 'Previously optimized', icon: '✓' }
     : optimization.optimizationRun
       ? { color: '#3b82f6', text: 'Newly optimized', icon: '🔄' }
       : { color: '#ef4444', text: 'Not optimized', icon: '○' };
 
-  return `
+return `
     <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')};">
 
       <div style="background: ${optimizationStatus.color}15; border: 1px solid ${optimizationStatus.color}40; border-radius: 12px; padding: ${responsive('12px', '16px')}; text-align: center;">
         <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: ${optimizationStatus.color};">
           <span>${optimizationStatus.icon}</span>
           <span>${optimizationStatus.text}${optimization.reOptimizationAttempted ? ' (Previous results retained)' : ''}</span>
+        </div>
+      </div>
+
+      <div style="background: #fef3c7; padding: ${responsive('12px', '16px')}; border-radius: 8px; border: 1px solid #f59e0b;">
+        <div style="font-size: 13px; color: #92400e;">
+          <strong>Budget Optimization Insight:</strong>
+          ${optimization.insight || 'The optimization suggests focusing more resources on higher-effectiveness tools while maintaining the same total budget.'}
         </div>
       </div>
 
@@ -2107,7 +2132,17 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
             <div style="font-size: ${responsive('11px', '12px')}; font-weight: 600; color: #4b5563; margin-bottom: 6px;">IMPACT</div>
             <div style="font-size: ${responsive('32px', '40px')}; font-weight: bold; color: ${improvementColor}; margin-bottom: 6px;">${improvementValue > 0 ? '+' : improvementValue < 0 ? '-' : ''}${improvementDisplay}%</div>
             <div style="font-size: ${responsive('12px', '14px')}; font-weight: 600; color: ${improvementColor};">${improvementLabel}</div>
-            <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Difference vs current setup</div>
+             <div style="font-size: ${responsive('11px', '12px')}; color: #4b5563; margin-top: 6px;">Difference vs current setup</div>
+          </div>
+        </div>
+        <div style="margin-top: ${responsive('12px', '16px')}; display: grid; grid-template-columns: ${responsive('1fr', '1fr 1fr')}; gap: ${responsive('12px', '16px')};">
+          <div style="background: white; padding: ${responsive('14px', '16px')}; border-radius: 8px; border: 2px solid #dc2626; text-align: center; color: #991b1b;">
+            <div style="font-size: 12px; margin-bottom: 4px;">CURRENT TOTAL BUDGET</div>
+            <div style="font-size: ${responsive('18px', '20px')}; font-weight: bold;">$${currentTotalBudget.toLocaleString()}</div>
+          </div>
+          <div style="background: white; padding: ${responsive('14px', '16px')}; border-radius: 8px; border: 2px solid #16a34a; text-align: center; color: #14532d;">
+            <div style="font-size: 12px; margin-bottom: 4px;">OPTIMIZED TOTAL BUDGET</div>
+            <div style="font-size: ${responsive('18px', '20px')}; font-weight: bold;">$${optimizedTotalBudget.toLocaleString()}</div>
           </div>
         </div>
       </div>
@@ -2122,8 +2157,8 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
             const changeColor = change > 0 ? '#16a34a' : change < 0 ? '#dc2626' : '#6b7280';
             const changeSign = change > 0 ? '+' : '';
             return `
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px;">
-                <span style="flex: 1; color: #374151;">${label.substring(0, 20)}${label.length > 20 ? '...' : ''}</span>
+               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; gap: 8px;">
+                <span style="flex: 1; color: #374151; white-space: normal; word-break: break-word;">${label}</span>
                 <span style="color: #6b7280; margin: 0 8px;">${current.toFixed(0)}%</span>
                 <span style="color: #16a34a;">→ ${optimized.toFixed(0)}%</span>
                 <span style="color: ${changeColor}; margin-left: 8px; min-width: 40px; text-align: right;">${changeSign}${change.toFixed(0)}%</span>
@@ -2131,17 +2166,10 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
             `;
           }).join('')}
         </div>
-      </div>
-    </div>
-
-    <div style="background: #fef3c7; padding: ${responsive('12px', '16px')}; border-radius: 8px; border: 1px solid #f59e0b; margin-top: ${responsive('16px', '20px')};">
-      <div style="font-size: 13px; color: #92400e;">
-        <strong>Budget Optimization Insight:</strong>
-        ${optimization.insight || 'The optimization suggests focusing more resources on higher-effectiveness tools while maintaining the same total budget.'}
-      </div>
+       </div>
     </div>
   `;
-  }
+}
 
 function setupCostAnalysisEventListeners(handlers) {
   const {
