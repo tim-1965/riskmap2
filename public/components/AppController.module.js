@@ -993,7 +993,7 @@ const statusBar = `
             ` : `
               <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                 <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">International supply chains: managing your labour rights risks</h1>
-                <p style="font-size:15px;color:#4b5563;margin:0;">Start with panel 1 and work across to see the results on panel 5.</p>
+                <p style="font-size:15px;color:#4b5563;margin:0;">Start with panel 1 and work across to see the results on panel 5. Then use the optimizer on panel 6.</p>
               </div>
             `}
             <div style="display:flex;justify-content:center;gap:${isMobile ? '4px' : '6px'};flex-wrap:wrap;width:100%;">
