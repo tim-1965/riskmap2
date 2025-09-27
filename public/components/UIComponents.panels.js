@@ -1822,26 +1822,26 @@ export function createCostAnalysisPanel(containerId, options) {
     <div class="cost-analysis-panel" style="background: white; padding: ${responsive('16px', '24px')}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
 
       <!-- Header Section -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
         <h2 style="font-size: ${responsive('18px', '20px')}; font-weight: bold; color: #1f2937; margin: 0;">Cost Analysis & Budget Optimization</h2>
-        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Number of Suppliers</label>
+        <div style="background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; display: grid; grid-template-columns: ${responsive('1fr', 'repeat(2, minmax(0, 1fr))')}; gap: 16px; align-items: stretch;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 12px; font-weight: 600; color: #166534;">Number of Suppliers</label>
             <input type="number"
                    id="supplierCountInput"
                    value="${sanitizedSupplierCount}"
-                   min="1" 
+                   min="1"
                    step="1"
-                   style="width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center;">
+                   style="width: 100%; padding: 10px 12px; border: 1px solid #86efac; border-radius: 8px; font-size: 14px; text-align: right; background: white; color: #064e3b;">
           </div>
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label style="font-size: 12px; font-weight: 500; color: #6b7280;">Internal cost per work hour (USD)</label>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 12px; font-weight: 600; color: #166534;">Internal cost per work hour (USD)</label>
             <input type="number"
                    id="hourlyRateInput"
                    value="${sanitizedHourlyRate}"
-                   min="0" 
+                   min="0"
                    step="0.01"
-                   style="width: 120px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center;">
+                   style="width: 100%; padding: 10px 12px; border: 1px solid #86efac; border-radius: 8px; font-size: 14px; text-align: right; background: white; color: #064e3b;">
           </div>
         </div>
       </div>
