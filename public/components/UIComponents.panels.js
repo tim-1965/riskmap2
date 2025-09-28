@@ -1639,11 +1639,15 @@ export function createCostAnalysisPanel(containerId, options) {
     onToolPerSupplierCostChange,
     onToolInternalHoursChange,
     onResponseInternalHoursChange,
-    optimizeBudgetAllocation
+   optimizeBudgetAllocation,
+    saqConstraintEnabled = false,
+    onSAQConstraintChange
   } = options;
 
   const mobile = isMobileView();
   const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
+
+  const enforceSAQConstraint = Boolean(saqConstraintEnabled);
 
   // Calculate current budget and effectiveness
   const budgetData = riskEngine.calculateBudgetAnalysis(
@@ -1927,13 +1931,19 @@ export function createCostAnalysisPanel(containerId, options) {
 
       <!-- Optimization Analysis -->
       <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display: flex; flex-direction: ${responsive('column', 'row')}; justify-content: space-between; align-items: ${responsive('flex-start', 'center')}; gap: 12px; margin-bottom: 16px;">
           <h3 style="font-size: 16px; font-weight: 600; color: #14532d; margin: 0;">Budget Optimization Analysis</h3>
-          <button id="runOptimization" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
-            Run Optimization
-          </button>
+          <div style="display: flex; flex-direction: ${responsive('column', 'row')}; align-items: ${responsive('flex-start', 'center')}; gap: 12px;">
+            <label for="saqConstraintToggle" title="When enabled, ensures combined coverage of 'Supplier SAQ with Evidence' and 'Supplier SAQ without Evidence' totals exactly 100% of suppliers" style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: #166534; cursor: pointer; background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px;">
+              <input type="checkbox" id="saqConstraintToggle" ${enforceSAQConstraint ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #16a34a;">
+              <span style="font-weight: 600;">Enforce 100% SAQ Coverage (Tools 4+5)</span>
+            </label>
+            <button id="runOptimization" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
+              Run Optimization
+            </button>
+          </div>
         </div>
-        
+
         <div id="optimizationResults">
           ${renderOptimizationResults(optimization, normalizedBudgetData, baselineRisk, managedRisk)}
         </div>
@@ -1982,6 +1992,8 @@ export function createCostAnalysisPanel(containerId, options) {
     onToolInternalHoursChange,
     onResponseInternalHoursChange,
     optimizeBudgetAllocation,
+    onSAQConstraintChange,
+    saqConstraintEnabled: enforceSAQConstraint,
     toolAnnualProgrammeCosts: sanitizedToolAnnualProgrammeCosts,
     toolPerSupplierCosts: sanitizedToolPerSupplierCosts,
     toolInternalHours: sanitizedToolInternalHours,
@@ -2031,6 +2043,8 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
 
   const mobile = isMobileView();
   const responsive = (mobileValue, desktopValue) => (mobile ? mobileValue : desktopValue);
+
+  const saqConstraintEnforced = Boolean(optimization?.saqConstraintEnforced);
 
   const normalizeRiskValue = (value, fallback = 0) =>
     typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -2097,12 +2111,19 @@ function renderOptimizationResults(optimization, budgetData, baselineRisk, manag
 return `
     <div style="display: flex; flex-direction: column; gap: ${responsive('16px', '20px')};">
 
-      <div style="background: ${optimizationStatus.color}15; border: 1px solid ${optimizationStatus.color}40; border-radius: 12px; padding: ${responsive('12px', '16px')}; text-align: center;">
+     <div style="background: ${optimizationStatus.color}15; border: 1px solid ${optimizationStatus.color}40; border-radius: 12px; padding: ${responsive('12px', '16px')}; text-align: center;">
         <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: ${optimizationStatus.color};">
           <span>${optimizationStatus.icon}</span>
           <span>${optimizationStatus.text}${optimization.reOptimizationAttempted ? ' (Previous results retained)' : ''}</span>
         </div>
       </div>
+
+      ${saqConstraintEnforced
+        ? `<div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: ${responsive('10px', '12px')}; color: #3730a3; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🛡️</span>
+            <span style="font-size: ${responsive('12px', '13px')}; font-weight: 500;">SAQ coverage constraint enforced: Tools 4 and 5 total exactly 100%.</span>
+          </div>`
+        : ''}
 
       <div style="background: #fef3c7; padding: ${responsive('12px', '16px')}; border-radius: 8px; border: 1px solid #f59e0b;">
         <div style="font-size: 13px; color: #92400e;">
@@ -2180,6 +2201,8 @@ function setupCostAnalysisEventListeners(handlers) {
     onToolInternalHoursChange,
     onResponseInternalHoursChange,
     optimizeBudgetAllocation,
+    onSAQConstraintChange,
+    saqConstraintEnabled,
     toolAnnualProgrammeCosts,
     toolPerSupplierCosts,
     toolInternalHours,
@@ -2278,6 +2301,16 @@ function setupCostAnalysisEventListeners(handlers) {
       });
     }
   });
+
+  const saqConstraintToggle = document.getElementById('saqConstraintToggle');
+  if (saqConstraintToggle) {
+    saqConstraintToggle.checked = Boolean(saqConstraintEnabled);
+    saqConstraintToggle.addEventListener('change', event => {
+      if (typeof onSAQConstraintChange === 'function') {
+        onSAQConstraintChange(event.target.checked);
+      }
+    });
+  }
 
   const resetToolCosts = document.getElementById('resetToolCosts');
   if (resetToolCosts) {
