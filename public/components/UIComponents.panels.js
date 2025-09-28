@@ -1939,7 +1939,7 @@ export function createCostAnalysisPanel(containerId, options) {
               <span style="font-weight: 600;">Enforce 100% SAQ Coverage (Tools 5+6)</span>
             </label>
             <p style="margin: 0; font-size: 12px; color: #14532d; max-width: 360px;">
-              The checkbox to enforce 100% SAQ coverage is in place so you can require all suppliers complete a questionnaire. This is good practice. It enables compliance to start with the supplier confirming it has implemented your policies and procedures; remedy is then based the supplier simply doing what it has agreed to do.
+              The checkbox to enforce 100% SAQ coverage is in place so you can require all suppliers complete a questionnaire. This is good practice. It enables compliance to start with the supplier confirming it has implemented your policies and procedures; remedy can then be based on requiring the supplier to do what it has already agreed to do.
             </p>
             <button id="runOptimization" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
               Run Optimization
