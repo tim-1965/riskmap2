@@ -1936,10 +1936,10 @@ export function createCostAnalysisPanel(containerId, options) {
           <div style="display: flex; flex-direction: ${responsive('column', 'row')}; align-items: ${responsive('flex-start', 'center')}; gap: 12px;">
             <label for="saqConstraintToggle" title="When enabled, ensures combined coverage of 'Supplier SAQ with Evidence' and 'Supplier SAQ without Evidence' totals exactly 100% of suppliers" style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: #166534; cursor: pointer; background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px;">
               <input type="checkbox" id="saqConstraintToggle" ${enforceSAQConstraint ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #16a34a;">
-              <span style="font-weight: 600;">Enforce 100% SAQ Coverage (Tools 4+5)</span>
+              <span style="font-weight: 600;">Enforce 100% SAQ Coverage (Tools 5+6)</span>
             </label>
             <p style="margin: 0; font-size: 12px; color: #14532d; max-width: 360px;">
-              The checkbox to enforce 100% SAQ coverage is in place so you can require all suppliers complete a questionnaire. This is good practice because compliance first starts with the supplier confirming it has implemented your policies and procedures - so that remedy is then based on requiring the supplier to do what it has already agreed to do.
+              The checkbox to enforce 100% SAQ coverage is in place so you can require all suppliers complete a questionnaire. This is good practice because compliance first starts with the supplier confirming it has implemented your policies and procedures; remedy can then be based on requiring the supplier to do what it has already agreed to do.
             </p>
             <button id="runOptimization" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;">
               Run Optimization
@@ -2124,7 +2124,7 @@ return `
       ${saqConstraintEnforced
         ? `<div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: ${responsive('10px', '12px')}; color: #3730a3; display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 18px;">🛡️</span>
-            <span style="font-size: ${responsive('12px', '13px')}; font-weight: 500;">SAQ coverage constraint enforced: Tools 4 and 5 total exactly 100%.</span>
+            <span style="font-size: ${responsive('12px', '13px')}; font-weight: 500;">SAQ coverage constraint enforced: SAQ tools 5 and 6 total exactly 100%.</span>
           </div>`
         : ''}
 
