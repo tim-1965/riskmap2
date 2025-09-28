@@ -1,5 +1,5 @@
-// AppController.module.js — cleaned and refactored for the 5-panel structure
-// Implements Codex’s recommendations: class-based controller, state store,
+// AppController.module.js – Enhanced with SAQ Coverage Constraint
+// Implements Codex's recommendations: class-based controller, state store,
 // debounced updates, clear separation of data/service/UI concerns.
 
 // CONFIGURATION: Set to true to enable Panel 6 (Cost Analysis), false to disable
@@ -53,6 +53,9 @@ export class AppController {
 
       // Panel 4 Response Methods - Internal hours only
       responseInternalHours: [0, 10, 10, 6, 2, 2], // Internal work hours per supplier per year for each response method
+
+        // NEW: SAQ Coverage Constraint state
+        saqConstraintEnabled: false, // Default: unchecked (preserves current behavior)
         } : {}),
 
       // Selection + volumes
@@ -145,6 +148,8 @@ export class AppController {
       this.onToolPerSupplierCostChange = this.onToolPerSupplierCostChange.bind(this);
       this.onToolInternalHoursChange = this.onToolInternalHoursChange.bind(this);
       this.onResponseInternalHoursChange = this.onResponseInternalHoursChange.bind(this);
+      // NEW: SAQ Constraint handler
+      this.onSAQConstraintChange = this.onSAQConstraintChange.bind(this);
     }
 
 this.optimizeBudgetAllocation = this.optimizeBudgetAllocation.bind(this);
@@ -573,8 +578,18 @@ onResponseInternalHoursChange(responseIndex, hours) {
   }
 }
 
+// NEW: SAQ Constraint handler
+onSAQConstraintChange(enabled) {
+  if (!ENABLE_PANEL_6) return;
+  this.state.saqConstraintEnabled = Boolean(enabled);
+  this.state.isDirty = true;
+  this.updateUI();
+}
+
  optimizeBudgetAllocation() {
   if (!ENABLE_PANEL_6) return null;
+  
+  // NEW: Pass SAQ constraint parameter to optimization
   return riskEngine.optimizeBudgetAllocation(
     this.state.supplierCount,
     this.state.hourlyRate,
@@ -589,7 +604,8 @@ onResponseInternalHoursChange(responseIndex, hours) {
     this.state.selectedCountries,
     this.state.countryVolumes,
     this.state.countryRisks,
-    this.state.focus
+    this.state.focus,
+    this.state.saqConstraintEnabled // NEW: SAQ constraint parameter
     );
   }
 
@@ -1425,7 +1441,10 @@ if (ENABLE_PANEL_6 && panel === 6) {
           onToolPerSupplierCostChange: this.onToolPerSupplierCostChange,
           onToolInternalHoursChange: this.onToolInternalHoursChange,
           onResponseInternalHoursChange: this.onResponseInternalHoursChange,
-          optimizeBudgetAllocation: this.optimizeBudgetAllocation
+          optimizeBudgetAllocation: this.optimizeBudgetAllocation,
+          // NEW: Pass SAQ constraint state and handler
+          saqConstraintEnabled: this.state.saqConstraintEnabled,
+          onSAQConstraintChange: this.onSAQConstraintChange
         });
       });
 
@@ -1746,6 +1765,8 @@ if (ENABLE_PANEL_6 && panel === 6) {
         snapshot.toolPerSupplierCosts = [...this.state.toolPerSupplierCosts];
         snapshot.toolInternalHours = [...this.state.toolInternalHours];
         snapshot.responseInternalHours = [...this.state.responseInternalHours];
+        // NEW: Save SAQ constraint state
+        snapshot.saqConstraintEnabled = this.state.saqConstraintEnabled;
       }
       localStorage.setItem('hrdd_app_state_v5', JSON.stringify(snapshot));
       this.state.isDirty = false;
@@ -1823,6 +1844,11 @@ if (ENABLE_PANEL_6 && panel === 6) {
           this.state.responseInternalHours = parsed.responseInternalHours.map(value =>
             Math.max(0, Number.isFinite(value) ? value : 0)
           );
+          restored = true;
+        }
+        // NEW: Restore SAQ constraint state
+        if (typeof parsed.saqConstraintEnabled === 'boolean') {
+          this.state.saqConstraintEnabled = parsed.saqConstraintEnabled;
           restored = true;
         }
       }

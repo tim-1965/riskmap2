@@ -1,4 +1,4 @@
-// RiskEngine.js - Modified to prevent rank reversals while maintaining focus allocation
+// RiskEngine.js - Enhanced with SAQ Coverage Constraint
 export class RiskEngine {
   constructor() {
     // Step 1: Default weightings for the 5 input columns
@@ -1655,6 +1655,33 @@ getDefaultCostAssumptions() {
     };
   }
 
+  // NEW: Helper function to enforce SAQ constraint
+  enforceSAQConstraint(toolAllocation) {
+    const allocation = [...toolAllocation];
+    const currentSAQSum = allocation[4] + allocation[5];
+    
+    if (Math.abs(currentSAQSum - 100) > 0.1) {
+      // Distribute 100% between tools 4 and 5, preserving their ratio if possible
+      if (currentSAQSum > 0) {
+        const ratio4 = allocation[4] / currentSAQSum;
+        allocation[4] = ratio4 * 100;
+        allocation[5] = (1 - ratio4) * 100;
+      } else {
+        // Default split if both are zero
+        allocation[4] = 50;
+        allocation[5] = 50;
+      }
+    }
+    
+    return allocation;
+  }
+
+  // NEW: Validate SAQ constraint
+  validateSAQConstraint(toolAllocation) {
+    const sum = toolAllocation[4] + toolAllocation[5];
+    return Math.abs(sum - 100) <= 0.1; // Allow small floating point errors
+  }
+
   // Enhanced budget optimization algorithm for the RiskEngine class
 // Replace the existing optimizeBudgetAllocation method with this improved version
 
@@ -1678,7 +1705,8 @@ optimizeBudgetAllocation(
   selectedCountries,
   countryVolumes,
   countryRisks,
-  focus
+  focus,
+  enforceSAQConstraint = false // NEW: SAQ constraint parameter
 ) {
   // Check if Panel 6 is enabled
   if (typeof window !== 'undefined' && window.hrddApp && !window.hrddApp.ENABLE_PANEL_6) {
@@ -1717,7 +1745,7 @@ optimizeBudgetAllocation(
     supplierCount, hourlyRate, toolAnnualProgrammeCosts, toolPerSupplierCosts,
     toolInternalHours, responseInternalHours, hrddStrategy, transparencyEffectiveness,
     responsivenessStrategy, responsivenessEffectiveness, selectedCountries,
-    countryVolumes, countryRisks, focus
+    countryVolumes, countryRisks, focus, enforceSAQConstraint // Include SAQ constraint in hash
   });
 
   // Track whether this is a re-optimization with the exact same inputs
@@ -1754,8 +1782,21 @@ optimizeBudgetAllocation(
     return totalCost;
   };
 
-  // ENHANCED: Stricter evaluation with minimum improvement filter
+  // ENHANCED: Stricter evaluation with minimum improvement filter and SAQ constraint
   const evaluateAllocation = (toolAllocation, responseAllocation) => {
+    // NEW: Validate SAQ constraint first if enabled
+    if (enforceSAQConstraint && !this.validateSAQConstraint(toolAllocation)) {
+      return { 
+        managedRisk: 999, // High penalty 
+        cost: 0, 
+        fitness: 999, 
+        budgetViolation: 0,
+        responseAllocation: [...responseAllocation],
+        valid: false,
+        constraintViolation: 'SAQ constraint violated'
+      };
+    }
+
     // Maintain voice linkage constraint
     const linkedResponseAllocation = [...responseAllocation];
     linkedResponseAllocation[0] = toolAllocation[0];
@@ -1840,12 +1881,17 @@ optimizeBudgetAllocation(
     }
   };
 
-  // ENHANCED: Improved budget adjustment with multiple strategies
+  // ENHANCED: Improved budget adjustment with multiple strategies and SAQ constraint support
   const adjustToBudget = (toolAllocation, responseAllocation, strategy = 'balanced') => {
     const maxAdjustments = 50;
     let adjustments = 0;
     let currentTools = [...toolAllocation];
     let currentResponses = [...responseAllocation];
+    
+    // NEW: Enforce SAQ constraint first if enabled
+    if (enforceSAQConstraint) {
+      currentTools = this.enforceSAQConstraint(currentTools);
+    }
     
     while (adjustments < maxAdjustments) {
       const currentCost = calculateAllocationCost(currentTools, currentResponses);
@@ -1856,10 +1902,13 @@ optimizeBudgetAllocation(
       if (difference > 0) {
         // Cost too high - reduce strategically based on strategy
         if (strategy === 'preserve_voice') {
-          // Reduce non-voice tools first
-          const nonVoiceTools = [1, 2, 3, 4, 5].filter(i => currentTools[i] > 15);
-          if (nonVoiceTools.length > 0) {
-            const toolToReduce = nonVoiceTools[Math.floor(Math.random() * nonVoiceTools.length)];
+          // NEW: When SAQ constraint is active, only adjust tools 1, 2, 3
+          const adjustableTools = enforceSAQConstraint 
+            ? [1, 2, 3].filter(i => currentTools[i] > 15)
+            : [1, 2, 3, 4, 5].filter(i => currentTools[i] > 15);
+          
+          if (adjustableTools.length > 0) {
+            const toolToReduce = adjustableTools[Math.floor(Math.random() * adjustableTools.length)];
             currentTools[toolToReduce] = Math.max(10, currentTools[toolToReduce] - 8);
           } else {
             const responseMethods = [1, 2, 3, 4, 5].filter(i => currentResponses[i] > 15);
@@ -1871,7 +1920,11 @@ optimizeBudgetAllocation(
         } else if (strategy === 'efficiency_focused') {
           // Reduce lowest efficiency tools first
           const toolEfficiencies = [90, 45, 25, 15, 12, 5]; // Base effectiveness from transparencyEffectiveness
-          const inefficientTools = [2, 3, 4, 5].filter(i => currentTools[i] > 15);
+          // NEW: When SAQ constraint is active, only consider tools 1, 2, 3 for reduction
+          const inefficientTools = enforceSAQConstraint 
+            ? [1, 2, 3].filter(i => currentTools[i] > 15)
+            : [2, 3, 4, 5].filter(i => currentTools[i] > 15);
+          
           if (inefficientTools.length > 0) {
             // Sort by efficiency (lower first)
             inefficientTools.sort((a, b) => toolEfficiencies[a] - toolEfficiencies[b]);
@@ -1879,13 +1932,22 @@ optimizeBudgetAllocation(
           }
         } else {
           // Balanced approach
-          const allTools = [0, 1, 2, 3, 4, 5].filter(i => currentTools[i] > 12);
+          // NEW: When SAQ constraint is active, exclude tools 4 and 5 from adjustment
+          const allTools = enforceSAQConstraint 
+            ? [0, 1, 2, 3].filter(i => currentTools[i] > 12)
+            : [0, 1, 2, 3, 4, 5].filter(i => currentTools[i] > 12);
+          
           if (allTools.length > 0) {
             const toolToReduce = allTools[Math.floor(Math.random() * allTools.length)];
             const reduction = toolToReduce === 0 ? 5 : 8; // Smaller reduction for voice
             currentTools[toolToReduce] = Math.max(8, currentTools[toolToReduce] - reduction);
             if (toolToReduce === 0) currentResponses[0] = currentTools[0]; // Maintain linkage
           }
+        }
+        
+        // NEW: Re-enforce SAQ constraint after any tool adjustments
+        if (enforceSAQConstraint) {
+          currentTools = this.enforceSAQConstraint(currentTools);
         }
       } else {
         // Cost too low - increase strategically
@@ -1905,6 +1967,11 @@ optimizeBudgetAllocation(
             currentTools[1] = Math.min(95, currentTools[1] + 6);
           }
         }
+        
+        // NEW: Re-enforce SAQ constraint after any tool adjustments
+        if (enforceSAQConstraint) {
+          currentTools = this.enforceSAQConstraint(currentTools);
+        }
       }
       
       adjustments++;
@@ -1913,14 +1980,19 @@ optimizeBudgetAllocation(
     return [currentTools, currentResponses];
   };
 
-  // ENHANCED: Multi-restart optimization with different strategies
+  // ENHANCED: Multi-restart optimization with different strategies and SAQ constraint support
   const runOptimizationRound = (startingStrategy = 'balanced') => {
     let localBestTools = [...hrddStrategy];
     let localBestResponses = [...responsivenessStrategy];
     let localBestFitness = Infinity;
     let localValidSolutions = 0;
 
-    // PHASE 1: Enhanced Simulated Annealing
+    // NEW: Ensure initial allocation satisfies SAQ constraint if enabled
+    if (enforceSAQConstraint) {
+      localBestTools = this.enforceSAQConstraint(localBestTools);
+    }
+
+    // PHASE 1: Enhanced Simulated Annealing with SAQ constraint support
     const runEnhancedSimulatedAnnealing = (iterations = 200) => {
       let currentTools = [...localBestTools];
       let currentResponses = [...localBestResponses];
@@ -1940,12 +2012,17 @@ optimizeBudgetAllocation(
         totalIterationsRun++;
         updateProgress('Simulated Annealing', i + 1, iterations);
         
-        // Generate neighbor with budget-aware moves
+        // Generate neighbor with budget-aware moves and SAQ constraint support
        let newTools = currentTools.map((val, idx) => {
           const stepSize = Math.random() * 12 - 6;
           const voiceBonus = idx === 0 && startingStrategy === 'voice_priority' ? 3 : 0;
           return Math.max(8, Math.min(92, val + stepSize + voiceBonus * Math.random()));
         });
+
+        // NEW: Enforce SAQ constraint if enabled
+        if (enforceSAQConstraint) {
+          newTools = this.enforceSAQConstraint(newTools);
+        }
 
         let newResponses = [...currentResponses];
         newResponses[0] = newTools[0]; // Voice linkage
@@ -1984,11 +2061,11 @@ optimizeBudgetAllocation(
       }
     };
 
-    // PHASE 2: Budget-Constrained Genetic Algorithm
+    // PHASE 2: Budget-Constrained Genetic Algorithm with SAQ constraint support
     const runBudgetConstrainedGA = (generations = 120, populationSize = 20) => {
       const population = [];
       
-      // Create initial population with budget adjustment
+      // Create initial population with budget adjustment and SAQ constraint
       const strategies = [
         { tools: [75, 45, 20, 25, 55, 75], responses: [75, 12, 25, 20, 15, 8] },
         { tools: [35, 25, 55, 40, 70, 80], responses: [35, 18, 30, 25, 12, 10] },
@@ -1997,9 +2074,14 @@ optimizeBudgetAllocation(
       ];
       
       strategies.forEach(strategy => {
-        const [adjTools, adjResponses] = adjustToBudget(strategy.tools, strategy.responses, startingStrategy);
+        let adjTools = [...strategy.tools];
+        // NEW: Enforce SAQ constraint if enabled
+        if (enforceSAQConstraint) {
+          adjTools = this.enforceSAQConstraint(adjTools);
+        }
+        const [finalTools, adjResponses] = adjustToBudget(adjTools, strategy.responses, startingStrategy);
         population.push({
-          tools: adjTools,
+          tools: finalTools,
           responses: adjResponses,
           fitness: Infinity
         });
@@ -2009,6 +2091,12 @@ optimizeBudgetAllocation(
        while (population.length < populationSize) {
         if (shouldStopForTime()) break;
         let randomTools = Array.from({ length: 6 }, () => Math.random() * 80 + 10);
+        
+        // NEW: Enforce SAQ constraint if enabled
+        if (enforceSAQConstraint) {
+          randomTools = this.enforceSAQConstraint(randomTools);
+        }
+        
         let randomResponses = Array.from({ length: 6 }, (_, i) =>
           i === 0 ? randomTools[0] : Math.random() * 80 + 10
         );
@@ -2031,7 +2119,7 @@ optimizeBudgetAllocation(
         if (result.valid) localValidSolutions++;
       });
       
-      // Evolution with budget constraints
+      // Evolution with budget constraints and SAQ constraint support
        for (let gen = 0; gen < generations; gen++) {
         if (shouldStopForTime()) break;
         totalIterationsRun++;
@@ -2057,7 +2145,7 @@ optimizeBudgetAllocation(
           newPopulation.push({ ...validSorted[i] });
         }
         
-        // Generate offspring with budget awareness
+        // Generate offspring with budget awareness and SAQ constraint support
         while (newPopulation.length < populationSize) {
           if (shouldStopForTime()) break;
           const parent1 = selectParent();
@@ -2079,6 +2167,11 @@ optimizeBudgetAllocation(
             
             child.tools[i] = Math.max(8, Math.min(92, toolValue));
             child.responses[i] = Math.max(8, Math.min(92, i === 0 ? child.tools[i] : responseValue));
+          }
+          
+          // NEW: Enforce SAQ constraint if enabled
+          if (enforceSAQConstraint) {
+            child.tools = this.enforceSAQConstraint(child.tools);
           }
           
           // Ensure budget compliance
@@ -2103,7 +2196,7 @@ optimizeBudgetAllocation(
       }
     };
 
-    // PHASE 3: Budget-Constrained Local Search
+    // PHASE 3: Budget-Constrained Local Search with SAQ constraint support
     const runBudgetConstrainedLocalSearch = (iterations = 100) => {
       let currentTools = [...localBestTools];
       let currentResponses = [...localBestResponses];
@@ -2122,11 +2215,19 @@ optimizeBudgetAllocation(
         let improved = false;
         const stepSize = Math.max(3, 10 * (1 - iter / iterations));
         
-        // Try improvements on each tool
-        for (let toolIdx = 0; toolIdx < 6; toolIdx++) {
+        // Try improvements on each tool (respecting SAQ constraint)
+        const toolsToTry = enforceSAQConstraint ? [0, 1, 2, 3] : [0, 1, 2, 3, 4, 5]; // Exclude SAQ tools if constraint active
+        
+        for (let toolIdx of toolsToTry) {
           for (const direction of [stepSize, -stepSize]) {
             const newTools = [...currentTools];
             newTools[toolIdx] = Math.max(8, Math.min(92, newTools[toolIdx] + direction));
+            
+            // NEW: Enforce SAQ constraint if enabled
+            if (enforceSAQConstraint) {
+              newTools[4] = currentTools[4]; // Preserve SAQ tools
+              newTools[5] = currentTools[5];
+            }
             
             const newResponses = [...currentResponses];
             if (toolIdx === 0) newResponses[0] = newTools[0]; // Voice linkage
@@ -2247,14 +2348,15 @@ optimizeBudgetAllocation(
   if (!finalResult.valid || finalResult.improvementInRiskReduction < minImprovementThreshold) {
     updateProgress('No Improvement Found', 100, 100);
     if (previousResults) {
-      const message = `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but could not identify a material improvement (requiring either lower budget or ${minImprovementThreshold}% better risk reduction while staying within budget).`;
+      const message = `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but could not identify a material improvement (requiring either lower budget or ${minImprovementThreshold}% better risk reduction while staying within budget).${enforceSAQConstraint ? ' SAQ constraint was enforced.' : ''}`;
       const merged = {
         ...previousResults,
         insight: message,
         alreadyOptimized: true,
         reOptimizationAttempted: true,
         attemptedValidSolutions: validSolutionsFound,
-        optimizationRun: true
+        optimizationRun: true,
+        saqConstraintEnforced: enforceSAQConstraint
       };
       return recordResultsAndReturn(merged);
     }
@@ -2272,7 +2374,7 @@ optimizeBudgetAllocation(
       currentEffectiveness: baselineEffectiveness,
       optimizedEffectiveness: baselineEffectiveness,
       improvement: 0,
-      insight: `No meaningful improvement found after ${currentAttempt + 1} optimization attempts. Your current allocation appears to be near-optimal within the budget constraint of ${targetBudget.toLocaleString()}. Consider increasing budget or adjusting strategy parameters for further optimization.`,
+      insight: `No meaningful improvement found after ${currentAttempt + 1} optimization attempts. Your current allocation appears to be near-optimal within the budget constraint of ${targetBudget.toLocaleString()}.${enforceSAQConstraint ? ' SAQ constraint (100% coverage) was enforced.' : ''} Consider increasing budget or adjusting strategy parameters for further optimization.`,
       budgetUtilization: 100,
       budgetConstraintMet: true,
       finalBudget: targetBudget,
@@ -2280,7 +2382,8 @@ optimizeBudgetAllocation(
       algorithmsUsed: ['Enhanced Simulated Annealing', 'Budget-Constrained GA', 'Local Search'],
       validSolutionsFound,
       optimizationRun: true,
-      alreadyOptimized: false
+      alreadyOptimized: false,
+      saqConstraintEnforced: enforceSAQConstraint
     };
 
     return recordResultsAndReturn(noImprovementResult);
@@ -2311,7 +2414,7 @@ optimizeBudgetAllocation(
 
     if (!criteriaA && !criteriaB) {
       updateProgress('Existing Solution Optimal', 100, 100);
-      const message = `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but did not beat the previous outcome (requires either lower budget or ${minImprovementThreshold}% additional risk reduction while staying within budget).`;
+      const message = `The existing solution remains the best one found. The optimization explored ${validSolutionsFound} valid configurations but did not beat the previous outcome (requires either lower budget or ${minImprovementThreshold}% additional risk reduction while staying within budget).${enforceSAQConstraint ? ' SAQ constraint was enforced.' : ''}`;
       const merged = {
         ...previousResults,
         insight: message,
@@ -2319,6 +2422,7 @@ optimizeBudgetAllocation(
         reOptimizationAttempted: true,
         attemptedValidSolutions: validSolutionsFound,
         optimizationRun: true,
+        saqConstraintEnforced: enforceSAQConstraint,
         criteriaChecked: {
           budgetImprovement: budgetImprovement.toFixed(2),
           riskImprovement: riskImprovement.toFixed(2),
@@ -2352,7 +2456,7 @@ optimizeBudgetAllocation(
   const improvement = optimizedEffectiveness - baselineEffectiveness;
   const voiceIncrease = bestToolAllocation[0] - hrddStrategy[0];
 
-  // Generate enhanced insight
+  // Generate enhanced insight with SAQ constraint information
   let insight = '';
   if (improvement > 10) {
     insight = `Exceptional optimization achieved: ${improvement.toFixed(1)}% better risk reduction through advanced multi-strategy optimization. `;
@@ -2366,6 +2470,11 @@ optimizeBudgetAllocation(
     insight = `Meaningful optimization identified (${improvement.toFixed(1)}% improvement). The enhanced multi-strategy approach found incremental improvements through intelligent resource reallocation.`;
   } else {
     insight = `Minor optimization achieved (${improvement.toFixed(1)}% improvement). Your allocation was already well-optimized, but the enhanced algorithm found small efficiency gains within budget constraints.`;
+  }
+
+  // Add SAQ constraint information to insight
+  if (enforceSAQConstraint) {
+    insight += ` SAQ constraint enforced: Tools 4+5 maintain exactly 100% supplier coverage (${bestToolAllocation[4].toFixed(1)}% + ${bestToolAllocation[5].toFixed(1)}%).`;
   }
 
   updateProgress('Optimization Complete', 100, 100);
@@ -2395,6 +2504,7 @@ optimizeBudgetAllocation(
     reOptimizationAttempted: isReOptimization,
     attemptedValidSolutions: validSolutionsFound,
     criteriaChecked: comparisonMetrics,
+    saqConstraintEnforced: enforceSAQConstraint,
 
     // Enhanced breakdown
     toolChanges: bestToolAllocation.map((alloc, i) => ({
