@@ -1661,7 +1661,7 @@ getDefaultCostAssumptions() {
     const currentSAQSum = allocation[4] + allocation[5];
     
     if (Math.abs(currentSAQSum - 100) > 0.1) {
-      // Distribute 100% between tools 4 and 5, preserving their ratio if possible
+      // Distribute 100% between SAQ tools 5 and 6, preserving their ratio if possible
       if (currentSAQSum > 0) {
         const ratio4 = allocation[4] / currentSAQSum;
         allocation[4] = ratio4 * 100;
