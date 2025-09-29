@@ -315,7 +315,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
             <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
             <li>Higher coverage increases total transparency but with diminishing returns.</li>
-            <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Passive</span>.</li>
+            <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Trusting</span>.</li>
             <li><strong>Use the focus setting below</strong> to distribute your coverage based on country risk levels for maximum impact.</li>
           </ul>
         </div>
@@ -977,7 +977,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
   const categoryColors = {
     'Worker Voice': '#22c55e',
     'Audit': '#f59e0b',
-    'Passive': '#6b7280'
+    'Trusting': '#6b7280'
   };
 
   const safeDetectionTotal = strategies.reduce((sum, strategy) => {
