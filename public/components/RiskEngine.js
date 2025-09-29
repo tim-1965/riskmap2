@@ -326,7 +326,7 @@ export class RiskEngine {
     const minCap = 0.50; // Strengthened from 0.65 to 0.50
     const maxCap = 0.70; // Strengthened from 0.85 to 0.70
     
-    return minCap + (maxCap - minCap) * (baselineNormalized);
+    return maxCap - (maxCap - minCap) * (baselineNormalized);
   }
 
   // Calculate focus effectiveness metrics across risk tiers
