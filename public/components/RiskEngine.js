@@ -819,13 +819,13 @@ export class RiskEngine {
       },
       {
         name: 'Audit',
-        tools: [2, 3, 4],
+        tools: [2, 3],
         baseEffectiveness: [0.25, 0.15],
         categoryWeight: 0.85
       },
       {
         name: 'Trusting',
-        tools: [5],
+        tools: [4, 5],
         baseEffectiveness: [0.12, 0.05],
         categoryWeight: 0.70
       }
@@ -900,13 +900,13 @@ export class RiskEngine {
       },
       {
         name: 'Audit',
-        tools: [2, 3, 4],
+        tools: [2, 3],
         baseEffectiveness: [0.25, 0.15],
         categoryWeight: 0.85
       },
       {
         name: 'Trusting',
-        tools: [5],
+        tools: [4, 5],
         baseEffectiveness: [0.12, 0.05],
         categoryWeight: 0.70
       }
@@ -1196,13 +1196,13 @@ export class RiskEngine {
       },
       {
         name: 'Audit',
-        tools: [2, 3, 4],
+        tools: [2, 3],
         baseEffectiveness: [0.25, 0.15],
         categoryWeight: 0.85
       },
       {
         name: 'Trusting',
-        tools: [5],
+        tools: [4, 5],
         baseEffectiveness: [0.12, 0.05],
         categoryWeight: 0.70
       }
