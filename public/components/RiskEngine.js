@@ -1492,12 +1492,12 @@ export class RiskEngine {
 getDefaultCostAssumptions() {
   return {
     // Panel 3 Tool Costs (6 tools)
-    toolAnnualProgrammeCosts: [100, 100, 100, 100, 100, 100], // Fixed annual programme costs
-    toolPerSupplierCosts: [100, 100, 100, 100, 100, 100],     // Variable per-supplier costs  
-    toolInternalHours: [100, 100, 100, 100, 100, 100],        // Internal hours per supplier per tool
+    toolAnnualProgrammeCosts: [12000, 0, 0, 40000, 0, 0], // Fixed annual programme costs
+    toolPerSupplierCosts: [120, 250, 1200, 0, 10, 10],     // Variable per-supplier costs  
+    toolInternalHours: [3, 6, 20, 4, 2, 1],        // Internal hours per supplier per tool
     
     // Panel 4 Response Method Costs (6 methods)
-    responseInternalHours: [100, 100, 100, 100, 100, 100],    // Internal hours per supplier per response method
+    responseInternalHours: [2, 6, 12, 3, 2, 1],    // Internal hours per supplier per response method
     
     // General defaults
     defaultSupplierCount: 250,
