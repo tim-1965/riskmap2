@@ -2318,30 +2318,73 @@ function setupCostAnalysisEventListeners(handlers) {
   const resetToolCosts = document.getElementById('resetToolCosts');
   if (resetToolCosts) {
     resetToolCosts.addEventListener('click', () => {
-      [100, 100, 100, 100, 100, 100].forEach((defaultValue, index) => {
-        onToolAnnualProgrammeCostChange(index, defaultValue);
+      const defaults = typeof riskEngine?.getDefaultCostAssumptions === 'function'
+        ? riskEngine.getDefaultCostAssumptions()
+        : {};
+
+      const {
+        toolAnnualProgrammeCosts: defaultAnnualCosts = [],
+        toolPerSupplierCosts: defaultPerSupplierCosts = [],
+        toolInternalHours: defaultInternalHours = []
+      } = defaults;
+
+      const toolCount = Math.max(
+        toolAnnualProgrammeCosts?.length || 0,
+        toolPerSupplierCosts?.length || 0,
+        toolInternalHours?.length || 0,
+        defaultAnnualCosts.length,
+        defaultPerSupplierCosts.length,
+        defaultInternalHours.length
+      );
+
+      for (let index = 0; index < toolCount; index += 1) {
+        const annualDefault = Number.isFinite(defaultAnnualCosts[index])
+          ? Math.max(0, defaultAnnualCosts[index])
+          : 0;
+        const perSupplierDefault = Number.isFinite(defaultPerSupplierCosts[index])
+          ? Math.max(0, defaultPerSupplierCosts[index])
+          : 0;
+        const internalHoursDefault = Number.isFinite(defaultInternalHours[index])
+          ? Math.max(0, defaultInternalHours[index])
+          : 0;
+
+        onToolAnnualProgrammeCostChange(index, annualDefault);
         const annualField = document.getElementById(`toolAnnualCostNum_${index}`);
-        if (annualField) annualField.value = defaultValue;
+        if (annualField) annualField.value = annualDefault;
 
-        onToolPerSupplierCostChange(index, defaultValue);
+        onToolPerSupplierCostChange(index, perSupplierDefault);
         const perSupplierField = document.getElementById(`toolPerSupplierCostNum_${index}`);
-        if (perSupplierField) perSupplierField.value = defaultValue;
+        if (perSupplierField) perSupplierField.value = perSupplierDefault;
 
-        onToolInternalHoursChange(index, defaultValue);
+        onToolInternalHoursChange(index, internalHoursDefault);
         const hourField = document.getElementById(`toolInternalHoursNum_${index}`);
-        if (hourField) hourField.value = defaultValue;
-      });
+        if (hourField) hourField.value = internalHoursDefault;
+      }
     });
   }
 
   const resetResponseCosts = document.getElementById('resetResponseCosts');
   if (resetResponseCosts) {
     resetResponseCosts.addEventListener('click', () => {
-      [100, 100, 100, 100, 100, 100].forEach((defaultHours, index) => {
-        onResponseInternalHoursChange(index, defaultHours);
+      const defaults = typeof riskEngine?.getDefaultCostAssumptions === 'function'
+        ? riskEngine.getDefaultCostAssumptions()
+        : {};
+
+      const { responseInternalHours: defaultResponseHours = [] } = defaults;
+      const responseCount = Math.max(
+        responseInternalHours?.length || 0,
+        defaultResponseHours.length
+      );
+
+      for (let index = 0; index < responseCount; index += 1) {
+        const hoursDefault = Number.isFinite(defaultResponseHours[index])
+          ? Math.max(0, defaultResponseHours[index])
+          : 0;
+
+        onResponseInternalHoursChange(index, hoursDefault);
         const hoursField = document.getElementById(`responseInternalHoursNum_${index}`);
-        if (hoursField) hoursField.value = defaultHours;
-      });
+        if (hoursField) hoursField.value = hoursDefault;
+      }
     });
   }
 
