@@ -5,7 +5,7 @@ export class RiskEngine {
     this.defaultWeights = [30, 30, 10, 20, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
     // Step 2: HRDD Strategy defaults - representing supplier base coverage percentages
-    this.defaultHRDDStrategy = [35, 15, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, trusting approaches are common
+    this.defaultHRDDStrategy = [10, 10, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, trusting approaches are common
     this.defaultTransparencyEffectiveness = [90, 45, 25, 15, 12, 5]; // Base effectiveness rates
 
     // Step 3: Responsiveness Strategy defaults
