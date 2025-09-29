@@ -267,7 +267,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   const categoryInfo = [
     { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
     { name: 'Audit', color: '#f59e0b', tools: [2, 3, 4] },
-    { name: 'Passive', color: '#6b7280', tools: [5] }
+    { name: 'Trusting', color: '#6b7280', tools: [5] }
   ];
 
   let localStrategy = [...strategy];
