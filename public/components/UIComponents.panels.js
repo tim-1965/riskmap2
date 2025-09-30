@@ -266,8 +266,8 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
   const categoryInfo = [
     { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
-    { name: 'Audit', color: '#f59e0b', tools: [2, 3, 4] },
-    { name: 'SAQ', color: '#6b7280', tools: [5] }
+    { name: 'Audit', color: '#f59e0b', tools: [2, 3] },
+    { name: 'SAQ', color: '#6b7280', tools: [4, 5] }
   ];
 
   let localStrategy = [...strategy];
@@ -547,8 +547,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const categoryInfo = [
     { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
-    { name: 'Audit', color: '#f59e0b', tools: [2, 3, 4] },
-    { name: 'SAQ', color: '#6b7280', tools: [5] }
+    { name: 'Audit', color: '#f59e0b', tools: [2, 3] },
+    { name: 'SAQ', color: '#6b7280', tools: [4, 5] }
   ];
 
   let localTransparency = [...transparency];
