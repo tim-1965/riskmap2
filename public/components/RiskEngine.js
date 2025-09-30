@@ -824,7 +824,7 @@ export class RiskEngine {
         categoryWeight: 0.85
       },
       {
-        name: 'Trusting',
+        name: 'SAQ',
         tools: [4, 5],
         baseEffectiveness: [0.12, 0.05],
         categoryWeight: 0.70
@@ -905,7 +905,7 @@ export class RiskEngine {
         categoryWeight: 0.85
       },
       {
-        name: 'Trusting',
+        name: 'SAQ',
         tools: [4, 5],
         baseEffectiveness: [0.12, 0.05],
         categoryWeight: 0.70
@@ -1201,7 +1201,7 @@ export class RiskEngine {
         categoryWeight: 0.85
       },
       {
-        name: 'Trusting',
+        name: 'SAQ',
         tools: [4, 5],
         baseEffectiveness: [0.12, 0.05],
         categoryWeight: 0.70

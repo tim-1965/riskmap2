@@ -267,7 +267,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   const categoryInfo = [
     { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
     { name: 'Audit', color: '#f59e0b', tools: [2, 3, 4] },
-    { name: 'Trusting', color: '#6b7280', tools: [5] }
+    { name: 'SAQ', color: '#6b7280', tools: [5] }
   ];
 
   let localStrategy = [...strategy];
@@ -315,7 +315,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
             <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
             <li>Higher coverage increases total transparency but with diminishing returns.</li>
-            <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">Trusting</span>.</li>
+            <li>Tools are grouped: <span style="color: #22c55e; font-weight: 500;">Worker Voice</span>, <span style="color: #f59e0b; font-weight: 500;">Audit</span>, <span style="color: #6b7280; font-weight: 500;">SAQ</span>.</li>
             <li><strong>Use the focus setting below</strong> to distribute your coverage based on country risk levels for maximum impact.</li>
           </ul>
         </div>
@@ -547,8 +547,8 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   const categoryInfo = [
     { name: 'Worker Voice', color: '#22c55e', tools: [0, 1] },
-    { name: 'Audit', color: '#f59e0b', tools: [2, 3] },
-    { name: 'Passive', color: '#6b7280', tools: [4, 5] }
+    { name: 'Audit', color: '#f59e0b', tools: [2, 3, 4] },
+    { name: 'SAQ', color: '#6b7280', tools: [5] }
   ];
 
   let localTransparency = [...transparency];
@@ -977,7 +977,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
   const categoryColors = {
     'Worker Voice': '#22c55e',
     'Audit': '#f59e0b',
-    'Trusting': '#6b7280'
+    'SAQ': '#6b7280'
   };
 
   const safeDetectionTotal = strategies.reduce((sum, strategy) => {
