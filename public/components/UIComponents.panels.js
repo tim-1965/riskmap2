@@ -5,6 +5,47 @@ let panel4ResizeListenerAttached = false;
 
 const isMobileView = () => (typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
 
+function attachDefaultSliderMarker(rangeInput, defaultValue) {
+  if (typeof document === 'undefined' || !rangeInput) return;
+
+  const parent = rangeInput.parentElement;
+  if (!parent) return;
+
+  if (!parent.dataset.defaultMarkerAttached) {
+    if (!parent.style.position || parent.style.position === 'static') {
+      parent.style.position = 'relative';
+    }
+
+    const marker = document.createElement('div');
+    marker.className = 'hrdd-slider-default-marker';
+    marker.style.position = 'absolute';
+    marker.style.top = '50%';
+    marker.style.transform = 'translate(-50%, -50%)';
+    marker.style.width = '10px';
+    marker.style.height = '10px';
+    marker.style.borderRadius = '9999px';
+    marker.style.backgroundColor = '#ef4444';
+    marker.style.pointerEvents = 'none';
+    marker.style.zIndex = '2';
+    marker.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.9)';
+
+    parent.appendChild(marker);
+    parent.dataset.defaultMarkerAttached = 'true';
+  }
+
+  const marker = parent.querySelector('.hrdd-slider-default-marker');
+  if (!marker) return;
+
+  const min = Number.isFinite(parseFloat(rangeInput.min)) ? parseFloat(rangeInput.min) : 0;
+  const max = Number.isFinite(parseFloat(rangeInput.max)) ? parseFloat(rangeInput.max) : 100;
+  const parsedDefault = Number.isFinite(parseFloat(defaultValue)) ? parseFloat(defaultValue) : min;
+  const clampedDefault = Math.max(min, Math.min(max, parsedDefault));
+  const denominator = max - min || 1;
+  const percent = ((clampedDefault - min) / denominator) * 100;
+
+  marker.style.left = `${percent}%`;
+}
+
 function describeFocusLevel(value) {
   if (value >= 0.75) return 'Only high risk suppliers are actively monitored.';
   if (value >= 0.5) return 'Active monitoring for medium and high risk suppliers.';
@@ -271,6 +312,9 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   ];
 
   let localStrategy = [...strategy];
+  const defaultStrategyValues = Array.isArray(riskEngine.defaultHRDDStrategy)
+    ? riskEngine.defaultHRDDStrategy
+    : null;
   const defaultFocusValue = typeof riskEngine.defaultFocus === 'number' ? riskEngine.defaultFocus : 0.6;
 
   const updateStrategy = (options = {}) => {
@@ -340,15 +384,22 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
         ${strategyDescriptions[index]}
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="range" min="0" max="100" value="${localStrategy[index]}" id="strategy_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+          <input type="range" min="0" max="100" value="${localStrategy[index]}" id="strategy_${index}" style="width: 100%; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+        </div>
         <input type="number" min="0" max="100" value="${localStrategy[index]}" id="strategyNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
         <span style="font-size: 12px; color: #6b7280; font-weight: 500;">%</span>
       </div>
     `;
     strategyContainer.appendChild(strategyControl);
 
-    const rangeInput = document.getElementById(`strategy_${index}`);
+     const rangeInput = document.getElementById(`strategy_${index}`);
     const numberInput = document.getElementById(`strategyNum_${index}`);
+
+    const defaultStrategyValue = defaultStrategyValues && Number.isFinite(defaultStrategyValues[index])
+      ? defaultStrategyValues[index]
+      : localStrategy[index];
+    attachDefaultSliderMarker(rangeInput, defaultStrategyValue);
 
     const handleStrategyValueChange = (value, options = {}) => {
       const sanitizedValue = applyStrategyValue(index, value, options);
@@ -465,7 +516,9 @@ export function createFocusPanel(containerId, { focus, onFocusChange, focusEffec
       </div>
 
       <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
-        <input type="range" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusSlider" style="flex: 1; height: 8px; border-radius: 4px; background-color: #bfdbfe;">
+        <div style="flex: 1; min-width: 160px; position: relative; display: flex; align-items: center;">
+          <input type="range" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusSlider" style="width: 100%; height: 8px; border-radius: 4px; background-color: #bfdbfe;">
+        </div>
         <input type="number" min="0" max="1" step="0.05" value="${localFocus.toFixed(2)}" id="focusNumber" style="width: 100px; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 14px; text-align: center;">
       </div>
 
@@ -485,6 +538,8 @@ export function createFocusPanel(containerId, { focus, onFocusChange, focusEffec
   const focusValueElement = container.querySelector('#focusValue');
   const focusPercentElement = container.querySelector('#focusPercent');
   const focusDescriptorElement = container.querySelector('#focusDescriptor');
+
+  attachDefaultSliderMarker(focusSlider, defaultFocusValue);
 
   const updateFocus = (value, notify = true) => {
     const parsed = Math.max(0, Math.min(1, parseFloat(value) || 0));
@@ -553,6 +608,11 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
   let localTransparency = [...transparency];
 
+  const defaultTransparency = Array.isArray(riskEngine.defaultTransparencyEffectiveness)
+    ? riskEngine.defaultTransparencyEffectiveness
+    : null;
+
+
   const updateTransparency = (options = {}) => {
     if (options.notify !== false && onTransparencyChange) {
       onTransparencyChange([...localTransparency]);
@@ -601,13 +661,19 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
       </div>
       <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
         <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">Ineffective</span>
-        <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: ${categoryColor};">
+        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+          <input type="range" min="0" max="100" value="${localTransparency[index]}" id="transparency_${index}" style="width: 100%; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: ${categoryColor};">
+        </div>
         <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">Fully effective</span>
       </div>
     `;
     transparencyContainer.appendChild(transparencyControl);
 
     const rangeInput = document.getElementById(`transparency_${index}`);
+    const defaultTransparencyValue = defaultTransparency && Number.isFinite(defaultTransparency[index])
+      ? defaultTransparency[index]
+      : localTransparency[index];
+    attachDefaultSliderMarker(rangeInput, defaultTransparencyValue);
     const updateTransparencyValue = (value, options = {}) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
 
@@ -649,6 +715,10 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
     ];
 
   let localResponsiveness = [...responsiveness];
+
+  const defaultResponsiveness = Array.isArray(riskEngine.defaultResponsivenessStrategy)
+    ? riskEngine.defaultResponsivenessStrategy
+    : null;
 
   const updateResponsiveness = (options = {}) => {
     const total = localResponsiveness.reduce((sum, w) => sum + w, 0);
@@ -716,13 +786,20 @@ export function createResponsivenessPanel(containerId, { responsiveness, onRespo
       </div>
        <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
         <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">No suppliers</span>
-        <input type="range" min="0" max="100" value="${localResponsiveness[index]}" id="responsiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: #0ea5e9;">
+        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+          <input type="range" min="0" max="100" value="${localResponsiveness[index]}" id="responsiveness_${index}" style="width: 100%; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: #0ea5e9;">
+        </div>
         <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">All suppliers</span>
       </div>
     `;
     responsivenessContainer.appendChild(responsivenessControl);
 
-   const rangeInput = document.getElementById(`responsiveness_${index}`);
+    const rangeInput = document.getElementById(`responsiveness_${index}`);
+
+    const defaultResponsivenessValue = defaultResponsiveness && Number.isFinite(defaultResponsiveness[index])
+      ? defaultResponsiveness[index]
+      : localResponsiveness[index];
+    attachDefaultSliderMarker(rangeInput, defaultResponsivenessValue);
 
     const handleResponsivenessChange = (value, options = {}) => {
       const sanitizedValue = applyResponsivenessValue(index, value, options);
@@ -794,7 +871,11 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
     'Limited effectiveness if strategy is only reactive.'
   ];
 
-  let localEffectiveness = [...effectiveness];
+   let localEffectiveness = [...effectiveness];
+
+  const defaultResponsivenessEffectiveness = Array.isArray(riskEngine.defaultResponsivenessEffectiveness)
+    ? riskEngine.defaultResponsivenessEffectiveness
+    : null;
 
    const updateEffectiveness = () => {
     const total = localEffectiveness.reduce((sum, value) => sum + value, 0);
@@ -840,15 +921,22 @@ export function createResponsivenessEffectivenessPanel(containerId, { effectiven
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px; font-style: italic;">
         ${effectivenessDescriptions[index]}
       </div>
-      <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
+       <div style="display: flex; align-items: center; gap: 12px; padding-top: 4px;">
         <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: left;">Ineffective</span>
-        <input type="range" min="0" max="100" value="${localEffectiveness[index]}" id="responsivenessEffectiveness_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: #0ea5e9;">
+        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+          <input type="range" min="0" max="100" value="${localEffectiveness[index]}" id="responsivenessEffectiveness_${index}" style="width: 100%; height: 8px; border-radius: 4px; background-color: #d1d5db; accent-color: #0ea5e9;">
+        </div>
         <span style="font-size: 11px; color: #6b7280; min-width: 90px; text-align: right;">Fully effective</span>
       </div>
     `;
     effectivenessContainer.appendChild(effectivenessControl);
 
-    const rangeInput = document.getElementById(`responsivenessEffectiveness_${index}`);
+     const rangeInput = document.getElementById(`responsivenessEffectiveness_${index}`);
+
+    const defaultEffectivenessValue = defaultResponsivenessEffectiveness && Number.isFinite(defaultResponsivenessEffectiveness[index])
+      ? defaultResponsivenessEffectiveness[index]
+      : localEffectiveness[index];
+    attachDefaultSliderMarker(rangeInput, defaultEffectivenessValue);
     const updateEffectivenessValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
       localEffectiveness[index] = newValue;
@@ -1414,6 +1502,8 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
     localWeights = [...localWeights, ...new Array(weightFactors.length - localWeights.length).fill(0)];
   }
 
+  const defaultWeights = Array.isArray(riskEngine.defaultWeights) ? riskEngine.defaultWeights : null;
+
   const updateWeights = () => {
     const total = localWeights.reduce((sum, w) => sum + w, 0);
     const totalElement = document.getElementById('totalWeights');
@@ -1473,7 +1563,9 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
       </div>
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${factor.description}</div>
       <div style="display: flex; align-items: center; gap: 12px;">
-        <input type="range" min="0" max="100" value="${weightValue}" id="weight_${index}" style="flex: 1; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+          <input type="range" min="0" max="100" value="${weightValue}" id="weight_${index}" style="width: 100%; height: 8px; border-radius: 4px; background-color: #d1d5db;">
+        </div>
         <input type="number" min="0" max="100" value="${weightValue}" id="weightNum_${index}" style="width: 80px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; text-align: center;">
       </div>
     `;
@@ -1481,6 +1573,11 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
 
     const rangeInput = document.getElementById(`weight_${index}`);
     const numberInput = document.getElementById(`weightNum_${index}`);
+
+    const defaultWeightValue = defaultWeights && Number.isFinite(defaultWeights[index])
+      ? defaultWeights[index]
+      : weightValue;
+    attachDefaultSliderMarker(rangeInput, defaultWeightValue);
 
     const updateWeightValue = (value) => {
       const newValue = Math.max(0, Math.min(100, parseFloat(value) || 0));
