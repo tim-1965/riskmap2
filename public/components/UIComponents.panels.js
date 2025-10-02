@@ -3,6 +3,9 @@ import { riskEngine } from './RiskEngine.js';
 let panel3ResizeListenerAttached = false;
 let panel4ResizeListenerAttached = false;
 
+const markerObservers = new WeakMap();
+const markerResizeHandlers = new WeakMap();
+
 const isMobileView = () => (typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
 
 function attachDefaultSliderMarker(rangeInput, defaultValue) {
@@ -41,9 +44,65 @@ function attachDefaultSliderMarker(rangeInput, defaultValue) {
   const parsedDefault = Number.isFinite(parseFloat(defaultValue)) ? parseFloat(defaultValue) : min;
   const clampedDefault = Math.max(min, Math.min(max, parsedDefault));
   const denominator = max - min || 1;
-  const percent = ((clampedDefault - min) / denominator) * 100;
+  const ratio = (clampedDefault - min) / denominator;
 
-  marker.style.left = `${percent}%`;
+  const updateMarkerPosition = () => {
+    if (!marker.isConnected) return;
+
+    const sliderRect = typeof rangeInput.getBoundingClientRect === 'function'
+      ? rangeInput.getBoundingClientRect()
+      : null;
+    const parentRect = typeof parent.getBoundingClientRect === 'function'
+      ? parent.getBoundingClientRect()
+      : null;
+
+    if (!sliderRect || !parentRect) {
+      marker.style.left = `${ratio * 100}%`;
+      marker.style.top = '50%';
+      return;
+    }
+
+    const sliderWidth = sliderRect.width || 0;
+    const sliderHeight = sliderRect.height || 0;
+
+    if (sliderWidth <= 0 || sliderHeight <= 0) {
+      marker.style.left = `${ratio * 100}%`;
+      marker.style.top = '50%';
+      return;
+    }
+
+    const offsetLeft = sliderRect.left - parentRect.left;
+    const offsetTop = sliderRect.top - parentRect.top;
+    const left = offsetLeft + sliderWidth * ratio;
+    const top = offsetTop + sliderHeight / 2;
+
+    marker.style.left = `${left}px`;
+    marker.style.top = `${top}px`;
+  };
+
+  const scheduleMarkerUpdate = () => {
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => updateMarkerPosition());
+    } else {
+      setTimeout(() => updateMarkerPosition(), 0);
+    }
+  };
+
+  scheduleMarkerUpdate();
+
+  if (typeof ResizeObserver === 'function') {
+    let observer = markerObservers.get(rangeInput);
+    if (!observer) {
+      observer = new ResizeObserver(() => updateMarkerPosition());
+      observer.observe(rangeInput);
+      observer.observe(parent);
+      markerObservers.set(rangeInput, observer);
+    }
+  } else if (typeof window !== 'undefined' && !markerResizeHandlers.has(rangeInput)) {
+    const handler = () => updateMarkerPosition();
+    window.addEventListener('resize', handler);
+    markerResizeHandlers.set(rangeInput, handler);
+  }
 }
 
 function describeFocusLevel(value) {
