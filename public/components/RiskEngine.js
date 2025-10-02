@@ -2,7 +2,7 @@
 export class RiskEngine {
   constructor() {
     // Step 1: Default weightings for the 5 input columns
-    this.defaultWeights = [30, 30, 10, 20, 10]; // ITUC, Corruption, Migrant, WJP, Walkfree
+    this.defaultWeights = [20, 20, 20, 20, 20]; // ITUC, Corruption, Migrant, WJP, Walkfree
     
     // Step 2: HRDD Strategy defaults - representing supplier base coverage percentages
     this.defaultHRDDStrategy = [10, 10, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, trusting approaches are common
@@ -33,7 +33,7 @@ export class RiskEngine {
     // Strategy labels
     this.hrddStrategyLabels = [
       'Continuous Worker Voice',
-      'Worker Surveys (annual)',
+      'Worker Surveys (periodic)',
       'Unannounced Social Audits',
       'Announced Social Audits',
       'Supplier SAQ with Evidence',

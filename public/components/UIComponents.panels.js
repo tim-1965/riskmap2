@@ -257,7 +257,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   const strategyLabels = riskEngine.hrddStrategyLabels;
   const strategyDescriptions = [
     '% of suppliers with always-on worker voice and daily feedback.',
-    '% of suppliers surveyed with annual structured worker surveys.',
+    '% of suppliers surveyed with periodic structured worker surveys.',
     '% of suppliers having unannounced third-party social audits.',
     '% of suppliers having planned / self-arranged social audits.',
     '% of suppliers completing self-assessment questionnaires with supporting evidence.',
@@ -301,7 +301,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
   container.innerHTML = `
     <div class="hrdd-strategy-panel" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; height: 100%;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD strategies in use</h2>
+        <h2 style="font-size: 20px; font-weight: bold; color: #1f2937;">HRDD tools in use</h2>
         <button id="resetStrategy" style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
           Reset to Default
         </button>
@@ -1855,7 +1855,7 @@ export function createCostAnalysisPanel(containerId, options) {
         <div style="display: grid; grid-template-columns: 1fr; gap: ${responsive('12px', '24px')}; align-items: stretch;">
           <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-              <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 3: HRDD Strategy Tools</h3>
+              <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin: 0;">Panel 3: HRDD Tools</h3>
               <button id="resetToolCosts" style="padding: 6px 12px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
                 Reset to Default
               </button>
