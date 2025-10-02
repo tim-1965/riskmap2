@@ -11,13 +11,13 @@ import { UIComponents } from './UIComponents.js';
 import { pdfGenerator } from './PDFGenerator.js';
 
 const PANEL_DESCRIPTIONS = {
-  1: 'Measure your reputational, legal and compliance risks linked to the treatement of workers in your supply chains. Calculate a global picture of labour rights risks using publicly-available indices from reputable organisations. Then go to panel 2.',
-  2: 'Click on the map to select which countries are in your supply chain. You can also pick countries in the list area below the map and optionally change their weighting (eg: by number of suppliers or workers, value of sourcing etc..). Then go to panel 3.',
+  1: 'Decide for yourself. Calculate a global picture of labour rights risks using publicly-available indices from reputable organisations. Use sliders (below the map) to change weightings. Then go to panel 2.',
+  2: 'Click on the map to select the countries in your supply chain or pick from the list below (not all countries are in the map). You can optionally weighting different countries (eg: by number of suppliers or workers, value of sourcing etc..). Then go to panel 3.',
   3: 'Set out your supply chain due diligence progam across six different industry tools and the effectiveness of each. Set the extent to which your efforts are focussed on higher risk countries. Then go to panel 4.',
   4: 'Set out how you respond to issues that are found. Responsiveness is a key tool in managing risks (low response levels can increase risks, active responses can reduce risks). Then go to panel 5.',
   5: `Here are your results showing your baseline risk level (panel 2) and how well you are managing it. You can see how each element in your strategy impacts your risks. You can print out a report capturing the analysis in full.${ENABLE_PANEL_6 ? ' Then go to panel 6.' : ''}`,
   ...(ENABLE_PANEL_6 ? {
-    6: 'Analyze the costs of your HRDD strategy including external tool costs and internal effort. See how your current budget allocation compares to an optimized approach that maximizes risk reduction per dollar spent.'
+    6: 'Analyze the costs of your external tools and internal efforts. See how your current budget allocation compares to an optimized approach that maximizes managed-risk reduction per dollar spent.'
   } : {})
 };
 
@@ -912,8 +912,8 @@ onSAQConstraintChange(enabled) {
     const panelTitles = {
   1: 'Global Risks',
   2: 'Baseline Risk',
-  3: 'HRDD Strategy',
-  4: 'Response Strategy',
+  3: 'Tools Strategy',
+  4: 'Remedy Approach',
   5: 'Managed Risk',
   ...(ENABLE_PANEL_6 ? { 6: 'Cost Analysis' } : {})
   };
@@ -1008,7 +1008,7 @@ const statusBar = `
               </div>
             ` : `
               <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">International supply chains: managing your labour rights risks</h1>
+                <h1 style="font-size:28px;font-weight:700;color:#1f2937;margin:0;line-height:1.25;">How effective are your labour rights due diligence tools?</h1>
                 <p style="font-size:15px;color:#4b5563;margin:0;">Start with panel 1 and work across to see the results on panel 5. Then use the optimizer on panel 6.</p>
               </div>
             `}
