@@ -2,7 +2,7 @@
 export class RiskEngine {
   constructor() {
     // Step 1: Default weightings for the 5 input columns
-    this.defaultWeights = [20, 20, 20, 20, 20]; // ITUC, Corruption, Migrant, WJP, Walkfree
+    this.defaultWeights = [20, 20, 20, 20, 20]; // ITUC, Corruption, Freedom, WJP, Walkfree
     
     // Step 2: HRDD Strategy defaults - representing supplier base coverage percentages
     this.defaultHRDDStrategy = [10, 10, 25, 60, 80, 90]; // Coverage percentages: Worker voice is rare, trusting approaches are common
@@ -599,7 +599,7 @@ export class RiskEngine {
     const values = [
       countryData.itucRightsRating,
       countryData.corruptionIndex,
-      countryData.migrantWorkerPrevalence,
+      countryData.freedomRating,
       countryData.wjpIndex,
       countryData.walkfreeSlaveryIndex
     ];
@@ -1451,7 +1451,7 @@ export class RiskEngine {
       step1: {
         weights: state.weights,
         baselineRisk: state.baselineRisk,
-        weightLabels: ['ITUC Rights Rating', 'Corruption Index', 'Migrant Worker Prevalence', 'WJP Index', 'Walk Free Slavery Index']
+        weightLabels: ['ITUC Rights Rating', 'Corruption Index', 'Freedom Rating', 'WJP Index', 'Walk Free Slavery Index']
       },
       step2: {
         hrddStrategy: state.hrddStrategy,

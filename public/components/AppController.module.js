@@ -1527,45 +1527,41 @@ if (ENABLE_PANEL_6 && panel === 6) {
 
   loadDemoData() {
     const demoCountries = [
-      {
+        {
         name: 'Bangladesh',
         isoCode: 'BGD',
         itucRightsRating: 68,
         corruptionIndex: 25,
-        migrantWorkerPrevalence: 42,
+        freedomRating: 32,
         wjpIndex: 30,
-        walkfreeSlaveryIndex: 48,
-        baseRiskScore: 58
+        walkfreeSlaveryIndex: 48
       },
       {
         name: 'Vietnam',
         isoCode: 'VNM',
         itucRightsRating: 64,
         corruptionIndex: 36,
-        migrantWorkerPrevalence: 29,
+        freedomRating: 49,
         wjpIndex: 45,
-        walkfreeSlaveryIndex: 38,
-        baseRiskScore: 52
+        walkfreeSlaveryIndex: 38
       },
       {
         name: 'Brazil',
         isoCode: 'BRA',
         itucRightsRating: 52,
         corruptionIndex: 38,
-        migrantWorkerPrevalence: 24,
+        freedomRating: 75,
         wjpIndex: 54,
-        walkfreeSlaveryIndex: 32,
-        baseRiskScore: 46
+        walkfreeSlaveryIndex: 32
       },
       {
         name: 'Germany',
         isoCode: 'DEU',
         itucRightsRating: 18,
         corruptionIndex: 80,
-        migrantWorkerPrevalence: 12,
+        freedomRating: 90,
         wjpIndex: 79,
-        walkfreeSlaveryIndex: 15,
-        baseRiskScore: 28
+        walkfreeSlaveryIndex: 15
       }
     ];
 

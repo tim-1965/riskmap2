@@ -6,6 +6,52 @@ let panel4ResizeListenerAttached = false;
 const markerObservers = new WeakMap();
 const markerResizeHandlers = new WeakMap();
 
+function estimateSliderThumbSize(rangeInput, sliderRect) {
+  const fallback = 16;
+  if (!rangeInput) return fallback;
+
+  const sizes = [];
+
+  if (sliderRect && Number.isFinite(sliderRect.height)) {
+    sizes.push(sliderRect.height);
+  }
+
+  if (Number.isFinite(rangeInput.offsetHeight)) {
+    sizes.push(rangeInput.offsetHeight);
+  }
+
+  if (Number.isFinite(rangeInput.clientHeight)) {
+    sizes.push(rangeInput.clientHeight);
+  }
+
+  if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+    const computedStyle = window.getComputedStyle(rangeInput);
+    const candidateProps = ['height', 'line-height', '--thumb-size', '--hrdd-slider-thumb-size'];
+
+    candidateProps.forEach((prop) => {
+      if (!computedStyle) return;
+      const value = computedStyle.getPropertyValue(prop);
+      if (!value) return;
+
+      const parsed = parseFloat(value);
+      if (Number.isFinite(parsed)) {
+        sizes.push(parsed);
+      }
+    });
+  }
+
+  const valid = sizes.filter(size => Number.isFinite(size) && size > 0);
+  if (!valid.length) {
+    return fallback;
+  }
+
+  const preferred = valid.filter(size => size >= fallback * 0.75);
+  const candidate = preferred.length ? Math.max(...preferred) : Math.max(...valid);
+
+  return Math.max(fallback * 0.75, Math.min(candidate, fallback * 2.5));
+}
+
+
 const isMobileView = () => (typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
 
 function attachDefaultSliderMarker(rangeInput, defaultValue) {
@@ -73,7 +119,9 @@ function attachDefaultSliderMarker(rangeInput, defaultValue) {
 
     const offsetLeft = sliderRect.left - parentRect.left;
     const offsetTop = sliderRect.top - parentRect.top;
-    const left = offsetLeft + sliderWidth * ratio;
+    const thumbSize = estimateSliderThumbSize(rangeInput, sliderRect);
+    const usableWidth = Math.max(0, sliderWidth - thumbSize);
+    const left = offsetLeft + usableWidth * ratio + thumbSize / 2;
     const top = offsetTop + sliderHeight / 2;
 
     marker.style.left = `${left}px`;
@@ -1513,11 +1561,11 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
       sourceLabel: 'Transparency International – Corruption Perceptions Index',
       url: 'https://www.transparency.org/en/cpi'
     },
-    {
-      label: 'ILO - International Labour Migration Statistics, migrant worker prevalence',
-      description: 'Highlights migrant worker participation using the ILO’s international labour migration statistics.',
-      sourceLabel: 'ILO International Labour Migration Statistics',
-      url: 'https://ilostat.ilo.org/methods/concepts-and-definitions/description-international-labour-migration-statistics/'
+     {
+      label: 'Freedom House - Global Freedom Scores (Labour Rights Components)',
+      description: 'Captures democratic freedoms and labour rights performance using Freedom House data.',
+      sourceLabel: 'Freedom House Global Freedom Scores',
+      url: 'https://freedomhouse.org/reports/freedom-world'
     },
     {
       label: 'World Justic Project - Rule of Law Index (using 4.8: Fundamental Labour Rights)',
