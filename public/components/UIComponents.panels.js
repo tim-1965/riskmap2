@@ -311,7 +311,7 @@ export function createHRDDStrategyPanel(containerId, { strategy, onStrategyChang
 
        <div style="margin-top: 16px;">
         <div data-panel3-info="strategy" style="background-color: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 16px; border-radius: 8px;">
-          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Enhanced Coverage-Based Strategy:</h4>
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #1e3a8a;">Coverage-Based Strategy:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
             <li>Each percentage is the amount of the supplier base covered by that strategy.</li>
             <li>Higher coverage increases total transparency but with diminishing returns.</li>
@@ -573,7 +573,7 @@ export function createTransparencyPanel(containerId, { transparency, onTranspare
 
       <div style="margin-top: 16px;">
         <div data-panel3-info="transparency" style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 16px; border-radius: 8px;">
-          <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Enhanced Transparency Calculation:</h4>
+          <h4 style="font-weight: 600; margin-bottom: 8px; color: #78350f;">Transparency Calculation:</h4>
           <ul style="font-size: 14px; margin: 0; padding-left: 16px; line-height: 1.5;">
             <li><strong>Effectiveness:</strong> Rates of risk detection achieved by each tool.</li>
             <li><strong>Use the focus setting below</strong> to allocate your coverage based on country risk levels.</li>
@@ -1098,13 +1098,13 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
 
       <!-- RISK TRANSFORMATION EXPLANATION -->
       <div id="strategyTransformationSection" style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
-        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">How Your Enhanced HRDD Strategy Reduces Risk</h3>
+        <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">How Your Use of HRDD Tools Reduces Risk</h3>
         
         <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 20px;">
           <p style="font-size: 14px; margin: 0; color: #1e40af; line-height: 1.5;">
-            <strong>Your enhanced HRDD strategy transforms baseline risk through five key mechanisms:</strong> 
-            detecting issues through focus-adjusted transparency tools, responding effectively when issues are found, 
-            concentrating resources on high-risk countries, leveraging portfolio effects, and optimizing coverage allocation.
+            <strong>Your use of HRDD tools transforms baseline risk to managed risk through four key steps:</strong> 
+            (1) which tools are used with what coverage of your supplier base, (2) how good those tools are at detecting issues, (3) how you respond to issues
+             that are detected, and (4) the effectiveness of those responses in ensuring sustained remedy and in deterring future issues.
           </p>
         </div>
 
@@ -1181,7 +1181,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
 
         <!-- EFFECTIVENESS BREAKDOWN -->
         <div style="background-color: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e5e7eb;">
-          <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #374151;">Enhanced Strategy Impact Summary</h4>
+          <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #374151;">Your Impact on Risk</h4>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
             <div>
               <div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">TOTAL RISK REDUCTION</div>
@@ -1204,17 +1204,17 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
 
       <!-- DETAILED STRATEGY BREAKDOWN -->
       <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-bottom: 24px;">
-        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">How coverage & response choices reduce risk</h3>
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #374151;">How choice of tools and approach to remedy reduces risk</h3>
         <p style="font-size: 13px; color: #4b5563; line-height: 1.6; margin-bottom: 20px;">
-          Your enhanced configuration ${totalReductionVerb} ${formatNumber(totalReductionAmount)} pts of risk from the baseline.
+          Your configuration ${totalReductionVerb} ${formatNumber(totalReductionAmount)} pts of risk from the baseline.
           Panel 3 detection coverage ${detectionStageVerb} ${formatNumber(detectionStageAmount)} pts (~${formatNumber(detectionShareOfTotal)}% of the total change),
-          while Panel 4 response allocation ${responseStageVerb} ${formatNumber(responseStageAmount)} pts (~${formatNumber(responseShareOfTotal)}%).
-          Enhanced focus settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts by intelligently concentrating effort on higher-risk countries.
+          while Panel 4 remedy approach ${responseStageVerb} ${formatNumber(responseStageAmount)} pts (~${formatNumber(responseShareOfTotal)}%).
+          Your focus on higher risk countries reduced overall risk further by ${focusStageVerb} ${formatNumber(focusStageAmount)} pts by concentrating attention on them.
         </p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
           <div style="border: 1px solid #bfdbfe; background-color: #eff6ff; padding: 16px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px;">
             <div>
-              <div style="font-size: 14px; font-weight: 600; color: #1d4ed8;">Panel 3 · Enhanced Detection coverage</div>
+              <div style="font-size: 14px; font-weight: 600; color: #1d4ed8;">Panel 3 · Tools strategy and detection coverage</div>
               <div style="font-size: 12px; color: #1e40af;">${detectionStageVerb.charAt(0).toUpperCase() + detectionStageVerb.slice(1)} ${formatNumber(detectionStageAmount)} pts (~${formatNumber(detectionShareOfTotal)}% of total)</div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1223,7 +1223,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           </div>
           <div style="border: 1px solid #ddd6fe; background-color: #f5f3ff; padding: 16px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px;">
             <div>
-              <div style="font-size: 14px; font-weight: 600; color: #5b21b6;">Panel 4 · Response allocation</div>
+              <div style="font-size: 14px; font-weight: 600; color: #5b21b6;">Panel 4 · Remedy approach</div>
               <div style="font-size: 12px; color: #4c1d95;">${responseStageVerb.charAt(0).toUpperCase() + responseStageVerb.slice(1)} ${formatNumber(responseStageAmount)} pts (~${formatNumber(responseShareOfTotal)}% of total)</div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1232,7 +1232,7 @@ export function createFinalResultsPanel(containerId, { baselineRisk, managedRisk
           </div>
         </div>
         <div style="margin-top: 16px; font-size: 12px; color: #475569; background-color: #f1f5f9; border: 1px dashed #cbd5f5; border-radius: 8px; padding: 12px;">
-          Enhanced focus and concentration settings ${focusStageVerb} ${formatNumber(focusStageAmount)} pts (${formatNumber(focusShareOfTotal)}% of the total change) by intelligently steering coverage and remediation toward the highest-risk parts of your portfolio with advanced risk-based allocation algorithms.
+          The concentration of effort on higher risk countries reduced risk further by ${focusStageVerb} ${formatNumber(focusStageAmount)} pts (${formatNumber(focusShareOfTotal)}% of the total change.
         </div>
       </div>
 
