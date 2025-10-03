@@ -1,4 +1,5 @@
 import { riskEngine } from './RiskEngine.js';
+import { renderCostAnalysisMap } from './UIComponents.maps.js';
 
 let panel3ResizeListenerAttached = false;
 let panel4ResizeListenerAttached = false;
@@ -1832,8 +1833,10 @@ export function createCostAnalysisPanel(containerId, options) {
     responsivenessStrategy,
     responsivenessEffectiveness,
     selectedCountries,
+    countries,
     countryVolumes,
     countryRisks,
+    countryManagedRisks,
     focus,
     baselineRisk,
     managedRisk,
@@ -1843,7 +1846,7 @@ export function createCostAnalysisPanel(containerId, options) {
     onToolPerSupplierCostChange,
     onToolInternalHoursChange,
     onResponseInternalHoursChange,
-   optimizeBudgetAllocation,
+    optimizeBudgetAllocation,
     saqConstraintEnabled = false,
     onSAQConstraintChange
   } = options;
@@ -1947,22 +1950,44 @@ export function createCostAnalysisPanel(containerId, options) {
       : Array.isArray(hrddStrategy)
         ? [...hrddStrategy]
         : [],
-    responseAllocation: Array.isArray(safeBudgetData.responseAllocation)
+      responseAllocation: Array.isArray(safeBudgetData.responseAllocation)
       ? safeBudgetData.responseAllocation
       : Array.isArray(responsivenessStrategy)
         ? [...responsivenessStrategy]
         : []
   };
 
+  const safeCountries = Array.isArray(countries) ? countries : [];
+  const safeSelectedCountries = Array.isArray(selectedCountries) ? selectedCountries : [];
+  const safeCountryRiskMap = (countryRisks && typeof countryRisks === 'object') ? countryRisks : {};
+  const safeCountryManagedRiskMap = (countryManagedRisks && typeof countryManagedRisks === 'object')
+    ? countryManagedRisks
+    : {};
+
   const totalExternalCost = normalizedBudgetData.totalExternalCost;
   const totalInternalCost = normalizedBudgetData.totalInternalCost;
-  const totalBudget = normalizedBudgetData.totalBudget || totalExternalCost + totalInternalCost;
+   const totalBudget = normalizedBudgetData.totalBudget || totalExternalCost + totalInternalCost;
   const costPerSupplier = sanitizedSupplierCount > 0
     ? Math.round(totalBudget / sanitizedSupplierCount)
     : 0;
   const optimization = typeof optimizeBudgetAllocation === 'function'
     ? optimizeBudgetAllocation()
     : null;
+
+  const getOptimizedRiskMap = (result) => {
+    if (!result || typeof result !== 'object') {
+      return {};
+    }
+    if (result.optimizedCountryManagedRisks && typeof result.optimizedCountryManagedRisks === 'object') {
+      return result.optimizedCountryManagedRisks;
+    }
+    if (result.currentCountryManagedRisks && typeof result.currentCountryManagedRisks === 'object') {
+      return result.currentCountryManagedRisks;
+    }
+    return {};
+  };
+
+  const initialOptimizedRiskMap = getOptimizedRiskMap(optimization);
 
   const rowCount = strategyCount;
 
@@ -2031,6 +2056,25 @@ export function createCostAnalysisPanel(containerId, options) {
 
       <!-- Header Section -->
       <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+        <div id="costAnalysisMapSection" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: ${responsive('16px', '20px')}; display: flex; flex-direction: column; gap: ${responsive('12px', '16px')}; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);">
+          <div style="display: flex; flex-direction: ${responsive('column', 'row')}; justify-content: space-between; align-items: ${responsive('flex-start', 'center')}; gap: 12px;">
+            <div>
+              <h3 style="font-size: ${responsive('16px', '18px')}; font-weight: 600; color: #1f2937; margin: 0;">Global Risk Outlook</h3>
+              <p style="font-size: ${responsive('12px', '13px')}; color: #4b5563; margin: 6px 0 0;">Compare baseline, managed, and optimized risk levels for your selected supply chain countries.</p>
+              <div id="costAnalysisMapStatus" style="font-size: ${responsive('11px', '12px')}; color: #475569; margin-top: 6px;"></div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; background: #e2e8f0; padding: 6px; border-radius: 9999px;">
+              <button type="button" class="cost-map-mode" data-map-mode="baseline"
+                      style="border: none; background: white; color: #1f2937; font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 9999px; cursor: pointer; box-shadow: none;">Baseline risk</button>
+              <button type="button" class="cost-map-mode" data-map-mode="managed"
+                      style="border: none; background: transparent; color: #1f2937; font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 9999px; cursor: pointer; box-shadow: none;">Managed risk</button>
+              <button type="button" class="cost-map-mode" data-map-mode="optimized"
+                      style="border: none; background: transparent; color: #1f2937; font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 9999px; cursor: pointer; box-shadow: none;">Optimized risk</button>
+            </div>
+          </div>
+          <div id="costAnalysisMapCanvas" style="width: 100%; min-height: ${responsive('260px', '360px')}; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);"></div>
+          <div id="costAnalysisMapLegend" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 12px;"></div>
+        </div>
         <h2 style="font-size: ${responsive('18px', '20px')}; font-weight: bold; color: #1f2937; margin: 0;">Cost Analysis & Budget Optimization</h2>
         <div style="background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; display: grid; grid-template-columns: ${responsive('1fr', 'repeat(2, minmax(0, 1fr))')}; gap: 16px; align-items: stretch;">
           <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -2185,10 +2229,111 @@ export function createCostAnalysisPanel(containerId, options) {
           responsivenessEffectiveness,
           focus
         )}
-      </div>
+       </div>
 
     </div>
   `;
+
+  const mapController = (() => {
+    const modeButtons = Array.from(container.querySelectorAll('.cost-map-mode'));
+    const statusElement = container.querySelector('#costAnalysisMapStatus');
+    let currentMode = 'baseline';
+    let optimizedRiskMap = { ...initialOptimizedRiskMap };
+
+    const palette = {
+      baseline: { background: '#1d4ed8', color: '#ffffff' },
+      managed: { background: '#059669', color: '#ffffff' },
+      optimized: { background: '#7c3aed', color: '#ffffff' }
+    };
+
+    const hasOptimizedData = () => Object.values(optimizedRiskMap)
+      .some(value => Number.isFinite(value));
+
+    const updateStatusMessage = () => {
+      if (!statusElement) return;
+      const selections = safeSelectedCountries.length;
+      const selectionText = selections > 0
+        ? `Selected countries: ${selections}.`
+        : 'No supply chain countries selected yet.';
+      const optimizationText = hasOptimizedData()
+        ? '<span style="color: #16a34a; font-weight: 600;">Optimized view reflects your latest run.</span>'
+        : '<span style="color: #b45309; font-weight: 600;">Run the optimizer to unlock the optimized view.</span>';
+      statusElement.innerHTML = `${selectionText} ${optimizationText}`;
+    };
+
+    const applyButtonStyles = () => {
+      modeButtons.forEach(button => {
+        const mode = button.dataset.mapMode || 'baseline';
+        const isActive = mode === currentMode;
+        const swatch = palette[mode] || palette.baseline;
+
+        if (mode === 'optimized') {
+          const enabled = hasOptimizedData();
+          button.disabled = !enabled;
+          button.style.opacity = enabled ? '1' : '0.45';
+          button.style.cursor = enabled ? 'pointer' : 'not-allowed';
+        } else {
+          button.disabled = false;
+          button.style.opacity = '1';
+          button.style.cursor = 'pointer';
+        }
+
+        if (isActive) {
+          button.style.background = swatch.background;
+          button.style.color = swatch.color;
+          button.style.boxShadow = '0 6px 16px rgba(15, 23, 42, 0.18)';
+        } else {
+          button.style.background = 'transparent';
+          button.style.color = '#1f2937';
+          button.style.boxShadow = 'none';
+        }
+      });
+    };
+
+    const render = (mode = currentMode) => {
+      currentMode = mode;
+      applyButtonStyles();
+      renderCostAnalysisMap('costAnalysisMapCanvas', {
+        countries: safeCountries,
+        selectedCountries: safeSelectedCountries,
+        baselineRisks: safeCountryRiskMap,
+        managedRisks: safeCountryManagedRiskMap,
+        optimizedRisks: optimizedRiskMap,
+        mode: currentMode,
+        legendContainerId: 'costAnalysisMapLegend',
+        height: responsive(260, 380),
+        width: responsive(640, 1200)
+      });
+    };
+
+    modeButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const nextMode = button.dataset.mapMode || 'baseline';
+        if (nextMode === 'optimized' && !hasOptimizedData()) {
+          return;
+        }
+        render(nextMode);
+      });
+    });
+
+    updateStatusMessage();
+    render('baseline');
+
+    return {
+      render,
+      setOptimizedRisks: (nextMap) => {
+        optimizedRiskMap = (nextMap && typeof nextMap === 'object') ? { ...nextMap } : {};
+        if (currentMode === 'optimized' && !hasOptimizedData()) {
+          currentMode = 'managed';
+        }
+        updateStatusMessage();
+        render(currentMode);
+      },
+      updateStatusMessage,
+      hasOptimizedData,
+      getCurrentMode: () => currentMode
+    };
+  })();
 
   // Set up event listeners
   setupCostAnalysisEventListeners({
@@ -2217,7 +2362,9 @@ export function createCostAnalysisPanel(containerId, options) {
     focus,
     baselineRisk,
     managedRisk,
-    budgetData: normalizedBudgetData
+    budgetData: normalizedBudgetData,
+    mapController,
+    getOptimizedRiskMap
   });
 }
 
@@ -2421,12 +2568,13 @@ function setupCostAnalysisEventListeners(handlers) {
     responsivenessStrategy,
     responsivenessEffectiveness,
     selectedCountries,
-    countryVolumes,
-    countryRisks,
+     countryRisks,
     focus,
     baselineRisk,
     managedRisk,
-    budgetData
+    budgetData,
+    mapController,
+    getOptimizedRiskMap
   } = handlers;
 
   const clampNumber = (value, min, max, fallback = 0) => {
@@ -2639,6 +2787,12 @@ function setupCostAnalysisEventListeners(handlers) {
         );
 
         const latestOptimization = optimizeBudgetAllocation();
+         if (mapController && typeof mapController.setOptimizedRisks === 'function') {
+          const optimizedRiskMap = typeof getOptimizedRiskMap === 'function'
+            ? getOptimizedRiskMap(latestOptimization)
+            : {};
+          mapController.setOptimizedRisks(optimizedRiskMap);
+          }
         const latestBudget = riskEngine.calculateBudgetAnalysis(
           latestSupplierCount,
           latestHourlyRate,

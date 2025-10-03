@@ -1418,7 +1418,7 @@ if (ENABLE_PANEL_6 && panel === 6) {
       `);
 
      queueMicrotask(() => {
-        UIComponents.createCostAnalysisPanel('costAnalysisPanel', {
+          UIComponents.createCostAnalysisPanel('costAnalysisPanel', {
           supplierCount: this.state.supplierCount,
           hourlyRate: this.state.hourlyRate,
           toolAnnualProgrammeCosts: this.state.toolAnnualProgrammeCosts,
@@ -1430,8 +1430,10 @@ if (ENABLE_PANEL_6 && panel === 6) {
           responsivenessStrategy: this.state.responsivenessStrategy,
           responsivenessEffectiveness: this.state.responsivenessEffectiveness,
           selectedCountries: this.state.selectedCountries,
+          countries: this.state.countries,
           countryVolumes: this.state.countryVolumes,
           countryRisks: this.state.countryRisks,
+          countryManagedRisks: this.state.countryManagedRisks,
           focus: this.state.focus,
           baselineRisk: this.state.baselineRisk,
           managedRisk: this.state.managedRisk,
