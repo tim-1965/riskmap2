@@ -915,7 +915,7 @@ onSAQConstraintChange(enabled) {
   3: 'Tools Strategy',
   4: 'Remedy Approach',
   5: 'Managed Risk',
-  ...(ENABLE_PANEL_6 ? { 6: 'Cost Analysis' } : {})
+  ...(ENABLE_PANEL_6 ? { 6: 'Optimize' } : {})
   };
 
     const hasWindow = typeof window !== 'undefined';
