@@ -1562,7 +1562,7 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
       url: 'https://www.transparency.org/en/cpi'
     },
      {
-      label: 'Freedom House - Global Freedom Scores (Labour Rights Components)',
+      label: 'Freedom House - Global Freedom Scores',
       description: 'Captures democratic freedoms and labour rights performance using Freedom House data.',
       sourceLabel: 'Freedom House Global Freedom Scores',
       url: 'https://freedomhouse.org/reports/freedom-world'
@@ -1591,8 +1591,8 @@ export function createWeightingsPanel(containerId, { weights, onWeightsChange })
       url: 'https://www.transparency.org/en/cpi/2024'
     },
     {
-      name: 'ILO - International Labour Migration Statistics',
-      url: 'https://ilostat.ilo.org/methods/concepts-and-definitions/description-international-labour-migration-statistics/'
+      name: 'Freedom House - Global Freedom Scores',
+      url: 'https://freedomhouse.org/report/freedom-world'
     },
     {
       name: 'World Justice Project - Rule of Law Index – Fundamental Rights',
